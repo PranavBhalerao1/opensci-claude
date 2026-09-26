@@ -1,0 +1,46 @@
+@import "tailwindcss";
+
+/* Strictly monochrome: black, white and greys. */
+@theme inline {
+  --color-ink: #0a0a0a;
+  --color-paper: #ffffff;
+  --color-muted: #6b6b6b;
+  --color-faint: #a3a3a3;
+  --color-rule: #e5e5e5;
+  --color-wash: #f7f7f7;
+  --font-sans: var(--font-sans-face), system-ui, sans-serif;
+  --font-serif: var(--font-serif-face), Georgia, serif;
+  --font-mono: var(--font-mono-face), ui-monospace, monospace;
+}
+
+body {
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+}
+
+::selection {
+  background: var(--color-ink);
+  color: var(--color-paper);
+}
+
+/* Assistant prose */
+.prose-os { font-size: 15px; line-height: 1.7; }
+.prose-os p { margin: 0 0 0.9em; }
+.prose-os p:last-child { margin-bottom: 0; }
+.prose-os h1, .prose-os h2, .prose-os h3 { font-family: var(--font-serif); font-weight: 500; margin: 1.2em 0 0.4em; }
+.prose-os h1 { font-size: 1.4em; } .prose-os h2 { font-size: 1.25em; } .prose-os h3 { font-size: 1.1em; }
+.prose-os ul, .prose-os ol { margin: 0 0 0.9em; padding-left: 1.3em; }
+.prose-os ul { list-style: square; } .prose-os ol { list-style: decimal; }
+.prose-os li { margin: 0.25em 0; }
+.prose-os strong { font-weight: 600; }
+.prose-os code { font-family: var(--font-mono); font-size: 0.88em; background: var(--color-wash); padding: 0.1em 0.3em; border: 1px solid var(--color-rule); }
+.prose-os pre { font-family: var(--font-mono); font-size: 13px; background: var(--color-wash); border: 1px solid var(--color-rule); padding: 12px 14px; overflow-x: auto; margin: 0 0 0.9em; }
+.prose-os pre code { background: none; border: 0; padding: 0; }
+.prose-os a { text-decoration: underline; text-underline-offset: 2px; }
+.prose-os blockquote { border-left: 2px solid var(--color-ink); padding-left: 12px; color: var(--color-muted); }
+.prose-os table { border-collapse: collapse; margin: 0 0 0.9em; font-size: 14px; }
+.prose-os th, .prose-os td { border: 1px solid var(--color-rule); padding: 6px 10px; text-align: left; }
+
+@keyframes blink { 50% { opacity: 0; } }
+.caret::after { content: "▍"; animation: blink 1s steps(1) infinite; margin-left: 1px; }
