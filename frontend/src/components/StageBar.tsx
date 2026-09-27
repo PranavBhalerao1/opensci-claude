@@ -7,12 +7,21 @@ const STAGES: { key: Stage; label: string }[] = [
   { key: "plan", label: "Plan" },
   { key: "blueprint", label: "Blueprint" },
   { key: "executing", label: "Execute" },
+  { key: "reporting", label: "Report" },
 ];
 
 export default function StageBar({ stage }: { stage: Stage }) {
   // "done" is the legacy name for "plan approved"; "ready" means the blueprint is approved.
   const current =
-    stage === "done" ? 4 : stage === "ready" ? 5 : stage === "executed" ? STAGES.length : STAGES.findIndex((s) => s.key === stage);
+    stage === "done"
+      ? 4
+      : stage === "ready"
+        ? 5
+        : stage === "executed"
+          ? 6
+          : stage === "complete"
+            ? STAGES.length
+            : STAGES.findIndex((s) => s.key === stage);
   return (
     <ol className="flex min-w-0 items-center gap-2 overflow-hidden font-mono text-[11px] uppercase tracking-[0.1em]">
       {STAGES.map((s, i) => {
@@ -27,10 +36,9 @@ export default function StageBar({ stage }: { stage: Stage }) {
           </li>
         );
       })}
-      {stage === "executed" && (
-        <li className="flex shrink-0 items-center gap-2">
-          <span className="h-px w-3 bg-rule" />
-          <span className="bg-ink px-1.5 py-0.5 text-paper">Executed</span>
+      {stage === "complete" && (
+        <li className="shrink-0 bg-ink px-1.5 py-0.5 text-paper" title="Investigation complete">
+          ✓
         </li>
       )}
     </ol>

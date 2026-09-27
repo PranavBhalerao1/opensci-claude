@@ -11,6 +11,7 @@ import {
   gapsApi,
   literatureApi,
   planApi,
+  reportApi,
   sendTurn,
   type Answer,
   type BlueprintRun as BlueprintRunT,
@@ -22,6 +23,7 @@ import {
   type Message,
   type PlanRun as PlanRunT,
   type Project,
+  type ReportRun as ReportRunT,
   type Turn,
 } from "@/lib/api";
 import BlueprintRun from "./BlueprintRun";
@@ -31,6 +33,7 @@ import GapsRun from "./GapsRun";
 import Library from "./Library";
 import LiteratureRun from "./LiteratureRun";
 import PlanRun from "./PlanRun";
+import ReportRun from "./ReportRun";
 import Notebook from "./Notebook";
 import QuestionCards from "./QuestionCards";
 import Sidebar from "./Sidebar";
@@ -62,6 +65,7 @@ export default function Workspace({ projectId: initialId }: { projectId?: string
   const [exec, setExec] = useState<Execution | null>(null);
   const [execKick, setExecKick] = useState(0);
   const [files, setFiles] = useState<{ focus?: string } | null>(null);
+  const [reportRun, setReportRun] = useState<ReportRunT | null>(null);
   const [library, setLibrary] = useState<{ focus?: string } | null>(null);
   // A project created in this tab already has its state locally; skip the reload.
   const justCreated = useRef<string | null>(null);
@@ -227,6 +231,40 @@ export default function Workspace({ projectId: initialId }: { projectId?: string
     };
   }, [execFor, execLive, execKick]);
 
+  // Report: available once execution has finished.
+  const reportFor = project && ["executed", "reporting", "complete"].includes(project.stage) ? project.id : null;
+  const reportStatus = reportRun?.status;
+  useEffect(() => {
+    if (!reportFor) return;
+    let cancelled = false;
+    const load = () =>
+      reportApi
+        .get(reportFor)
+        .then((d) => {
+          if (cancelled) return;
+          setReportRun(d.run);
+          setProject(d.project);
+          if (d.run?.status !== "running") refreshProjects();
+        })
+        .catch((e) => !cancelled && setError(String(e)));
+    void load();
+    if (reportStatus !== "running") return () => void (cancelled = true);
+    const timer = setInterval(load, 3000);
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+    };
+  }, [reportFor, reportStatus, refreshProjects]);
+
+  const startReport = async () => {
+    if (!projectId) return;
+    try {
+      setReportRun(await reportApi.run(projectId));
+    } catch (e) {
+      setError(String(e));
+    }
+  };
+
   const execAction = async (fn: () => Promise<unknown>) => {
     try {
       await fn();
@@ -304,6 +342,7 @@ export default function Workspace({ projectId: initialId }: { projectId?: string
     setExec(null);
     setExecKick(0);
     setFiles(null);
+    setReportRun(null);
     setLibrary(null);
     setProjectId(id);
   };
@@ -490,6 +529,14 @@ export default function Workspace({ projectId: initialId }: { projectId?: string
                         onCancel={() => execAction(() => executionApi.cancel(project.id))}
                         onTask={(taskId, action, note) => execAction(() => executionApi.task(project.id, taskId, action, note))}
                         onSecret={(name, value) => execAction(() => executionApi.provideSecret(project.id, name, value))}
+                        onOpenFiles={(focus) => setFiles({ focus })}
+                      />
+                    )}
+                    {reportFor && (
+                      <ReportRun
+                        project={project}
+                        run={reportRun}
+                        onStart={startReport}
                         onOpenFiles={(focus) => setFiles({ focus })}
                       />
                     )}

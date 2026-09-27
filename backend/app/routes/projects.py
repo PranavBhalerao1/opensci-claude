@@ -16,6 +16,7 @@ from .. import jobs, pipeline
 from ..agents import clarify
 from ..agents import blueprint as blueprint_agent
 from ..agents import plan as plan_agent
+from ..agents import report as report_agent
 from ..config import settings
 from ..db import Message, Paper, Project, ProjectPaper, Run, Secret, TaskState, Usage, engine, get_session
 from ..graph import project_graph
@@ -90,7 +91,7 @@ def get_project(project_id: str, session: Session = Depends(get_session)) -> dic
 @router.delete("/{project_id}", status_code=204)
 def delete_project(project_id: str, session: Session = Depends(get_session)) -> None:
     project = _get(session, project_id)
-    if any(jobs.is_running(project_id, k) for k in ("literature", "gaps", "plan", "blueprint", "execute")):
+    if any(jobs.is_running(project_id, k) for k in ("literature", "gaps", "plan", "blueprint", "execute", "report")):
         raise HTTPException(409, "Stop the running stage before deleting")
     # Papers stay in the shared cache and usage rows stay for spend history.
     for model in (Message, ProjectPaper, TaskState, Run, Secret):
@@ -100,6 +101,7 @@ def delete_project(project_id: str, session: Session = Depends(get_session)) -> 
     session.commit()
     shutil.rmtree(sandbox_for(project_id).root, ignore_errors=True)
     shutil.rmtree(plan_agent.EXPORT_DIR / project_id, ignore_errors=True)
+    (sandbox_for(project_id).root.parent / f"{project_id}-research-package.zip").unlink(missing_ok=True)
 
 
 @router.post("/{project_id}/brief/confirm")
@@ -448,6 +450,32 @@ def add_secret(project_id: str, body: SecretIn, session: Session = Depends(get_s
         raise HTTPException(400, "Invalid credential name or empty value")
     requeued = orchestrator.provide_secret(project_id, name, body.value.strip())
     return {"name": name, "requeued_tasks": requeued}
+
+
+@router.get("/{project_id}/report")
+def get_report(project_id: str, session: Session = Depends(get_session)) -> dict:
+    project = _get(session, project_id)
+    run = session.exec(
+        select(Run).where(Run.project_id == project_id, Run.kind == "report").order_by(Run.started_at.desc())
+    ).first()
+    return {"run": run, "project": project}
+
+
+@router.post("/{project_id}/report/run")
+async def run_report(project_id: str, session: Session = Depends(get_session)) -> Run:
+    project = _get(session, project_id)
+    if project.stage not in ("executed", "complete", "reporting"):
+        raise HTTPException(409, "Execute the blueprint first")
+    if jobs.is_running(project_id, "execute") or jobs.is_running(project_id, "report"):
+        raise HTTPException(409, "A run is in progress")
+    return pipeline.start_report(project_id)
+
+
+@router.get("/{project_id}/package")
+def download_package(project_id: str, session: Session = Depends(get_session)) -> FileResponse:
+    _get(session, project_id)
+    path = report_agent.package(project_id)
+    return FileResponse(path, media_type="application/zip", filename=path.name)
 
 
 @router.get("/{project_id}/workspace/files")

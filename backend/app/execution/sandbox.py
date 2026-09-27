@@ -131,7 +131,9 @@ class LocalSandbox(Sandbox):
         return {
             **self.secrets,
             "PATH": f"{self.venv / 'bin'}:{self.conda_env / 'bin'}:/usr/bin:/bin:/usr/sbin:/sbin:/opt/homebrew/bin:/usr/local/bin",
-            "HOME": str(self.root),
+            # A hidden home keeps tool caches (~/Library, ~/.cache) out of research outputs.
+            "HOME": str(self.root / ".home"),
+            "XDG_CACHE_HOME": str(self.root / ".home" / ".cache"),
             "TMPDIR": str(self.root / ".tmp"),
             "MPLBACKEND": "Agg",
             "PYTHONUNBUFFERED": "1",
@@ -145,7 +147,7 @@ class LocalSandbox(Sandbox):
         async with self._lock:
             if self._ready:
                 return
-            for d in (self.root, self.root / ".tmp", self.root / ".scratch", self.root / ".logs"):
+            for d in (self.root, self.root / ".tmp", self.root / ".scratch", self.root / ".logs", self.root / ".home"):
                 d.mkdir(parents=True, exist_ok=True)
             (self.root / ".sandbox.sb").write_text(self._profile())
             if not self.python.exists():

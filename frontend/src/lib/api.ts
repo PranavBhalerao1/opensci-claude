@@ -1,6 +1,6 @@
 export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
-export type Stage = "clarify" | "literature" | "gaps" | "plan" | "done" | "blueprint" | "ready" | "executing" | "executed";
+export type Stage = "clarify" | "literature" | "gaps" | "plan" | "done" | "blueprint" | "ready" | "executing" | "executed" | "reporting" | "complete";
 
 export type Depth = "quick" | "standard" | "deep";
 
@@ -522,4 +522,34 @@ export const executionApi = {
     fetch(`${API_URL}/api/projects/${id}/workspace/files`).then(json<{ path: string; size: number }[]>),
   fileUrl: (id: string, path: string) =>
     `${API_URL}/api/projects/${id}/workspace/file?path=${encodeURIComponent(path)}`,
+};
+
+// ── Report ─────────────────────────────────────────────────────────────────
+
+export interface Scaffold {
+  title: string;
+  one_sentence_summary: string;
+  hypothesis_verdict: "supported" | "not_supported" | "inconclusive" | "mixed";
+  verdict_explanation: string;
+  findings: { claim: string; evidence: string[]; strength: "strong" | "moderate" | "weak"; relation: string }[];
+  success_criteria: { criterion: string; status: "met" | "not_met" | "partial" | "unknown"; evidence: string }[];
+  figures: { path: string; caption: string; section: string }[];
+  limitations: string[];
+  deviations: string[];
+}
+
+export interface ReportRun extends Omit<Run, "result"> {
+  result: {
+    scaffold: Scaffold;
+    agent: { status: string; summary: string; cost: number; issues: string[] };
+    files: { tex: boolean; pdf: boolean; bib: boolean };
+    citations: { used: string[]; unknown: string[]; available: number };
+    audit: { claim: string; problem: string; severity: "high" | "medium" | "low" }[];
+  } | null;
+}
+
+export const reportApi = {
+  get: (id: string) => fetch(`${API_URL}/api/projects/${id}/report`).then(json<{ run: ReportRun | null; project: Project }>),
+  run: (id: string) => fetch(`${API_URL}/api/projects/${id}/report/run`, { method: "POST" }).then(json<ReportRun>),
+  packageUrl: (id: string) => `${API_URL}/api/projects/${id}/package`,
 };

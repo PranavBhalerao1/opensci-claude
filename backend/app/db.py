@@ -26,6 +26,7 @@ class Project(SQLModel, table=True):
     id: str = Field(default_factory=_id, primary_key=True)
     title: str = "Untitled research"
     # clarify -> literature -> gaps -> plan -> blueprint -> ready -> executing -> executed
+    #   -> reporting -> complete
     stage: str = "clarify"
     autonomous: bool = False
     settings: dict = Field(default_factory=dict, sa_column=Column(JSON))

@@ -2,6 +2,7 @@
 
 confirm brief → literature → gaps → choose gap (autonomous: recommended) → plan
 → approve plan → blueprint → approve blueprint → ready → execute → executed
+→ report (consolidate, write, compile, audit) → complete
 (autonomous mode makes every choice and approval itself)
 """
 
@@ -14,6 +15,7 @@ from . import jobs
 from .agents import gaps, literature
 from .agents import blueprint as blueprint_agent
 from .agents import plan as plan_agent
+from .agents import report as report_agent
 from .db import Project, Run, engine
 from .execution import orchestrator
 
@@ -115,4 +117,21 @@ async def _after_blueprint(project_id: str) -> None:
 
 
 def start_execution(project_id: str) -> Run:
-    return jobs.start(project_id, "execute", orchestrator.run)
+    return jobs.start(project_id, "execute", orchestrator.run, then=_after_execution)
+
+
+async def _after_execution(project_id: str) -> None:
+    with Session(engine) as s:
+        project = s.get(Project, project_id)
+        autonomous, stage = project.autonomous, project.stage
+    if autonomous and stage == "executed":
+        start_report(project_id)
+
+
+def start_report(project_id: str) -> Run:
+    _set_stage(project_id, "reporting")
+    return jobs.start(project_id, "report", report_agent.run, then=_after_report)
+
+
+async def _after_report(project_id: str) -> None:
+    _set_stage(project_id, "complete")
