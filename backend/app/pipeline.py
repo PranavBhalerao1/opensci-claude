@@ -1,7 +1,8 @@
 """Stage chaining: which job starts after which, and autonomous auto-decisions.
 
 confirm brief → literature → gaps → choose gap (autonomous: recommended) → plan
-→ approve (autonomous: automatic) → done
+→ approve plan → blueprint → approve blueprint → ready
+(autonomous mode makes every choice and approval itself)
 """
 
 import functools
@@ -11,6 +12,7 @@ from sqlmodel import Session, select
 
 from . import jobs
 from .agents import gaps, literature
+from .agents import blueprint as blueprint_agent
 from .agents import plan as plan_agent
 from .db import Project, Run, engine
 
@@ -69,7 +71,8 @@ def start_plan(project_id: str, instruction: str | None = None) -> Run:
     """Draft a plan, or revise the latest one when `instruction` is given."""
     with Session(engine) as s:
         project = s.get(Project, project_id)
-        project.plan = None  # any change invalidates a previous approval
+        project.plan = None  # any change invalidates previous approvals
+        project.blueprint = None
         project.stage = "plan"
         s.add(project)
         s.commit()
@@ -81,4 +84,29 @@ async def _after_plan(project_id: str) -> None:
     with Session(engine) as s:
         autonomous = s.get(Project, project_id).autonomous
     if autonomous:
-        plan_agent.approve(project_id)
+        approve_plan(project_id)
+
+
+def approve_plan(project_id: str) -> Project:
+    project = plan_agent.approve(project_id)
+    start_blueprint(project_id)
+    return project
+
+
+def start_blueprint(project_id: str, instruction: str | None = None) -> Run:
+    with Session(engine) as s:
+        project = s.get(Project, project_id)
+        project.blueprint = None
+        project.stage = "blueprint"
+        project.settings = {"budget": blueprint_agent.DEFAULT_BUDGET, **(project.settings or {})}
+        s.add(project)
+        s.commit()
+    job = blueprint_agent.make_revision_job(instruction) if instruction else blueprint_agent.run
+    return jobs.start(project_id, "blueprint", job, then=_after_blueprint)
+
+
+async def _after_blueprint(project_id: str) -> None:
+    with Session(engine) as s:
+        autonomous = s.get(Project, project_id).autonomous
+    if autonomous:
+        blueprint_agent.approve(project_id)

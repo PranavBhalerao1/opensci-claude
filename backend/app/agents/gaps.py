@@ -83,8 +83,8 @@ class NoveltyVerdict(BaseModel):
 PROPOSE_INSTRUCTIONS = """\
 You are the gap-finding scientist of OpenScientist. From the literature notes,
 identify research gaps worth an investigation that OpenScientist can execute
-computationally (public data, simulations, ML experiments, statistical analyses,
-meta-analyses) within the brief's constraints.
+computationally (public data and scientific databases, simulations and modelling,
+CAD/geometry, statistical analyses, ML, meta-analyses) within the brief's constraints.
 
 A good gap is specific, supported by evidence in the notes (limitations, conflicts,
 missing evaluations, untested combinations), testable with a clear outcome, and

@@ -21,6 +21,15 @@ class Settings(BaseSettings):
     model_standard: str = "gpt-6-sol"
     model_bulk: str = "gpt-6-luna"
 
+    # USD per 1M tokens: (input, cached input, output). Used for cost tracking and
+    # budget enforcement; web searches are billed per call.
+    model_prices: dict[str, tuple[float, float, float]] = {
+        "gpt-6-astra": (10.0, 1.0, 50.0),
+        "gpt-6-sol": (2.0, 0.2, 10.0),
+        "gpt-6-luna": (0.10, 0.01, 0.50),
+    }
+    web_search_price: float = 0.01
+
     database_url: str = f"sqlite:///{BACKEND_DIR / 'data' / 'openscientist.db'}"
     cors_origins: list[str] = ["http://localhost:3000"]
 

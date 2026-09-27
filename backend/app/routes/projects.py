@@ -12,11 +12,12 @@ from sse_starlette.sse import EventSourceResponse
 
 from .. import jobs, pipeline
 from ..agents import clarify
+from ..agents import blueprint as blueprint_agent
 from ..agents import plan as plan_agent
 from ..config import settings
-from ..db import Message, Paper, Project, ProjectPaper, Run, engine, get_session
+from ..db import Message, Paper, Project, ProjectPaper, Run, Usage, engine, get_session
 from ..graph import project_graph
-from ..llm import stream_text
+from ..llm import current_project, stream_text
 
 router = APIRouter(prefix="/api/projects", tags=["projects"])
 
@@ -250,12 +251,65 @@ def edit_plan(project_id: str, body: PlanEdit, session: Session = Depends(get_se
 
 
 @router.post("/{project_id}/plan/approve")
-def approve_plan(project_id: str, session: Session = Depends(get_session)) -> Project:
+async def approve_plan(project_id: str, session: Session = Depends(get_session)) -> Project:
     _get(session, project_id)
     if jobs.is_running(project_id, "plan"):
         raise HTTPException(409, "Plan is being revised")
+    if jobs.is_running(project_id, "blueprint"):
+        raise HTTPException(409, "A blueprint is being compiled")
     try:
-        return plan_agent.approve(project_id)
+        return pipeline.approve_plan(project_id)
+    except LookupError as exc:
+        raise HTTPException(409, str(exc)) from exc
+
+
+class BlueprintRevise(BaseModel):
+    instruction: str
+
+
+@router.get("/{project_id}/blueprint")
+def get_blueprint(project_id: str, session: Session = Depends(get_session)) -> dict:
+    project = _get(session, project_id)
+    run = session.exec(
+        select(Run).where(Run.project_id == project_id, Run.kind == "blueprint").order_by(Run.started_at.desc())
+    ).first()
+    return {"run": run, "project": project}
+
+
+@router.post("/{project_id}/blueprint/run")
+async def rerun_blueprint(project_id: str, session: Session = Depends(get_session)) -> Run:
+    project = _get(session, project_id)
+    if not project.plan:
+        raise HTTPException(409, "Approve the research plan first")
+    if jobs.is_running(project_id, "blueprint"):
+        raise HTTPException(409, "Blueprint already being compiled")
+    return pipeline.start_blueprint(project_id)
+
+
+@router.post("/{project_id}/blueprint/revise")
+async def revise_blueprint(project_id: str, body: BlueprintRevise, session: Session = Depends(get_session)) -> dict:
+    _get(session, project_id)
+    instruction = body.instruction.strip()
+    if not instruction:
+        raise HTTPException(400, "Empty instruction")
+    if jobs.is_running(project_id, "blueprint"):
+        raise HTTPException(409, "Blueprint already being revised")
+    if not blueprint_agent.latest_run(project_id):
+        raise HTTPException(409, "No blueprint to revise yet")
+    msg = Message(project_id=project_id, role="user", content=instruction)
+    session.add(msg)
+    session.commit()
+    session.refresh(msg)
+    return {"message": msg, "run": pipeline.start_blueprint(project_id, instruction)}
+
+
+@router.post("/{project_id}/blueprint/approve")
+def approve_blueprint(project_id: str, session: Session = Depends(get_session)) -> Project:
+    _get(session, project_id)
+    if jobs.is_running(project_id, "blueprint"):
+        raise HTTPException(409, "Blueprint is being revised")
+    try:
+        return blueprint_agent.approve(project_id)
     except LookupError as exc:
         raise HTTPException(409, str(exc)) from exc
 
@@ -267,6 +321,16 @@ def download_file(project_id: str, name: str, session: Session = Depends(get_ses
     if not path:
         raise HTTPException(404, "File not exported yet")
     return FileResponse(path, media_type="application/json", filename=name)
+
+
+@router.get("/{project_id}/usage")
+def get_usage(project_id: str, session: Session = Depends(get_session)) -> dict:
+    _get(session, project_id)
+    rows = session.exec(select(Usage).where(Usage.project_id == project_id)).all()
+    by_model: dict[str, float] = {}
+    for u in rows:
+        by_model[u.model] = by_model.get(u.model, 0.0) + u.cost
+    return {"total": round(sum(by_model.values()), 4), "by_model": by_model, "calls": len(rows)}
 
 
 @router.get("/{project_id}/graph")
@@ -311,6 +375,7 @@ def post_turn(project_id: str, body: TurnCreate, session: Session = Depends(get_
     stage = project.stage
 
     async def events() -> AsyncIterator[dict]:
+        current_project.set(project_id)
         yield {"event": "message", "data": json.dumps(user_data)}
         try:
             if stage == "clarify":

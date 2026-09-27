@@ -22,7 +22,7 @@ from ..llm import parse
 from .literature import brief_context, cite
 
 EXPORT_DIR = BACKEND_DIR / "data" / "projects"
-EXPORT_FILES = ("vague_research_plan.json", "context.json")
+EXPORT_FILES = ("vague_research_plan.json", "context.json", "master_plan.json")
 
 
 # ── Schema (vague_research_plan.json) ──────────────────────────────────────
@@ -99,8 +99,9 @@ class ResearchPlan(BaseModel):
 PLAN_INSTRUCTIONS = """\
 You are the Planning Agent of OpenScientist. Write the research plan for the chosen
 gap. It will be expanded by a Blueprint Agent into an exact execution spec for
-autonomous agents that write and run code (Python, public data, cloud GPUs, web
-access). So:
+autonomous agents that write and run code, query scientific databases and APIs in
+any field, install domain software (e.g. bioinformatics, cheminformatics, CAD,
+simulation, GIS, statistics packages) and search the web. So:
 - Every task must be concrete and executable by an agent: state what to do, with
   what data, producing which named artifacts. No wet-lab or human-subject steps.
 - Wire dependencies explicitly; parallelise independent work.
@@ -380,7 +381,7 @@ def approve(project_id: str) -> Project:
     with Session(engine) as s:
         project = s.get(Project, project_id)
         project.plan = {**plan, "run_id": prev.id, "approved_at": datetime.now(timezone.utc).isoformat()}
-        project.stage = "done"
+        project.stage = "blueprint"
         s.add(project)
         s.commit()
         s.refresh(project)

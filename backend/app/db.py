@@ -25,7 +25,7 @@ def _id() -> str:
 class Project(SQLModel, table=True):
     id: str = Field(default_factory=_id, primary_key=True)
     title: str = "Untitled research"
-    # clarify -> literature -> gaps -> plan -> done (plan approved, ready for the Blueprint Agent)
+    # clarify -> literature -> gaps -> plan -> blueprint -> ready (to execute)
     stage: str = "clarify"
     autonomous: bool = False
     settings: dict = Field(default_factory=dict, sa_column=Column(JSON))
@@ -35,6 +35,8 @@ class Project(SQLModel, table=True):
     chosen_gap: dict | None = Field(default=None, sa_column=Column(NullableJSON))
     # The approved vague_research_plan (see agents/plan.py)
     plan: dict | None = Field(default=None, sa_column=Column(NullableJSON))
+    # Approval record for master_plan.json (see agents/blueprint.py)
+    blueprint: dict | None = Field(default=None, sa_column=Column(NullableJSON))
     created_at: datetime = Field(default_factory=_now)
     updated_at: datetime = Field(default_factory=_now)
 
@@ -112,6 +114,21 @@ class Run(SQLModel, table=True):
     error: str | None = None
     started_at: datetime = Field(default_factory=_now)
     finished_at: datetime | None = None
+
+
+class Usage(SQLModel, table=True):
+    """One LLM call's token usage and estimated cost."""
+
+    id: str = Field(default_factory=_id, primary_key=True)
+    project_id: str | None = Field(default=None, index=True)
+    run_id: str | None = Field(default=None, index=True)
+    model: str
+    input_tokens: int = 0
+    cached_tokens: int = 0
+    output_tokens: int = 0
+    web_searches: int = 0
+    cost: float = 0.0
+    created_at: datetime = Field(default_factory=_now)
 
 
 if settings.database_url.startswith("sqlite:///"):

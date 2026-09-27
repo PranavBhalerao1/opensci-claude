@@ -6,11 +6,13 @@ import remarkGfm from "remark-gfm";
 
 import {
   api,
+  blueprintApi,
   gapsApi,
   literatureApi,
   planApi,
   sendTurn,
   type Answer,
+  type BlueprintRun as BlueprintRunT,
   type Depth,
   type GapsRun as GapsRunT,
   type Literature,
@@ -19,6 +21,7 @@ import {
   type Project,
   type Turn,
 } from "@/lib/api";
+import BlueprintRun from "./BlueprintRun";
 import BriefCard from "./BriefCard";
 import GapsRun from "./GapsRun";
 import Library from "./Library";
@@ -50,6 +53,7 @@ export default function Workspace({ projectId: initialId }: { projectId?: string
   const [lit, setLit] = useState<Literature | null>(null);
   const [gapsRun, setGapsRun] = useState<GapsRunT | null>(null);
   const [planRun, setPlanRun] = useState<{ run: PlanRunT | null; revisions: number } | null>(null);
+  const [bpRun, setBpRun] = useState<BlueprintRunT | null>(null);
   const [library, setLibrary] = useState<{ focus?: string } | null>(null);
   // A project created in this tab already has its state locally; skip the reload.
   const justCreated = useRef<string | null>(null);
@@ -144,6 +148,53 @@ export default function Workspace({ projectId: initialId }: { projectId?: string
     };
   }, [planFor, planStatus, planRunId, awaitingAutoApproval]);
 
+  // The blueprint compiles once the plan is approved.
+  const bpFor = project?.plan ? project.id : null;
+  const bpStatus = bpRun?.status;
+  const bpRunId = bpRun?.id;
+  const awaitingBpApproval = Boolean(project?.autonomous && bpStatus === "done" && !project?.blueprint);
+  useEffect(() => {
+    if (!bpFor) return;
+    let cancelled = false;
+    const load = () =>
+      blueprintApi
+        .get(bpFor)
+        .then((d) => {
+          if (cancelled) return;
+          setBpRun(d.run);
+          setProject(d.project);
+        })
+        .catch((e) => !cancelled && setError(String(e)));
+    void load();
+    const settled = !bpStatus ? project?.stage === "done" : bpStatus !== "running" && !awaitingBpApproval;
+    if (settled) return () => void (cancelled = true);
+    const timer = setInterval(load, 3000);
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- stage only matters for the no-run case
+  }, [bpFor, bpStatus, bpRunId, awaitingBpApproval]);
+
+  const startBlueprint = async () => {
+    if (!projectId) return;
+    try {
+      setBpRun(await blueprintApi.run(projectId));
+    } catch (e) {
+      setError(String(e));
+    }
+  };
+
+  const approveBlueprint = async () => {
+    if (!projectId) return;
+    try {
+      setProject(await blueprintApi.approve(projectId));
+      refreshProjects();
+    } catch (e) {
+      setError(String(e));
+    }
+  };
+
   const startedPlan = (run: PlanRunT) => setPlanRun((p) => ({ run, revisions: p?.revisions ?? 0 }));
 
   const approvePlan = async () => {
@@ -208,6 +259,7 @@ export default function Workspace({ projectId: initialId }: { projectId?: string
     setLit(null);
     setGapsRun(null);
     setPlanRun(null);
+    setBpRun(null);
     setLibrary(null);
     setProjectId(id);
   };
@@ -215,6 +267,19 @@ export default function Workspace({ projectId: initialId }: { projectId?: string
   const runTurn = async (turn: Turn) => {
     if (busy) return;
     // While reviewing a plan, a reply is a revision request.
+    // While reviewing a blueprint, a reply revises it.
+    if (turn.kind === "text" && projectId && (project?.stage === "blueprint" || project?.stage === "ready") && bpRun?.status === "done") {
+      setError(null);
+      try {
+        const { message, run } = await blueprintApi.revise(projectId, turn.content);
+        setMessages((m) => [...m, message]);
+        setBpRun(run);
+        setProject((p) => (p ? { ...p, blueprint: null, stage: "blueprint" } : p));
+      } catch (e) {
+        setError(String(e));
+      }
+      return;
+    }
     const reviewingPlan = project?.stage === "plan" || project?.stage === "done";
     if (turn.kind === "text" && projectId && reviewingPlan && planRun?.run?.status === "done") {
       setError(null);
@@ -361,6 +426,9 @@ export default function Workspace({ projectId: initialId }: { projectId?: string
                         }}
                       />
                     )}
+                    {bpFor && (
+                      <BlueprintRun project={project} run={bpRun} onStart={startBlueprint} onApprove={approveBlueprint} />
+                    )}
                   </>
                 ) : null
               }
@@ -381,6 +449,7 @@ export default function Workspace({ projectId: initialId }: { projectId?: string
         lit={lit}
         gapsRun={gapsRun}
         planRun={planRun?.run ?? null}
+        bpRun={bpRun}
         onOpenLibrary={() => setLibrary({})}
       />
       {library && projectId && lit && (
@@ -394,6 +463,8 @@ function composerHint(project: Project | null, messages: Message[]) {
   const last = messages.at(-1);
   if (last?.kind === "questions") return "Answer above, or type anything to add context…";
   if (project?.stage === "clarify" && last?.kind === "brief") return "Suggest a change to the brief…";
+  if (project?.stage === "blueprint" || project?.stage === "ready")
+    return "Ask for changes to the blueprint, e.g. “merge the two data agents”…";
   if (project?.stage === "plan" || project?.stage === "done") return "Ask for changes to the plan, e.g. “add an ablation study”…";
   return "Reply…";
 }

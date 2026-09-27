@@ -5,14 +5,16 @@ const STAGES: { key: Stage; label: string }[] = [
   { key: "literature", label: "Literature" },
   { key: "gaps", label: "Gaps" },
   { key: "plan", label: "Plan" },
+  { key: "blueprint", label: "Blueprint" },
 ];
 
 export default function StageBar({ stage }: { stage: Stage }) {
-  const current = STAGES.findIndex((s) => s.key === stage);
+  // "done" is the legacy name for "plan approved"; "ready" means the blueprint is approved.
+  const current = stage === "done" ? 4 : stage === "ready" ? STAGES.length : STAGES.findIndex((s) => s.key === stage);
   return (
     <ol className="flex items-center gap-3 font-mono text-[11px] uppercase tracking-[0.12em]">
       {STAGES.map((s, i) => {
-        const state = stage === "done" || i < current ? "past" : i === current ? "now" : "next";
+        const state = i < current ? "past" : i === current ? "now" : "next";
         return (
           <li key={s.key} className="flex items-center gap-3">
             {i > 0 && <span className="h-px w-5 bg-rule" />}
@@ -23,10 +25,10 @@ export default function StageBar({ stage }: { stage: Stage }) {
           </li>
         );
       })}
-      {stage === "done" && (
+      {stage === "ready" && (
         <li className="flex items-center gap-3">
           <span className="h-px w-5 bg-rule" />
-          <span className="bg-ink px-1.5 py-0.5 text-paper">Planning complete</span>
+          <span className="bg-ink px-1.5 py-0.5 text-paper">Ready to execute</span>
         </li>
       )}
     </ol>

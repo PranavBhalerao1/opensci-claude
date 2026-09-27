@@ -9,6 +9,7 @@ from datetime import datetime, timezone
 from sqlmodel import Session, select
 
 from .db import Run, engine
+from .llm import current_project, current_run
 
 log = logging.getLogger("openscientist.jobs")
 _tasks: dict[str, asyncio.Task] = {}
@@ -77,6 +78,8 @@ def start(
 
     async def wrapper() -> None:
         done_ok = False
+        current_project.set(project_id)
+        current_run.set(run.id)
         try:
             result = await job(project_id, handle)
         except Exception as exc:

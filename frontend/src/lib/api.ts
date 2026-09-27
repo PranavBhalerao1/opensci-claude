@@ -1,6 +1,6 @@
 export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
-export type Stage = "clarify" | "literature" | "gaps" | "plan" | "done";
+export type Stage = "clarify" | "literature" | "gaps" | "plan" | "done" | "blueprint" | "ready";
 
 export type Depth = "quick" | "standard" | "deep";
 
@@ -8,6 +8,7 @@ export interface ProjectSettings {
   depth?: Depth;
   max_papers?: number;
   citation_hops?: number;
+  budget?: { llm_usd: number; gpu_hours: number };
 }
 
 export interface KeyConcept {
@@ -42,6 +43,7 @@ export interface Project {
   brief: ResearchBrief | null;
   chosen_gap: (Gap & { run_id: string }) | null;
   plan: (ResearchPlan & { run_id: string; approved_at: string }) | null;
+  blueprint: { run_id: string; approved_at: string } | null;
   created_at: string;
   updated_at: string;
 }
@@ -372,4 +374,86 @@ export const planApi = {
   approve: (id: string) =>
     fetch(`${API_URL}/api/projects/${id}/plan/approve`, { method: "POST" }).then(json<Project>),
   fileUrl: (id: string, name: string) => `${API_URL}/api/projects/${id}/files/${name}`,
+};
+
+// ── Blueprint ──────────────────────────────────────────────────────────────
+
+export interface BpAgent {
+  id: string;
+  name: string;
+  model_tier: "reasoning" | "standard" | "bulk";
+  tools: string[];
+  instructions: string;
+}
+
+export interface BpTask {
+  id: string;
+  title: string;
+  agent: string;
+  objective: string;
+  steps: string[];
+  inputs: { path: string; source: string }[];
+  outputs: { path: string; format: string; description: string }[];
+  acceptance_checks: string[];
+  depends_on: string[];
+  tools: string[];
+  resources: string[];
+  compute: { kind: "cpu" | "apple_gpu" | "cuda_gpu"; est_minutes: number; timeout_minutes: number };
+  max_cost_usd: number;
+  retries: number;
+  human_required: boolean;
+}
+
+export interface MasterPlan {
+  title: string;
+  summary: string;
+  python_packages: string[];
+  system_requirements: string[];
+  agents: BpAgent[];
+  datasets: {
+    id: string;
+    name: string;
+    url: string | null;
+    access_method: string;
+    format: string;
+    license: string;
+    notes: string;
+    verified: boolean;
+  }[];
+  tasks: BpTask[];
+  checkpoints: { after_task: string; reason: string }[];
+  llm_usd_estimate: number;
+  compute_hours_estimate: number;
+  execution_notes: string[];
+}
+
+export interface BlueprintRun extends Omit<Run, "result"> {
+  result: {
+    master_plan: MasterPlan;
+    warnings: string[];
+    capabilities: string[];
+    budget: { llm_usd: number; gpu_hours: number };
+    instruction?: string;
+  } | null;
+}
+
+export const blueprintApi = {
+  get: (id: string) =>
+    fetch(`${API_URL}/api/projects/${id}/blueprint`).then(json<{ run: BlueprintRun | null; project: Project }>),
+  run: (id: string) => fetch(`${API_URL}/api/projects/${id}/blueprint/run`, { method: "POST" }).then(json<BlueprintRun>),
+  revise: (id: string, instruction: string) =>
+    fetch(`${API_URL}/api/projects/${id}/blueprint/revise`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ instruction }),
+    }).then(json<{ message: Message; run: BlueprintRun }>),
+  approve: (id: string) =>
+    fetch(`${API_URL}/api/projects/${id}/blueprint/approve`, { method: "POST" }).then(json<Project>),
+};
+
+export const usageApi = {
+  get: (id: string) =>
+    fetch(`${API_URL}/api/projects/${id}/usage`).then(
+      json<{ total: number; by_model: Record<string, number>; calls: number }>,
+    ),
 };

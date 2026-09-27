@@ -1,15 +1,26 @@
-import { planApi, type GapsRun, type Literature, type PlanRun, type Project } from "@/lib/api";
+import { useEffect, useState } from "react";
+
+import {
+  planApi,
+  usageApi,
+  type BlueprintRun,
+  type GapsRun,
+  type Literature,
+  type PlanRun,
+  type Project,
+} from "@/lib/api";
 
 interface Props {
   project: Project | null;
   lit: Literature | null;
   gapsRun: GapsRun | null;
   planRun: PlanRun | null;
+  bpRun: BlueprintRun | null;
   onOpenLibrary: () => void;
 }
 
 /** Right-hand lab notebook: a compact, always-visible record of each stage. */
-export default function Notebook({ project, lit, gapsRun, planRun, onOpenLibrary }: Props) {
+export default function Notebook({ project, lit, gapsRun, planRun, bpRun, onOpenLibrary }: Props) {
   return (
     <aside className="flex w-80 shrink-0 flex-col border-l border-rule bg-paper max-xl:hidden">
       <div className="border-b border-rule px-5 py-4">
@@ -17,7 +28,14 @@ export default function Notebook({ project, lit, gapsRun, planRun, onOpenLibrary
         <div className="font-mono text-[10px] uppercase tracking-[0.14em] text-faint">Live record of the investigation</div>
       </div>
       {project ? (
-        <Entries project={project} lit={lit} gapsRun={gapsRun} planRun={planRun} onOpenLibrary={onOpenLibrary} />
+        <Entries
+          project={project}
+          lit={lit}
+          gapsRun={gapsRun}
+          planRun={planRun}
+          bpRun={bpRun}
+          onOpenLibrary={onOpenLibrary}
+        />
       ) : (
         <p className="px-5 py-4 text-[13px] leading-relaxed text-muted">Start an investigation to open a notebook.</p>
       )}
@@ -25,7 +43,30 @@ export default function Notebook({ project, lit, gapsRun, planRun, onOpenLibrary
   );
 }
 
-function Entries({ project, lit, gapsRun, planRun, onOpenLibrary }: Props & { project: Project }) {
+function Spend({ projectId }: { projectId: string }) {
+  const [usage, setUsage] = useState<{ total: number; calls: number } | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    const load = () => usageApi.get(projectId).then((u) => !cancelled && setUsage(u)).catch(() => {});
+    void load();
+    const t = setInterval(load, 15000);
+    return () => {
+      cancelled = true;
+      clearInterval(t);
+    };
+  }, [projectId]);
+  if (!usage) return null;
+  return (
+    <div className="flex justify-between border-b border-dashed border-rule py-2">
+      <dt className="uppercase tracking-wider text-faint">Spend</dt>
+      <dd className="text-ink" title={`${usage.calls} model calls`}>
+        ${usage.total.toFixed(2)}
+      </dd>
+    </div>
+  );
+}
+
+function Entries({ project, lit, gapsRun, planRun, bpRun, onOpenLibrary }: Props & { project: Project }) {
   const { brief, settings } = project;
   const run = lit?.run;
   const overview = run?.result?.overview;
@@ -159,6 +200,33 @@ function Entries({ project, lit, gapsRun, planRun, onOpenLibrary }: Props & { pr
       </div>
 
       <div className="mt-7">
+        <Label>§5 · Blueprint</Label>
+        {bpRun?.status === "done" && bpRun.result ? (
+          <div className="mt-2">
+            <div className="font-mono text-[10px] uppercase tracking-[0.12em] text-muted">
+              {project.blueprint ? "Approved" : "Draft"} · {bpRun.result.master_plan.agents.length} agents ·{" "}
+              {bpRun.result.master_plan.tasks.length} tasks
+            </div>
+            {bpRun.result.warnings.length > 0 && (
+              <p className="mt-1 font-mono text-[11px] text-ink">! {bpRun.result.warnings.length} items need attention</p>
+            )}
+            {project.blueprint && (
+              <a
+                href={planApi.fileUrl(project.id, "master_plan.json")}
+                className="mt-2 block border border-ink px-3 py-1.5 font-mono text-[11px] transition-colors hover:bg-ink hover:text-paper"
+              >
+                ↓ master_plan.json
+              </a>
+            )}
+          </div>
+        ) : bpRun ? (
+          <p className="mt-1 font-mono text-[11px] text-muted">{bpRun.status === "error" ? "Failed" : `${bpRun.phase}…`}</p>
+        ) : (
+          <p className="mt-1 text-[12.5px] text-faint">Pending</p>
+        )}
+      </div>
+
+      <div className="mt-7">
         <Label>Record</Label>
         <dl className="mt-1 font-mono text-[12px]">
           {rows.map(([k, v]) => (
@@ -167,6 +235,7 @@ function Entries({ project, lit, gapsRun, planRun, onOpenLibrary }: Props & { pr
               <dd className="capitalize text-ink">{v}</dd>
             </div>
           ))}
+          <Spend projectId={project.id} />
         </dl>
       </div>
     </div>
