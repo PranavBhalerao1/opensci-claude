@@ -478,6 +478,16 @@ def download_package(project_id: str, session: Session = Depends(get_session)) -
     return FileResponse(path, media_type="application/zip", filename=path.name)
 
 
+@router.post("/{project_id}/runs/{kind}/cancel")
+def cancel_stage(project_id: str, kind: Literal["literature", "gaps", "plan", "blueprint", "report"],
+                 session: Session = Depends(get_session)) -> dict:
+    """Stop a running planning or report stage (execution has its own pause/cancel)."""
+    _get(session, project_id)
+    if not jobs.cancel(project_id, kind):
+        raise HTTPException(409, f"No {kind} run in progress")
+    return {"cancelled": kind}
+
+
 @router.get("/{project_id}/workspace/files")
 def workspace_files(project_id: str, session: Session = Depends(get_session)) -> list[dict]:
     _get(session, project_id)

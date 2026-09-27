@@ -23,7 +23,9 @@ from pathlib import Path
 
 from ..config import BACKEND_DIR, ROOT_DIR
 
-WORKSPACES = BACKEND_DIR / "data" / "workspaces"
+# Outside the repo: tools that walk parent directories (pytest, git, uv, npm) must not
+# run into the sandbox's deny rules for the repository.
+WORKSPACES = Path.home() / ".openscientist" / "workspaces"
 # Shared across projects: one micromamba binary and one package cache (envs hard-link from it).
 MAMBA_ROOT = BACKEND_DIR / "data" / "mamba"
 PYTHON_VERSION = "3.12"

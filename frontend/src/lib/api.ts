@@ -548,6 +548,11 @@ export interface ReportRun extends Omit<Run, "result"> {
   } | null;
 }
 
+export const stageApi = {
+  cancel: (id: string, kind: "literature" | "gaps" | "plan" | "blueprint" | "report") =>
+    fetch(`${API_URL}/api/projects/${id}/runs/${kind}/cancel`, { method: "POST" }).then(json<{ cancelled: string }>),
+};
+
 export const reportApi = {
   get: (id: string) => fetch(`${API_URL}/api/projects/${id}/report`).then(json<{ run: ReportRun | null; project: Project }>),
   run: (id: string) => fetch(`${API_URL}/api/projects/${id}/report/run`, { method: "POST" }).then(json<ReportRun>),

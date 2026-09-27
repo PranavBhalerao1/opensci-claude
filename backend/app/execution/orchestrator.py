@@ -55,6 +55,9 @@ Work only inside the project workspace (your current directory); other agents sh
 - Split large independent work (sweeps, per-sample or per-target runs) across
   spawn_subagents when available.
 - Share useful discoveries with post_note; check read_notes for what others found.
+- When a request fails (4xx/5xx), debug it: retry with minimal headers (no custom
+  Accept/Content-Type unless the docs require them), compare with the
+  http_request tool (a known-good client), read the error body, and check the docs.
 - If a service truly requires an account or API key, call request_credential.
 - Write real, tested code: run it, fix errors, and keep code in files (src/, scripts/).
 - Finish by calling report_result with the artifacts you produced.
@@ -74,9 +77,11 @@ class Verdict(BaseModel):
 
 VERIFY_INSTRUCTIONS = """\
 You verify a research task's outputs against its acceptance checks, using only the
-file previews given. FACTS lines are computed exactly by code; trust them. A check
-passes if the previews show it is met; if the preview cannot confirm it, fail it
-and say what is missing. Your verdict must agree with your own reason."""
+evidence given. FACTS are computed by the platform (file statistics, test runs it
+executed itself); trust them. The AGENT REPORT is the agent's own claim: accept it
+only where it is consistent with the files and FACTS, never as sole proof of a
+number. A check passes if the evidence shows it is met; if the evidence cannot
+confirm it, fail it and say what is missing. Your verdict must agree with your reason."""
 
 
 # ── Control ────────────────────────────────────────────────────────────────
@@ -115,6 +120,24 @@ def model_for(tier: str, policy: str) -> str:
     if policy == "economy" and tier == "reasoning":
         return settings.model_standard
     return tiers.get(tier, settings.model_standard)
+
+
+ESCALATE = {"bulk": "standard", "standard": "reasoning", "reasoning": "reasoning"}
+ESCALATED_MIN_BUDGET = 0.12  # a stronger model needs room to debug
+
+
+def escalated_model(tier: str, policy: str, attempt: int) -> tuple[str, bool]:
+    """First attempt: the assigned tier under the policy. Retries escalate one tier
+    (cheap first, stronger only when a task has already failed). Minimal policy
+    escalates at most to the standard tier."""
+    base = model_for(tier, policy)
+    if attempt <= 1:
+        return base, False
+    up = ESCALATE[tier]
+    if policy == "minimal":
+        up = "standard"
+    stronger = model_for(up, "default" if policy == "minimal" else policy)
+    return stronger, stronger != base
 
 
 def spent(project_id: str) -> float:
@@ -175,7 +198,11 @@ def _task_prompt(mp: dict, task: dict, states: dict[str, TaskState], feedback: s
     if resources:
         parts.append("Resource notes:\n" + json.dumps(resources, ensure_ascii=False))
     if feedback:
-        parts.append(f"PREVIOUS ATTEMPT FAILED. Fix this:\n{feedback}")
+        parts.append(
+            f"PREVIOUS ATTEMPT FAILED. Fix this:\n{feedback}\n\nFiles written by the failed attempt may be "
+            "stale or wrong. Before reporting, make sure every file you touched (including status, log and "
+            "provenance files) reflects the final result; delete ones that no longer apply."
+        )
     return "\n\n".join(parts)
 
 
@@ -214,14 +241,32 @@ def _previews(sandbox, outputs: list[dict]) -> str:
     return "\n\n".join(blocks)
 
 
-async def _verify(task: dict, sandbox, policy: str) -> list[dict]:
+async def _run_tests(sandbox, outputs: list[dict]) -> str | None:
+    """If the task produced tests, run them ourselves so 'tests pass' is a fact, not a claim."""
+    tests = [o["path"] for o in outputs
+             if o["path"].endswith(".py") and ("tests/" in o["path"] or o["path"].rsplit("/", 1)[-1].startswith("test_"))]
+    tests = [t for t in tests if sandbox.path(t).is_file()]
+    if not tests:
+        return None
+    await sandbox.install(["pytest"])
+    res = await sandbox.run([str(sandbox.python), "-m", "pytest", "-q", "-p", "no:cacheprovider", *tests], 900)
+    tail = "\n".join((res.stdout + res.stderr).strip().splitlines()[-15:])
+    return f"FACTS: platform ran `pytest -q {' '.join(tests)}` → exit code {res.exit_code}\n{tail}"
+
+
+async def _verify(task: dict, sandbox, policy: str, report: dict | None = None) -> list[dict]:
     if not task["acceptance_checks"]:
         return []
+    evidence = "Output previews:\n" + _previews(sandbox, task["outputs"])
+    if tests := await _run_tests(sandbox, task["outputs"]):
+        evidence = tests + "\n\n" + evidence
+    if report:
+        evidence += "\n\nAGENT REPORT (claims):\n" + json.dumps(report, ensure_ascii=False)[:4000]
     verdict = await parse(
         model=model_for("standard", policy),
         instructions=VERIFY_INSTRUCTIONS,
         messages=[{"role": "user", "content": "Acceptance checks:\n" + "\n".join(f"- {c}" for c in task["acceptance_checks"])
-                   + "\n\nOutput previews:\n" + _previews(sandbox, task["outputs"])}],
+                   + "\n\n" + evidence}],
         schema=Verdict,
         reasoning_effort="low",
     )
@@ -266,16 +311,20 @@ async def _execute(project_id: str, mp: dict, task: dict, state_id: str, policy:
 
     agent = next(a for a in mp["agents"] if a["id"] == task["agent"])
     sandbox = sandbox_for(project_id)
+    model, escalated = escalated_model(agent["model_tier"], policy, me.attempts + 1)
+    if escalated:
+        _append_event(state_id, {"type": "message", "step": 0, "text": f"Retrying with a stronger model ({model})",
+                                 "cost": 0.0})
     spec = AgentSpec(
         name=f"{agent['name']} ({task['id']})",
         instructions=COMMON_INSTRUCTIONS.format(
             name=agent["name"], role=agent["instructions"], today=_now().date().isoformat()
         ),
-        model=model_for(agent["model_tier"], policy),
+        model=model,
         tools=[t for t in task["tools"] if t in agent["tools"] and t in TOOLS] or agent["tools"],
         max_steps=MAX_AGENT_STEPS,
-        max_cost=max(0.05, float(task["max_cost_usd"])),
-        reasoning_effort="low" if agent["model_tier"] == "bulk" or policy == "minimal" else "medium",
+        max_cost=max(ESCALATED_MIN_BUDGET if escalated else 0.05, float(task["max_cost_usd"])),
+        reasoning_effort="medium" if escalated else ("low" if agent["model_tier"] == "bulk" or policy == "minimal" else "medium"),
     )
     ctx = ToolContext(project_id, sandbox, http, agent_name=agent["name"])
     sub_cost = [0.0]
@@ -295,8 +344,14 @@ async def _execute(project_id: str, mp: dict, task: dict, state_id: str, policy:
         return
 
     missing = [o["path"] for o in task["outputs"] if not sandbox.path(o["path"]).exists()]
-    checks = await _verify(task, sandbox, policy) if res.status in ("success", "partial") and not missing else []
-    passed = res.status == "success" and not missing and all(c["passed"] for c in checks)
+    report = {"status": res.status, "summary": res.summary, "metrics": res.metrics, "issues": res.issues}
+    # Verify whenever every output exists — an agent cut off by its budget or step limit
+    # may already have finished the work. An explicit "failed" report is trusted.
+    verifiable = not missing and res.status != "failed"
+    checks = await _verify(task, sandbox, policy, report) if verifiable else []
+    passed = verifiable and bool(checks or not task["acceptance_checks"]) and all(c["passed"] for c in checks)
+    if passed and res.status in ("budget_exceeded", "step_limit"):
+        res.issues.append(f"Agent stopped ({res.status}) before reporting; outputs verified by the platform.")
     problems = (
         [f"Missing outputs: {', '.join(missing)}"] if missing else []
     ) + [f"Check failed: {c['check']} — {c['reason']}" for c in checks if not c["passed"]] + res.issues
@@ -328,8 +383,12 @@ def prepare_states(project_id: str, bp_run_id: str, mp: dict) -> None:
             st = existing.get(t["id"])
             if st is None:
                 s.add(TaskState(project_id=project_id, blueprint_run_id=bp_run_id, task_id=t["id"], agent=t["agent"]))
-            elif st.status in ("running", "cancelled", "failed", "blocked"):
+            elif st.status in ("running", "cancelled", "blocked"):
                 st.status, st.attempts = "pending", 0
+                s.add(st)
+            elif st.status == "failed":
+                # Keep the attempt count so the retry escalates to a stronger model.
+                st.status = "pending"
                 s.add(st)
         s.commit()
 

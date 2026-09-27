@@ -16,7 +16,7 @@ from .agents import gaps, literature
 from .agents import blueprint as blueprint_agent
 from .agents import plan as plan_agent
 from .agents import report as report_agent
-from .db import Project, Run, engine
+from .db import Project, Run, TaskState, engine
 from .execution import orchestrator
 
 
@@ -121,10 +121,14 @@ def start_execution(project_id: str) -> Run:
 
 
 async def _after_execution(project_id: str) -> None:
+    """Autonomous projects write the report only when every task finished (done or
+    skipped); otherwise the run stops for attention rather than reporting on gaps."""
     with Session(engine) as s:
         project = s.get(Project, project_id)
         autonomous, stage = project.autonomous, project.stage
-    if autonomous and stage == "executed":
+        states = s.exec(select(TaskState).where(TaskState.blueprint_run_id == (project.blueprint or {}).get("run_id"))).all()
+    finished = bool(states) and all(st.status in ("done", "skipped") for st in states)
+    if autonomous and stage == "executed" and finished:
         start_report(project_id)
 
 

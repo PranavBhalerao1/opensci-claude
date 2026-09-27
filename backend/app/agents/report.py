@@ -95,6 +95,10 @@ a report scaffold for the Report Agent. Be rigorous and honest:
 - Record failed, skipped or blocked tasks and substitutions as deviations.
 - Figures: only files that exist in the inventory.
 - Citations: only keys from the reference list.
+- Report numbers at sensible precision (3-4 significant figures) in claims and the
+  verdict; exact values belong in the evidence entries.
+- Interpret carefully: e.g. an effect that appears later than the assumed break is
+  evidence about timing (such as delayed adoption), not automatically against it.
 Never invent results."""
 
 REPORT_INSTRUCTIONS = """\

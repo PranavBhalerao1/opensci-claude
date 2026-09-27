@@ -217,7 +217,8 @@ async def run(project_id: str, h: RunHandle, feedback: str | None = None) -> dic
         instructions=PROPOSE_INSTRUCTIONS,
         messages=[{"role": "user", "content": context}],
         schema=GapProposals,
-        reasoning_effort="high",
+        # Medium: the novelty check afterwards catches weak gaps; high doubled cost and time.
+        reasoning_effort="medium",
     )
     gaps = proposals.gaps[:6]
     h.counts(proposed=len(gaps), checked=0)

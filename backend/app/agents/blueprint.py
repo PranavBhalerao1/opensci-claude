@@ -378,8 +378,9 @@ def make_revision_job(instruction: str):
         capabilities = sandbox_for(project_id).capabilities
         budget = _budget(project)
         h.phase("compiling", "Revising the blueprint")
+        policy = (project.settings or {}).get("model_policy", "default")
         mp = await parse(
-            model=settings.model_standard,
+            model=settings.model_bulk if policy == "minimal" else settings.model_standard,
             instructions=COMPILE_INSTRUCTIONS + "\nRevise the blueprint per the instruction; keep everything else.",
             messages=[{"role": "user", "content": f"Instruction: {instruction}\n\nTools:\n{describe(capabilities)}"
                        f"\n\nBlueprint:\n{json.dumps(prev.result['master_plan'])}"}],

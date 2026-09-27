@@ -93,6 +93,17 @@ Step 3 · Consolidation & report:
 Models: `gpt-6-astra` only for heavy reasoning / agentic stages (gaps, plan); `gpt-6-sol` and
 `gpt-6-luna` everywhere else.
 
+## Reliability
+
+- **Model escalation**: a failed task retries on the next model tier (Luna → Sol → Astra), so most
+  work stays cheap and only hard tasks pay for a stronger model.
+- **Platform-verified checks**: the orchestrator runs produced tests itself and gives the verifier
+  exact file facts; agents cut off by budget are still verified if their outputs exist.
+- **Autonomous safety**: the report is written only when every task finished; any stage can be
+  stopped (header "Stop" button) and retried; execution pauses at the budget.
+- Workspaces live in `~/.openscientist/workspaces` (outside the repo, so tools like pytest/git work).
+- Tests: `cd backend && uv run pytest` (offline regression suite).
+
 ## Run locally
 
 Put keys in `.env` at the repo root (see `.env.example`), then in two terminals:

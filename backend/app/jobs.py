@@ -82,6 +82,12 @@ def start(
         current_run.set(run.id)
         try:
             result = await job(project_id, handle)
+        except asyncio.CancelledError:
+
+            def cancelled(r: Run) -> None:
+                r.status, r.error, r.finished_at = "error", "Cancelled", _now()
+
+            handle._update(cancelled)
         except Exception as exc:
             log.exception("%s run failed", kind)
 
@@ -107,6 +113,15 @@ def start(
 
     _tasks[key] = asyncio.create_task(wrapper())
     return run
+
+
+def cancel(project_id: str, kind: str) -> bool:
+    """Stop a running stage job. The wrapper marks its Run as an error ("Cancelled")."""
+    task = _tasks.get(f"{project_id}:{kind}")
+    if not task or task.done():
+        return False
+    task.cancel()
+    return True
 
 
 def mark_interrupted() -> None:

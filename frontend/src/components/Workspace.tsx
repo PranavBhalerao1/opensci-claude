@@ -13,6 +13,7 @@ import {
   planApi,
   reportApi,
   sendTurn,
+  stageApi,
   type Answer,
   type BlueprintRun as BlueprintRunT,
   type Depth,
@@ -441,6 +442,34 @@ export default function Workspace({ projectId: initialId }: { projectId?: string
 
   const empty = !projectId && messages.length === 0;
 
+  // The one planning/report stage currently running, if any (execution has its own controls).
+  const runningStage = (
+    [
+      ["literature", lit?.run?.status],
+      ["gaps", gapsRun?.status],
+      ["plan", planRun?.run?.status],
+      ["blueprint", bpRun?.status],
+      ["report", reportRun?.status],
+    ] as const
+  ).find(([, status]) => status === "running")?.[0];
+
+  const stopStage = async () => {
+    if (!projectId || !runningStage) return;
+    if (!confirm(`Stop the ${runningStage} stage? You can retry it afterwards.`)) return;
+    try {
+      await stageApi.cancel(projectId, runningStage);
+      // Refetch the affected stage so its card shows the stopped state.
+      if (runningStage === "literature") setLit((l) => (l?.run ? { ...l, run: { ...l.run, status: "error", error: "Cancelled" } } : l));
+      if (runningStage === "gaps") setGapsRun((r) => (r ? { ...r, status: "error", error: "Cancelled" } : r));
+      if (runningStage === "plan")
+        setPlanRun((p) => (p?.run ? { ...p, run: { ...p.run, status: "error", error: "Cancelled" } } : p));
+      if (runningStage === "blueprint") setBpRun((r) => (r ? { ...r, status: "error", error: "Cancelled" } : r));
+      if (runningStage === "report") setReportRun((r) => (r ? { ...r, status: "error", error: "Cancelled" } : r));
+    } catch (e) {
+      setError(String(e));
+    }
+  };
+
   return (
     <div className="flex h-full">
       <Sidebar
@@ -454,7 +483,16 @@ export default function Workspace({ projectId: initialId }: { projectId?: string
       <main className="flex min-w-0 flex-1 flex-col">
         <header className="flex h-14 shrink-0 items-center justify-between border-b border-rule px-6">
           <StageBar stage={project?.stage ?? "clarify"} />
-          <span className="shrink-0 pl-4 font-mono text-[11px] uppercase tracking-[0.12em] text-faint">
+          <span className="flex shrink-0 items-center gap-3 pl-4 font-mono text-[11px] uppercase tracking-[0.12em] text-faint">
+            {runningStage && (
+              <button
+                onClick={stopStage}
+                title={`Stop the running ${runningStage} stage`}
+                className="border border-ink px-2 py-0.5 text-ink hover:bg-ink hover:text-paper"
+              >
+                ■ Stop {runningStage}
+              </button>
+            )}
             {project ? (project.autonomous ? "Autonomous" : "Guided") : ""}
           </span>
         </header>
