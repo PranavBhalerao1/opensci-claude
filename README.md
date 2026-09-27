@@ -66,6 +66,18 @@ Every model call's cost is recorded (`Usage` table) and shown per project in the
    The UI shows agent lanes with live steps, a task table with checks and full agent logs, and a
    workspace browser with CSV/image/text previews.
 
+9. **Open-ended agents & swarms** — agents are not limited to a tool list: they find services with
+   `web_search`, read docs with `read_webpage`, and call them via `http_request` or their own client
+   code; install software via pip or `install_conda_packages` (private micromamba, conda-forge /
+   bioconda, shared package cache); run long jobs with `start_process` / `check_process` / `wait`;
+   edit code precisely with `edit_file`; fan out with `spawn_subagents` (parallel sub-agents sharing
+   the workspace); share findings via `post_note` / `read_notes`; and ask the user for a key with
+   `request_credential` (stored per project, exposed only to that sandbox). Blueprints may use
+   2–12 agents and up to 4 tasks run at once. Verified end to end: a 4-agent swarm implemented and
+   tested a novel attention mechanism and trained it against a baseline in parallel sub-agents on
+   the Apple GPU ($0.11); a single agent chose a COX-2 structure, installed AutoDock Vina via conda,
+   docked ibuprofen and validated the pose by re-docking (0.44 Å RMSD) ($0.36).
+
 **Next: Step 3** — consolidation + report agents: turn the executed workspace into a scaffolded
 report and a conference-style paper.
 

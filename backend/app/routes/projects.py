@@ -1,4 +1,5 @@
 import json
+import re
 import shutil
 from collections.abc import AsyncIterator
 from datetime import datetime, timezone
@@ -16,7 +17,7 @@ from ..agents import clarify
 from ..agents import blueprint as blueprint_agent
 from ..agents import plan as plan_agent
 from ..config import settings
-from ..db import Message, Paper, Project, ProjectPaper, Run, TaskState, Usage, engine, get_session
+from ..db import Message, Paper, Project, ProjectPaper, Run, Secret, TaskState, Usage, engine, get_session
 from ..graph import project_graph
 from ..execution import orchestrator
 from ..execution.sandbox import sandbox_for
@@ -92,7 +93,7 @@ def delete_project(project_id: str, session: Session = Depends(get_session)) -> 
     if any(jobs.is_running(project_id, k) for k in ("literature", "gaps", "plan", "blueprint", "execute")):
         raise HTTPException(409, "Stop the running stage before deleting")
     # Papers stay in the shared cache and usage rows stay for spend history.
-    for model in (Message, ProjectPaper, TaskState, Run):
+    for model in (Message, ProjectPaper, TaskState, Run, Secret):
         for row in session.exec(select(model).where(model.project_id == project_id)):
             session.delete(row)
     session.delete(project)
@@ -428,6 +429,27 @@ def task_action(project_id: str, task_id: str, action: Literal["complete", "skip
         raise HTTPException(409, str(exc)) from exc
 
 
+class SecretIn(BaseModel):
+    name: str
+    value: str
+
+
+@router.get("/{project_id}/secrets")
+def list_secrets(project_id: str, session: Session = Depends(get_session)) -> list[str]:
+    _get(session, project_id)
+    return [r.name for r in session.exec(select(Secret).where(Secret.project_id == project_id))]
+
+
+@router.post("/{project_id}/secrets")
+def add_secret(project_id: str, body: SecretIn, session: Session = Depends(get_session)) -> dict:
+    _get(session, project_id)
+    name = body.name.strip().upper()
+    if not re.match(r"^[A-Z][A-Z0-9_]{1,63}$", name) or not body.value.strip():
+        raise HTTPException(400, "Invalid credential name or empty value")
+    requeued = orchestrator.provide_secret(project_id, name, body.value.strip())
+    return {"name": name, "requeued_tasks": requeued}
+
+
 @router.get("/{project_id}/workspace/files")
 def workspace_files(project_id: str, session: Session = Depends(get_session)) -> list[dict]:
     _get(session, project_id)
@@ -437,7 +459,7 @@ def workspace_files(project_id: str, session: Session = Depends(get_session)) ->
     out = []
     for p in sorted(root.rglob("*")):
         rel = p.relative_to(root)
-        if p.is_file() and not any(part.startswith(".") for part in rel.parts):
+        if p.is_file() and not any(part.startswith(".") or part == "__pycache__" for part in rel.parts):
             out.append({"path": str(rel), "size": p.stat().st_size})
         if len(out) >= 1000:
             break

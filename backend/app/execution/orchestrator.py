@@ -9,6 +9,7 @@ TaskState table, so a restarted server resumes where it left off.
 
 import asyncio
 import json
+import re
 from datetime import datetime, timezone
 
 import httpx
@@ -17,7 +18,7 @@ from sqlalchemy import func
 from sqlmodel import Session, select
 
 from ..config import settings
-from ..db import Project, Run, TaskState, Usage, engine
+from ..db import Project, Run, Secret, TaskState, Usage, engine
 from ..jobs import RunHandle
 from ..llm import parse
 from . import catalog
@@ -25,16 +26,17 @@ from .agent import AgentSpec, run_agent
 from .sandbox import sandbox_for
 from .tools import TOOLS, ToolContext
 
-MAX_PARALLEL = 3
+MAX_PARALLEL = 4
+MAX_AGENT_STEPS = 80
 MAX_EVENTS = 150
-PREVIEW_CHARS = 3000
+PREVIEW_CHARS = 12_000  # whole document up to this size; longer ones show head and tail
 TEXT_SUFFIXES = {".csv", ".tsv", ".json", ".md", ".txt", ".py", ".yaml", ".yml", ".tex", ".bib", ".r", ".qmd", ".log"}
 SATISFIED = {"done", "skipped"}
 TERMINAL = {"done", "skipped", "failed", "blocked", "cancelled"}
 
 COMMON_INSTRUCTIONS = """\
-You are {name}, an agent on an OpenScientist research team. Work only inside the
-project workspace (your current directory); other agents share it.
+You are {name}, an agent on an OpenScientist research team. Today's date is {today}.
+Work only inside the project workspace (your current directory); other agents share it.
 - Produce exactly the outputs listed, at exactly those paths.
 - Check your work before reporting: print shapes, heads, summary statistics.
 - Keep tool output short: print summaries, never whole large files.
@@ -42,6 +44,19 @@ project workspace (your current directory); other agents share it.
 - NEVER fabricate data, results or citations. If something is impossible (data
   unavailable, access denied, missing software), report status "failed" or
   "partial" and explain the issue.
+- You are not limited to known tools or APIs. If you need a service, database,
+  web server or software, find it yourself: web_search, read its documentation
+  with read_webpage, then use it via http_request or by writing client code
+  (submit jobs, poll for results, parse outputs). Install software with
+  install_packages (pip) or install_conda_packages (conda-forge/bioconda), or
+  download and build it in the workspace.
+- For long computations (training, simulations, docking, servers) use
+  start_process and poll with check_process/wait instead of blocking.
+- Split large independent work (sweeps, per-sample or per-target runs) across
+  spawn_subagents when available.
+- Share useful discoveries with post_note; check read_notes for what others found.
+- If a service truly requires an account or API key, call request_credential.
+- Write real, tested code: run it, fix errors, and keep code in files (src/, scripts/).
 - Finish by calling report_result with the artifacts you produced.
 
 {role}"""
@@ -190,7 +205,10 @@ def _previews(sandbox, outputs: list[dict]) -> str:
         elif p.suffix.lower() in TEXT_SUFFIXES and size:
             text = p.read_text(errors="replace")
             lines = text.count("\n")
-            blocks.append(f"### {o['path']} ({size:,} bytes, {lines:,} lines)\n{text[:PREVIEW_CHARS]}")
+            if len(text) > PREVIEW_CHARS:
+                head, tail = PREVIEW_CHARS * 2 // 3, PREVIEW_CHARS // 3
+                text = f"{text[:head]}\n… [{len(text) - PREVIEW_CHARS:,} chars omitted] …\n{text[-tail:]}"
+            blocks.append(f"### {o['path']} ({size:,} bytes, {lines:,} lines)\n{text}")
         else:
             blocks.append(f"### {o['path']} ({size:,} bytes, binary {p.suffix or 'file'}; content not shown)")
     return "\n\n".join(blocks)
@@ -210,6 +228,35 @@ async def _verify(task: dict, sandbox, policy: str) -> list[dict]:
     return [r.model_dump() for r in verdict.results]
 
 
+def _subagent_runner(spec: AgentSpec, ctx: ToolContext, state_id: str, budget: float, cost_box: list[float]):
+    """Build the spawn callback: children share the workspace, cannot spawn further, split the budget."""
+
+    async def spawn(subtasks: list[dict]) -> list[dict]:
+        child_budget = max(0.03, budget * 0.7 / len(subtasks))
+        child_tools = [t for t in spec.tools if t != "spawn_subagents"]
+
+        async def one(sub: dict) -> dict:
+            name = re.sub(r"[^A-Za-z0-9_-]", "_", sub["name"])[:30]
+            child = AgentSpec(
+                name=f"{spec.name} › {name}", instructions=spec.instructions, model=spec.model, tools=child_tools,
+                max_steps=MAX_AGENT_STEPS, max_cost=child_budget, reasoning_effort=spec.reasoning_effort,
+            )
+            child_ctx = ToolContext(ctx.project_id, ctx.sandbox, ctx.http, agent_name=child.name)
+            task = sub["instructions"] + "\n\nRequired outputs:\n" + "\n".join(f"- {o}" for o in sub["outputs"])
+            res = await run_agent(child, task, child_ctx,
+                                  on_event=lambda e: _append_event(state_id, {**e, "sub": name}))
+            cost_box[0] += res.cost
+            missing = [o for o in sub["outputs"] if not ctx.sandbox.path(o).exists()]
+            return {"name": name, "status": res.status, "summary": res.summary, "artifacts": res.artifacts,
+                    "metrics": res.metrics, "missing_outputs": missing, "cost": round(res.cost, 4)}
+
+        _append_event(state_id, {"type": "message", "step": 0, "text": f"Spawning {len(subtasks)} sub-agents",
+                                 "cost": 0.0})
+        return list(await asyncio.gather(*(one(s) for s in subtasks)))
+
+    return spawn
+
+
 async def _execute(project_id: str, mp: dict, task: dict, state_id: str, policy: str, http: httpx.AsyncClient) -> None:
     with Session(engine) as s:
         states = {st.task_id: st for st in s.exec(select(TaskState).where(TaskState.blueprint_run_id == s.get(TaskState, state_id).blueprint_run_id))}
@@ -221,16 +268,31 @@ async def _execute(project_id: str, mp: dict, task: dict, state_id: str, policy:
     sandbox = sandbox_for(project_id)
     spec = AgentSpec(
         name=f"{agent['name']} ({task['id']})",
-        instructions=COMMON_INSTRUCTIONS.format(name=agent["name"], role=agent["instructions"]),
+        instructions=COMMON_INSTRUCTIONS.format(
+            name=agent["name"], role=agent["instructions"], today=_now().date().isoformat()
+        ),
         model=model_for(agent["model_tier"], policy),
         tools=[t for t in task["tools"] if t in agent["tools"] and t in TOOLS] or agent["tools"],
-        max_steps=40,
+        max_steps=MAX_AGENT_STEPS,
         max_cost=max(0.05, float(task["max_cost_usd"])),
         reasoning_effort="low" if agent["model_tier"] == "bulk" or policy == "minimal" else "medium",
     )
-    ctx = ToolContext(project_id, sandbox, http)
+    ctx = ToolContext(project_id, sandbox, http, agent_name=agent["name"])
+    sub_cost = [0.0]
+    if "spawn_subagents" in spec.tools:
+        ctx.spawn = _subagent_runner(spec, ctx, state_id, spec.max_cost, sub_cost)
     res = await run_agent(spec, _task_prompt(mp, task, states, feedback), ctx,
                           on_event=lambda e: _append_event(state_id, e))
+
+    if res.status == "needs_credential":
+        c = res.credential
+        _update(
+            state_id, status="human", attempts=me.attempts, cost=me.cost + res.cost + sub_cost[0],
+            note=f"Needs credential {c['env_var']} for {c['service']}: {c['reason']}"
+                 + (f" Sign up: {c['signup_url']}" if c.get("signup_url") else ""),
+            finished_at=_now(),
+        )
+        return
 
     missing = [o["path"] for o in task["outputs"] if not sandbox.path(o["path"]).exists()]
     checks = await _verify(task, sandbox, policy) if res.status in ("success", "partial") and not missing else []
@@ -245,7 +307,7 @@ async def _execute(project_id: str, mp: dict, task: dict, state_id: str, policy:
     _update(
         state_id,
         status="done" if passed else ("pending" if retry else "failed"),
-        cost=me.cost + res.cost,
+        cost=me.cost + res.cost + sub_cost[0],
         summary=res.summary,
         artifacts=res.artifacts,
         checks=checks,
@@ -290,6 +352,7 @@ async def run(project_id: str, h: RunHandle) -> dict:
     checkpoints = {} if autonomous else {c["after_task"]: c["reason"] for c in mp["checkpoints"]}
     capabilities = sandbox_for(project_id).capabilities
     prepare_states(project_id, bp_run_id, mp)
+    load_secrets(project_id)
 
     ctl = Control()
     _controls[project_id] = ctl
@@ -376,6 +439,7 @@ async def run(project_id: str, h: RunHandle) -> dict:
                                 ctl.pause(f"checkpoint:{tid}: {checkpoints[tid]}")
     finally:
         _controls.pop(project_id, None)
+        sandbox.stop_all()  # background processes do not outlive the run
         with Session(engine) as s:
             for st in s.exec(select(TaskState).where(TaskState.blueprint_run_id == bp_run_id, TaskState.status == "running")):
                 st.status, st.note = "cancelled", "Execution stopped"
@@ -396,6 +460,33 @@ async def run(project_id: str, h: RunHandle) -> dict:
 
 
 # ── Human actions ──────────────────────────────────────────────────────────
+
+
+def load_secrets(project_id: str) -> None:
+    with Session(engine) as s:
+        rows = s.exec(select(Secret).where(Secret.project_id == project_id)).all()
+    sandbox_for(project_id).secrets = {r.name: r.value for r in rows}
+
+
+def provide_secret(project_id: str, name: str, value: str) -> int:
+    """Store a credential, expose it to the sandbox, and re-queue tasks waiting for it."""
+    with Session(engine) as s:
+        for old in s.exec(select(Secret).where(Secret.project_id == project_id, Secret.name == name)):
+            s.delete(old)
+        s.add(Secret(project_id=project_id, name=name, value=value))
+        waiting = s.exec(select(TaskState).where(TaskState.project_id == project_id, TaskState.status == "human")).all()
+        requeued = 0
+        for st in waiting:
+            if (st.note or "").startswith(f"Needs credential {name} "):
+                st.status, st.note = "pending", None
+                s.add(st)
+                requeued += 1
+        s.commit()
+    load_secrets(project_id)
+    ctl = control(project_id)
+    if ctl and ctl.reason and ctl.reason.startswith("human"):
+        ctl.resume()
+    return requeued
 
 
 def set_task_status(project_id: str, task_id: str, status: str, note: str | None) -> TaskState:

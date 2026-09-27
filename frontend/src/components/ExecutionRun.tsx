@@ -13,6 +13,7 @@ interface Props {
   onResume: (budget?: number) => Promise<void>;
   onCancel: () => Promise<void>;
   onTask: (taskId: string, action: "complete" | "skip", note?: string) => Promise<void>;
+  onSecret: (name: string, value: string) => Promise<void>;
   onOpenFiles: (path?: string) => void;
 }
 
@@ -86,6 +87,7 @@ export default function ExecutionRun(props: Props) {
                     open={open === t.id}
                     onToggle={() => setOpen(open === t.id ? null : t.id)}
                     onTask={props.onTask}
+                    onSecret={props.onSecret}
                     onOpenFiles={props.onOpenFiles}
                   />
                 ) : null;
@@ -313,7 +315,7 @@ function Lanes({ mp, byTask, onOpen }: { mp: MasterPlan; byTask: Map<string, Tas
               <div className="mt-2 border-l-2 border-ink pl-3 font-mono text-[11px] leading-relaxed text-muted">
                 {live.events.slice(-4).map((e, i) => (
                   <div key={i} className="truncate">
-                    <span className="text-faint">step {e.step}</span> {e.tool ?? "note"}{" "}
+                    <span className="text-faint">{e.sub ? `${e.sub} · ` : ""}step {e.step}</span> {e.tool ?? "note"}{" "}
                     <span className="text-ink">{(e.args ?? e.text ?? "").slice(0, 110)}</span>
                   </div>
                 ))}
@@ -334,6 +336,7 @@ function TaskRow({
   open,
   onToggle,
   onTask,
+  onSecret,
   onOpenFiles,
 }: {
   title: string;
@@ -342,9 +345,12 @@ function TaskRow({
   open: boolean;
   onToggle: () => void;
   onTask: Props["onTask"];
+  onSecret: Props["onSecret"];
   onOpenFiles: Props["onOpenFiles"];
 }) {
   const [note, setNote] = useState("");
+  const [secret, setSecret] = useState("");
+  const credential = st.status === "human" ? /^Needs credential ([A-Z0-9_]+)/.exec(st.note ?? "")?.[1] : undefined;
   const duration =
     st.started_at && st.finished_at
       ? Math.round((new Date(st.finished_at).getTime() - new Date(st.started_at).getTime()) / 1000)
@@ -402,13 +408,40 @@ function TaskRow({
               <div className="mt-2 max-h-72 overflow-y-auto border border-rule bg-paper p-3 font-mono text-[11px] leading-relaxed">
                 {st.events.map((e, i) => (
                   <div key={i} className="border-b border-dashed border-rule py-1 last:border-b-0">
-                    <span className="text-faint">step {e.step} · ${e.cost.toFixed(4)}</span> <span>{e.tool ?? "message"}</span>
+                    <span className="text-faint">
+                      {e.sub ? `${e.sub} · ` : ""}step {e.step} · ${e.cost.toFixed(4)}
+                    </span>{" "}
+                    <span>{e.tool ?? "message"}</span>
                     <div className="break-all text-muted">{e.args ?? e.text}</div>
                     {e.result && <div className="whitespace-pre-line break-all text-faint">→ {e.result}</div>}
                   </div>
                 ))}
               </div>
             </details>
+          )}
+          {credential && (
+            <form
+              className="flex flex-wrap items-center gap-2 border border-ink bg-paper px-3 py-2"
+              onSubmit={async (e) => {
+                e.preventDefault();
+                if (!secret.trim()) return;
+                await onSecret(credential, secret.trim());
+                setSecret("");
+              }}
+            >
+              <span className="font-mono text-[11px]">{credential}</span>
+              <input
+                type="password"
+                autoComplete="off"
+                value={secret}
+                onChange={(e) => setSecret(e.target.value)}
+                placeholder="Paste the key — stored locally, only this project's sandbox sees it"
+                className="min-w-0 flex-1 bg-transparent py-1 font-mono text-[12px] outline-none placeholder:text-faint"
+              />
+              <button type="submit" className="bg-ink px-3 py-1.5 text-[12.5px] text-paper">
+                Provide &amp; retry
+              </button>
+            </form>
           )}
           {actionable && (
             <div className="flex flex-wrap items-center gap-2">

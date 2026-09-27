@@ -27,11 +27,12 @@ class AgentSpec:
 
 @dataclass
 class AgentResult:
-    status: str  # success | partial | failed | step_limit | budget_exceeded | error
+    status: str  # success | partial | failed | step_limit | budget_exceeded | needs_credential
     summary: str
     artifacts: list[str] = field(default_factory=list)
     metrics: dict = field(default_factory=dict)
     issues: list[str] = field(default_factory=list)
+    credential: dict | None = None
     steps: int = 0
     cost: float = 0.0
 
@@ -67,6 +68,7 @@ async def run_agent(spec: AgentSpec, task: str, ctx: ToolContext, on_event: Even
             tools=specs(tool_names),
             previous_response_id=previous,
             reasoning={"effort": spec.reasoning_effort},
+            truncation="auto",  # long coding/training sessions drop the oldest context instead of failing
         )
         cost += record_usage(spec.model, response)
         previous = response.id
@@ -103,6 +105,10 @@ async def run_agent(spec: AgentSpec, task: str, ctx: ToolContext, on_event: Even
             })
             pending.append({"type": "function_call_output", "call_id": call.call_id, "output": output})
 
+        if ctx.credential_request is not None:
+            c = ctx.credential_request
+            return AgentResult("needs_credential", f"Needs {c['env_var']} for {c['service']}: {c['reason']}",
+                               credential=c, steps=step, cost=cost)
         if ctx.result is not None:
             r = ctx.result
             return AgentResult(

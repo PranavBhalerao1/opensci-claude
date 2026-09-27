@@ -127,9 +127,14 @@ alternatives in notes. Never invent URLs."""
 
 COMPILE_INSTRUCTIONS = """\
 You are the Blueprint Agent of OpenScientist. Compile the approved research plan
-into an exact execution blueprint for autonomous agents working in a shared project
-workspace. Research may be in any field; agents reach domain services through
-http_request and domain software through install_packages.
+into an exact execution blueprint for a team (a swarm) of autonomous agents working
+in a shared project workspace. Research may be in any field, on any topic, with any
+tool or server. Agents are NOT limited to the resource catalog: they can find any
+service or software with web_search/read_webpage, call it with http_request or
+their own client code, install software via pip or conda (conda-forge/bioconda),
+download and build tools, run long jobs as background processes, fan work out to
+parallel sub-agents, share findings through team notes, and ask the user for an
+API key when a service requires one.
 
 Rules:
 - One ExecTask per plan task (same ids), unless a plan task must be split; keep
@@ -141,14 +146,22 @@ Rules:
 - Acceptance checks must be checkable by reading the outputs.
 - Only use tools from the tool list; respect UNAVAILABLE tools and the runtime
   capabilities. Mark tasks needing a person as human_required.
-- Design a small agent team (2-6 agents) with focused roles and minimal tool sets.
-  Use the 'reasoning' tier sparingly.
+- Design the team for the work: 2-12 agents with focused roles (e.g. data
+  engineers, domain specialists, ML/simulation engineers, statisticians, writers)
+  and the tools each role needs. Use the 'reasoning' tier only for hard design,
+  debugging or analysis.
+- Maximise parallelism: split work into fine-grained tasks so independent tasks run
+  at the same time, and give tasks with many independent units (sweeps, ablations,
+  per-target or per-dataset runs) the spawn_subagents tool, describing the fan-out in
+  the steps.
+- Code-heavy tasks should write real modules and tests (src/, tests/) and run them;
+  long computations use start_process + check_process.
 - Estimate costs honestly and keep the total LLM estimate within the budget.
 - In checkpoints, add human reviews after data acquisition and before the paper.
-- Prefer software installable with install_packages (pip). If the plan names tools
-  the runtime lacks (e.g. R, Quarto, MATLAB, system binaries), substitute
-  pip-installable equivalents and say so in execution_notes; only keep a
-  non-pip requirement when there is no reasonable substitute.
+- Software: prefer pip (install_packages), then conda-forge/bioconda
+  (install_conda_packages) for binaries such as docking, MD, alignment or FEM tools.
+  If the plan names something neither provides (e.g. MATLAB), substitute an
+  equivalent and say so in execution_notes.
 - system_requirements lists only needs this runtime does NOT already meet.
 - datasets lists external sources only, never the study's own derived outputs."""
 
@@ -304,7 +317,8 @@ async def run(project_id: str, h: RunHandle) -> dict:
         f"APPROVED PLAN:\n{json.dumps(plan, ensure_ascii=False)}\n\n"
         f"RESOLVED DATASETS:\n{resolution.model_dump_json()}\n\n"
         f"TOOLS:\n{describe(capabilities)}\n\n"
-        f"RUNTIME CAPABILITIES: {', '.join(sorted(capabilities))} (no CUDA GPU, ~1 GB download limit, small disk)\n\n"
+        f"RUNTIME CAPABILITIES: {', '.join(sorted(capabilities))} (Apple GPU via PyTorch MPS, no CUDA GPU; "
+        "conda available; background processes; ~1 GB per download; small disk)\n\n"
         f"BUDGET: ${budget['llm_usd']:.2f} LLM, {budget['gpu_hours']} GPU-hours\n\n"
         f"RESOURCE CATALOG:\n{catalog.summary()}"
     )

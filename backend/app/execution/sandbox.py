@@ -11,16 +11,21 @@ This is defence in depth for development, not a hardened multi-tenant boundary.
 
 import asyncio
 import os
+import platform
 import re
 import shutil
 import signal
 import sys
+import tarfile
+import urllib.request
 from dataclasses import dataclass
 from pathlib import Path
 
 from ..config import BACKEND_DIR, ROOT_DIR
 
 WORKSPACES = BACKEND_DIR / "data" / "workspaces"
+# Shared across projects: one micromamba binary and one package cache (envs hard-link from it).
+MAMBA_ROOT = BACKEND_DIR / "data" / "mamba"
 PYTHON_VERSION = "3.12"
 BASE_PACKAGES = ["numpy", "pandas", "scipy", "matplotlib", "requests"]
 OUTPUT_LIMIT = 16_000
@@ -28,6 +33,17 @@ MIN_FREE_BYTES = 2 * 1024**3
 
 # pip requirement spec: name, optional extras, optional single version constraint.
 _PKG = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*(\[[A-Za-z0-9,._-]+\])?((==|>=|<=|~=|!=|>|<)[A-Za-z0-9.*+!-]+)?$")
+# conda spec: [channel::]name[=version[=build]] or name with a comparison.
+_CONDA_PKG = re.compile(r"^([A-Za-z0-9_.-]+::)?[A-Za-z0-9][A-Za-z0-9._-]*((=|==|>=|<=|>|<)[A-Za-z0-9.*_+!-]+(=[A-Za-z0-9.*_]+)?)?$")
+_CONDA_CHANNELS = {"conda-forge", "bioconda", "pytorch", "nvidia", "defaults"}
+_NAME = re.compile(r"^[A-Za-z0-9_-]{1,40}$")
+
+
+def _micromamba_platform() -> str:
+    machine = platform.machine().lower()
+    if sys.platform == "darwin":
+        return "osx-arm64" if machine in ("arm64", "aarch64") else "osx-64"
+    return "linux-aarch64" if machine in ("arm64", "aarch64") else "linux-64"
 
 
 @dataclass
@@ -75,15 +91,20 @@ class Sandbox:
 
 
 class LocalSandbox(Sandbox):
-    capabilities = {"python", "shell", "internet", "files", "cpu"} | (
+    capabilities = {"python", "shell", "internet", "files", "cpu", "background", "conda"} | (
         {"apple_gpu"} if sys.platform == "darwin" else set()
     )
 
     def __init__(self, project_id: str):
         self.root = (WORKSPACES / project_id).resolve()
         self.venv = self.root / ".venv"
+        self.conda_env = self.root / ".conda"
+        self.mamba_root = MAMBA_ROOT
+        self.secrets: dict[str, str] = {}  # user-provided credentials, exposed as env vars
+        self.procs: dict[str, asyncio.subprocess.Process] = {}
         self._ready = False
         self._lock = asyncio.Lock()
+
 
     @property
     def python(self) -> Path:
@@ -106,12 +127,15 @@ class LocalSandbox(Sandbox):
 
     def _env(self) -> dict[str, str]:
         # Deliberately minimal: no API keys or host credentials reach agent code.
+        # Credentials the user supplied for this project are the only secrets exposed.
         return {
-            "PATH": f"{self.venv / 'bin'}:/usr/bin:/bin:/usr/sbin:/sbin:/opt/homebrew/bin:/usr/local/bin",
+            **self.secrets,
+            "PATH": f"{self.venv / 'bin'}:{self.conda_env / 'bin'}:/usr/bin:/bin:/usr/sbin:/sbin:/opt/homebrew/bin:/usr/local/bin",
             "HOME": str(self.root),
             "TMPDIR": str(self.root / ".tmp"),
             "MPLBACKEND": "Agg",
             "PYTHONUNBUFFERED": "1",
+            "PYTHONDONTWRITEBYTECODE": "1",
             "LANG": "en_US.UTF-8",
             "VIRTUAL_ENV": str(self.venv),
         }
@@ -121,7 +145,7 @@ class LocalSandbox(Sandbox):
         async with self._lock:
             if self._ready:
                 return
-            for d in (self.root, self.root / ".tmp", self.root / ".scratch"):
+            for d in (self.root, self.root / ".tmp", self.root / ".scratch", self.root / ".logs"):
                 d.mkdir(parents=True, exist_ok=True)
             (self.root / ".sandbox.sb").write_text(self._profile())
             if not self.python.exists():
@@ -172,6 +196,90 @@ class LocalSandbox(Sandbox):
         return await self._host(["uv", "pip", "install", "--quiet", "--python", str(self.python), *packages], 900)
 
 
+    # ── Background processes (training runs, servers, long simulations) ────
+
+    async def spawn(self, name: str, command: str) -> str:
+        """Start a sandboxed shell command in the background; output goes to .logs/<name>.log."""
+        await self.ensure()
+        if not _NAME.match(name):
+            raise ValueError("Process names may use letters, digits, - and _ (max 40)")
+        if name in self.procs and self.procs[name].returncode is None:
+            raise ValueError(f"A process named {name} is already running")
+        log = self.root / ".logs" / f"{name}.log"
+        handle = log.open("wb")
+        proc = await asyncio.create_subprocess_exec(
+            "/usr/bin/sandbox-exec", "-f", str(self.root / ".sandbox.sb"), "/bin/bash", "-c", command,
+            cwd=self.root, env=self._env(), stdout=handle, stderr=asyncio.subprocess.STDOUT,
+            start_new_session=True,
+        )
+        handle.close()
+        self.procs[name] = proc
+        return f"Started {name} (pid {proc.pid}); logs in .logs/{name}.log"
+
+    def status(self, name: str, tail: int = 30) -> str:
+        proc = self.procs.get(name)
+        if proc is None:
+            return f"No process named {name}. Known: {', '.join(self.procs) or 'none'}"
+        log = self.root / ".logs" / f"{name}.log"
+        lines = log.read_text(errors="replace").splitlines() if log.exists() else []
+        state = "running" if proc.returncode is None else f"exited with code {proc.returncode}"
+        return f"{name}: {state}\nlast {min(tail, len(lines))} of {len(lines)} log lines:\n" + "\n".join(lines[-tail:])
+
+    def stop(self, name: str) -> str:
+        proc = self.procs.get(name)
+        if proc is None or proc.returncode is not None:
+            return f"{name} is not running"
+        os.killpg(proc.pid, signal.SIGTERM)
+        return f"Sent SIGTERM to {name}"
+
+    def stop_all(self) -> None:
+        for proc in self.procs.values():
+            if proc.returncode is None:
+                try:
+                    os.killpg(proc.pid, signal.SIGKILL)
+                except ProcessLookupError:
+                    pass
+
+    # ── Conda (conda-forge / bioconda) for non-pip scientific software ─────
+
+    @staticmethod
+    async def _micromamba_shared() -> Path:
+        exe = MAMBA_ROOT / "bin" / "micromamba"
+        if exe.exists():
+            return exe
+        url = f"https://micro.mamba.pm/api/micromamba/{_micromamba_platform()}/latest"
+        MAMBA_ROOT.mkdir(parents=True, exist_ok=True)
+        archive = MAMBA_ROOT / "micromamba.tar.bz2"
+
+        def fetch() -> None:
+            urllib.request.urlretrieve(url, archive)
+            with tarfile.open(archive, "r:bz2") as tar:
+                tar.extract("bin/micromamba", MAMBA_ROOT, filter="data")
+            archive.unlink()
+            exe.chmod(0o755)
+
+        await asyncio.to_thread(fetch)
+        return exe
+
+    async def install_conda(self, packages: list[str], channels: list[str]) -> ExecResult:
+        bad = [p for p in packages if not _CONDA_PKG.match(p)] + [c for c in channels if c not in _CONDA_CHANNELS]
+        if bad:
+            return ExecResult(2, "", f"Rejected specs or channels: {', '.join(bad)}")
+        if self.free_bytes() < 2 * MIN_FREE_BYTES:
+            return ExecResult(2, "", "Not enough free disk space for conda packages")
+        await self.ensure()
+        async with _CONDA_LOCK:
+            exe = await self._micromamba_shared()
+            verb = "install" if (self.conda_env / "conda-meta").exists() else "create"
+            chan = [a for c in (channels or ["conda-forge"]) for a in ("-c", c)]
+            # Host-side like pip: micromamba writes its package cache inside the workspace.
+            return await self._host(
+                [str(exe), verb, "-y", "-q", "-r", str(self.mamba_root), "-p", str(self.conda_env), *chan, *packages],
+                1800,
+            )
+
+
+_CONDA_LOCK = asyncio.Lock()  # the shared package cache is not safe for concurrent writers
 _sandboxes: dict[str, LocalSandbox] = {}
 
 

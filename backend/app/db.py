@@ -138,6 +138,17 @@ class TaskState(SQLModel, table=True):
     finished_at: datetime | None = None
 
 
+class Secret(SQLModel, table=True):
+    """A credential the user supplied for one project (exposed to its sandbox as an env var).
+    Stored in the local database; never returned by the API after saving."""
+
+    id: str = Field(default_factory=_id, primary_key=True)
+    project_id: str = Field(foreign_key="project.id", index=True)
+    name: str
+    value: str
+    created_at: datetime = Field(default_factory=_now)
+
+
 class Usage(SQLModel, table=True):
     """One LLM call's token usage and estimated cost."""
 

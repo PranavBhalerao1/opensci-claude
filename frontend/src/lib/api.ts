@@ -465,6 +465,7 @@ export const usageApi = {
 
 export interface AgentEvent {
   type: "tool" | "message";
+  sub?: string; // set when a sub-agent produced the event
   step: number;
   tool?: string;
   args?: string;
@@ -515,6 +516,8 @@ export const executionApi = {
   cancel: (id: string) => post(`${API_URL}/api/projects/${id}/execution/cancel`).then(json<unknown>),
   task: (id: string, taskId: string, action: "complete" | "skip", note?: string) =>
     post(`${API_URL}/api/projects/${id}/execution/tasks/${taskId}/${action}`, { note }).then(json<TaskState>),
+  provideSecret: (id: string, name: string, value: string) =>
+    post(`${API_URL}/api/projects/${id}/secrets`, { name, value }).then(json<{ name: string; requeued_tasks: number }>),
   files: (id: string) =>
     fetch(`${API_URL}/api/projects/${id}/workspace/files`).then(json<{ path: string; size: number }[]>),
   fileUrl: (id: string, path: string) =>
