@@ -66,8 +66,8 @@ export default function BlueprintRun({ project, run, onStart, onApprove }: Props
                 </a>
               </div>
               <p className="mt-3 text-[13px] leading-relaxed text-muted">
-                Ready to execute. The orchestrator will run these agents and tasks in the project workspace — that is
-                the next build step. Reply below to revise the blueprint.
+                Ready to execute — start the run below. Replying with a change revises the blueprint (and returns it to
+                draft).
               </p>
             </div>
           ) : (

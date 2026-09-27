@@ -25,7 +25,7 @@ def _id() -> str:
 class Project(SQLModel, table=True):
     id: str = Field(default_factory=_id, primary_key=True)
     title: str = "Untitled research"
-    # clarify -> literature -> gaps -> plan -> blueprint -> ready (to execute)
+    # clarify -> literature -> gaps -> plan -> blueprint -> ready -> executing -> executed
     stage: str = "clarify"
     autonomous: bool = False
     settings: dict = Field(default_factory=dict, sa_column=Column(JSON))
@@ -113,6 +113,28 @@ class Run(SQLModel, table=True):
     result: dict | None = Field(default=None, sa_column=Column(NullableJSON))
     error: str | None = None
     started_at: datetime = Field(default_factory=_now)
+    finished_at: datetime | None = None
+
+
+class TaskState(SQLModel, table=True):
+    """Execution state of one blueprint task (see execution/orchestrator.py)."""
+
+    id: str = Field(default_factory=_id, primary_key=True)
+    project_id: str = Field(foreign_key="project.id", index=True)
+    blueprint_run_id: str = Field(index=True)
+    task_id: str
+    agent: str
+    # pending | running | done | failed | blocked | human | skipped | cancelled
+    status: str = "pending"
+    attempts: int = 0
+    cost: float = 0.0
+    summary: str | None = None
+    artifacts: list = Field(default_factory=list, sa_column=Column(JSON))
+    checks: list = Field(default_factory=list, sa_column=Column(JSON))
+    issues: list = Field(default_factory=list, sa_column=Column(JSON))
+    events: list = Field(default_factory=list, sa_column=Column(JSON))
+    note: str | None = None  # human note, block reason, or failure reason
+    started_at: datetime | None = None
     finished_at: datetime | None = None
 
 

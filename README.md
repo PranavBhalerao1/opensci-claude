@@ -33,7 +33,7 @@ Step 1 · Planning Agent — complete:
    `backend/data/projects/<id>/vague_research_plan.json` and `context.json` (brief, clarification,
    papers + notes, knowledge graph, all gaps, chosen gap). Autonomous mode approves automatically.
 
-Step 2 · Blueprint & execution foundation:
+Step 2 · Blueprint & execution:
 
 6. **Execution runtime** (`backend/app/execution/`) — `LocalSandbox` runs agent code in a
    per-project workspace with its own Python env, confined by macOS `sandbox-exec` (writes only in
@@ -55,9 +55,19 @@ Step 2 · Blueprint & execution foundation:
 
 Every model call's cost is recorded (`Usage` table) and shown per project in the Notebook.
 
-**Next: Orchestrator** — execute `master_plan.json`: run tasks in dependency order (parallel where
-possible), pass artifacts through the workspace, check acceptance, retry/escalate, enforce budgets,
-pause at checkpoints in guided mode, live agent lanes in the UI.
+8. **Execution** (`backend/app/execution/orchestrator.py`) — runs `master_plan.json`: tasks in
+   dependency order, up to 3 in parallel, each by its agent in the sandbox. After each task, code
+   checks the declared outputs exist and a verifier model checks the acceptance criteria against
+   file previews (CSV row counts and head/tail are computed exactly); failures retry with the
+   verifier's feedback, then block only their branch. Human-required tasks wait for you (mark done
+   / skip); you can also accept a failed task's output. Guided mode pauses at checkpoints; every run
+   pauses at the budget. Pause / resume / cancel; state survives server restarts. Per-project model
+   policy: `default` (flagship for hard reasoning), `economy` (no flagship), `minimal` (cheapest).
+   The UI shows agent lanes with live steps, a task table with checks and full agent logs, and a
+   workspace browser with CSV/image/text previews.
+
+**Next: Step 3** — consolidation + report agents: turn the executed workspace into a scaffolded
+report and a conference-style paper.
 
 Models: `gpt-6-astra` only for heavy reasoning / agentic stages (gaps, plan); `gpt-6-sol` and
 `gpt-6-luna` everywhere else.
@@ -67,7 +77,7 @@ Models: `gpt-6-astra` only for heavy reasoning / agentic stages (gaps, plan); `g
 Put keys in `.env` at the repo root (see `.env.example`), then in two terminals:
 
 ```bash
-cd backend && uv run uvicorn app.main:app --reload --port 8000
+cd backend && uv run uvicorn app.main:app --reload --reload-dir app --port 8000
 cd frontend && npm run dev          # http://localhost:3000
 ```
 
@@ -83,12 +93,12 @@ cd frontend && npm run dev          # http://localhost:3000
 | `backend/app/agents/gaps.py` | Gap finding: propose, novelty check, rank, choose |
 | `backend/app/agents/plan.py` | Plan: draft, validate DAG, revise, approve, export |
 | `backend/app/agents/blueprint.py` | Blueprint: resolve data, compile, validate, approve |
-| `backend/app/execution/` | Sandbox, tool registry, resource catalog, agent loop |
+| `backend/app/execution/` | Sandbox, tool registry, resource catalog, agent loop, orchestrator |
 | `backend/app/pipeline.py` | Stage chaining and autonomous auto-decisions |
 | `backend/app/graph.py` | Knowledge graph (papers, methods, datasets, tasks, citations) |
 | `backend/app/jobs.py` | Background runs with progress stored in the `Run` table |
 | `backend/app/llm.py` | OpenAI Responses API wrapper (streaming + structured outputs) |
 | `backend/app/config.py` | Settings and model tiers (`gpt-6-astra` / `gpt-6-sol` / `gpt-6-luna`) |
 | `backend/app/db.py` | SQLite via SQLModel (Postgres + pgvector later) |
-| `frontend/src/components/` | Workspace, QuestionCards, BriefCard, LiteratureRun, GapsRun, PlanRun, BlueprintRun, Library, KnowledgeGraph, Notebook, … |
+| `frontend/src/components/` | Workspace, QuestionCards, BriefCard, LiteratureRun, GapsRun, PlanRun, BlueprintRun, ExecutionRun, WorkspaceFiles, Library, KnowledgeGraph, Notebook, … |
 | `frontend/src/lib/api.ts` | API client + SSE parser |

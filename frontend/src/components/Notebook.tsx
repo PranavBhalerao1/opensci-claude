@@ -4,6 +4,7 @@ import {
   planApi,
   usageApi,
   type BlueprintRun,
+  type Execution,
   type GapsRun,
   type Literature,
   type PlanRun,
@@ -16,11 +17,13 @@ interface Props {
   gapsRun: GapsRun | null;
   planRun: PlanRun | null;
   bpRun: BlueprintRun | null;
+  exec: Execution | null;
+  onOpenFiles: () => void;
   onOpenLibrary: () => void;
 }
 
 /** Right-hand lab notebook: a compact, always-visible record of each stage. */
-export default function Notebook({ project, lit, gapsRun, planRun, bpRun, onOpenLibrary }: Props) {
+export default function Notebook({ project, lit, gapsRun, planRun, bpRun, exec, onOpenFiles, onOpenLibrary }: Props) {
   return (
     <aside className="flex w-80 shrink-0 flex-col border-l border-rule bg-paper max-xl:hidden">
       <div className="border-b border-rule px-5 py-4">
@@ -34,6 +37,8 @@ export default function Notebook({ project, lit, gapsRun, planRun, bpRun, onOpen
           gapsRun={gapsRun}
           planRun={planRun}
           bpRun={bpRun}
+          exec={exec}
+          onOpenFiles={onOpenFiles}
           onOpenLibrary={onOpenLibrary}
         />
       ) : (
@@ -60,13 +65,13 @@ function Spend({ projectId }: { projectId: string }) {
     <div className="flex justify-between border-b border-dashed border-rule py-2">
       <dt className="uppercase tracking-wider text-faint">Spend</dt>
       <dd className="text-ink" title={`${usage.calls} model calls`}>
-        ${usage.total.toFixed(2)}
+        ${usage.total.toFixed(usage.total < 1 ? 3 : 2)}
       </dd>
     </div>
   );
 }
 
-function Entries({ project, lit, gapsRun, planRun, bpRun, onOpenLibrary }: Props & { project: Project }) {
+function Entries({ project, lit, gapsRun, planRun, bpRun, exec, onOpenFiles, onOpenLibrary }: Props & { project: Project }) {
   const { brief, settings } = project;
   const run = lit?.run;
   const overview = run?.result?.overview;
@@ -221,6 +226,30 @@ function Entries({ project, lit, gapsRun, planRun, bpRun, onOpenLibrary }: Props
           </div>
         ) : bpRun ? (
           <p className="mt-1 font-mono text-[11px] text-muted">{bpRun.status === "error" ? "Failed" : `${bpRun.phase}…`}</p>
+        ) : (
+          <p className="mt-1 text-[12.5px] text-faint">Pending</p>
+        )}
+      </div>
+
+      <div className="mt-7">
+        <Label>§6 · Execution</Label>
+        {exec?.run ? (
+          <div className="mt-2">
+            <div className="font-mono text-[10px] uppercase tracking-[0.12em] text-muted">
+              {exec.tasks.filter((t) => t.status === "done" || t.status === "skipped").length} / {exec.tasks.length} tasks
+              · ${exec.spent.toFixed(3)}
+              {exec.live ? (exec.paused ? " · paused" : " · running") : ""}
+            </div>
+            {exec.tasks.some((t) => t.status === "failed" || t.status === "human") && (
+              <p className="mt-1 font-mono text-[11px] text-ink">! tasks need your attention</p>
+            )}
+            <button
+              onClick={onOpenFiles}
+              className="mt-2 w-full border border-ink px-3 py-1.5 text-left font-mono text-[11px] transition-colors hover:bg-ink hover:text-paper"
+            >
+              Browse workspace →
+            </button>
+          </div>
         ) : (
           <p className="mt-1 text-[12.5px] text-faint">Pending</p>
         )}

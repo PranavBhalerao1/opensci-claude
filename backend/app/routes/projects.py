@@ -1,4 +1,5 @@
 import json
+import shutil
 from collections.abc import AsyncIterator
 from datetime import datetime, timezone
 from pathlib import Path
@@ -15,8 +16,10 @@ from ..agents import clarify
 from ..agents import blueprint as blueprint_agent
 from ..agents import plan as plan_agent
 from ..config import settings
-from ..db import Message, Paper, Project, ProjectPaper, Run, Usage, engine, get_session
+from ..db import Message, Paper, Project, ProjectPaper, Run, TaskState, Usage, engine, get_session
 from ..graph import project_graph
+from ..execution import orchestrator
+from ..execution.sandbox import sandbox_for
 from ..llm import current_project, stream_text
 
 router = APIRouter(prefix="/api/projects", tags=["projects"])
@@ -86,10 +89,16 @@ def get_project(project_id: str, session: Session = Depends(get_session)) -> dic
 @router.delete("/{project_id}", status_code=204)
 def delete_project(project_id: str, session: Session = Depends(get_session)) -> None:
     project = _get(session, project_id)
-    for m in _messages(session, project_id):
-        session.delete(m)
+    if any(jobs.is_running(project_id, k) for k in ("literature", "gaps", "plan", "blueprint", "execute")):
+        raise HTTPException(409, "Stop the running stage before deleting")
+    # Papers stay in the shared cache and usage rows stay for spend history.
+    for model in (Message, ProjectPaper, TaskState, Run):
+        for row in session.exec(select(model).where(model.project_id == project_id)):
+            session.delete(row)
     session.delete(project)
     session.commit()
+    shutil.rmtree(sandbox_for(project_id).root, ignore_errors=True)
+    shutil.rmtree(plan_agent.EXPORT_DIR / project_id, ignore_errors=True)
 
 
 @router.post("/{project_id}/brief/confirm")
@@ -312,6 +321,141 @@ def approve_blueprint(project_id: str, session: Session = Depends(get_session)) 
         return blueprint_agent.approve(project_id)
     except LookupError as exc:
         raise HTTPException(409, str(exc)) from exc
+
+
+class ExecutionStart(BaseModel):
+    budget_usd: float | None = None
+    model_policy: Literal["default", "economy", "minimal"] | None = None
+
+
+class TaskAction(BaseModel):
+    note: str | None = None
+
+
+def _apply_exec_settings(session: Session, project: Project, body: ExecutionStart) -> None:
+    cfg = dict(project.settings or {})
+    if body.budget_usd is not None:
+        cfg["budget"] = {**(cfg.get("budget") or {}), "llm_usd": max(0.05, min(body.budget_usd, 500.0))}
+    if body.model_policy:
+        cfg["model_policy"] = body.model_policy
+    project.settings = cfg
+    session.add(project)
+    session.commit()
+
+
+@router.get("/{project_id}/execution")
+def get_execution(project_id: str, session: Session = Depends(get_session)) -> dict:
+    project = _get(session, project_id)
+    run = session.exec(
+        select(Run).where(Run.project_id == project_id, Run.kind == "execute").order_by(Run.started_at.desc())
+    ).first()
+    tasks: list[TaskState] = []
+    if project.blueprint:
+        order = {t["id"]: i for i, t in enumerate(
+            session.get(Run, project.blueprint["run_id"]).result["master_plan"]["tasks"])}
+        tasks = sorted(
+            session.exec(select(TaskState).where(TaskState.blueprint_run_id == project.blueprint["run_id"])),
+            key=lambda st: order.get(st.task_id, 999),
+        )
+    ctl = orchestrator.control(project_id)
+    cfg = project.settings or {}
+    return {
+        "run": run,
+        "project": project,
+        "tasks": tasks,
+        "spent": round(orchestrator.spent(project_id), 4),
+        "budget": ((cfg.get("budget") or {}).get("llm_usd", 15.0)),
+        "model_policy": cfg.get("model_policy", "default"),
+        "paused": ctl.reason if ctl else None,
+        "live": jobs.is_running(project_id, "execute"),
+    }
+
+
+@router.post("/{project_id}/execution/start")
+async def start_execution(project_id: str, body: ExecutionStart, session: Session = Depends(get_session)) -> Run:
+    project = _get(session, project_id)
+    if not project.blueprint:
+        raise HTTPException(409, "Approve the blueprint first")
+    if jobs.is_running(project_id, "execute"):
+        raise HTTPException(409, "Execution already running")
+    _apply_exec_settings(session, project, body)
+    return pipeline.start_execution(project_id)
+
+
+@router.post("/{project_id}/execution/pause")
+def pause_execution(project_id: str) -> dict:
+    ctl = orchestrator.control(project_id)
+    if not ctl:
+        raise HTTPException(409, "Execution is not running")
+    ctl.pause("paused by you")
+    return {"paused": ctl.reason}
+
+
+@router.post("/{project_id}/execution/resume")
+async def resume_execution(project_id: str, body: ExecutionStart, session: Session = Depends(get_session)) -> dict:
+    project = _get(session, project_id)
+    _apply_exec_settings(session, project, body)
+    ctl = orchestrator.control(project_id)
+    if ctl:
+        ctl.resume()
+        return {"resumed": True}
+    if not project.blueprint:
+        raise HTTPException(409, "Approve the blueprint first")
+    pipeline.start_execution(project_id)  # restart after a finish, failure or server restart
+    return {"resumed": True, "restarted": True}
+
+
+@router.post("/{project_id}/execution/cancel")
+def cancel_execution(project_id: str) -> dict:
+    ctl = orchestrator.control(project_id)
+    if not ctl:
+        raise HTTPException(409, "Execution is not running")
+    ctl.cancelled = True
+    ctl.resume()  # wake the scheduler so it can stop
+    return {"cancelled": True}
+
+
+@router.post("/{project_id}/execution/tasks/{task_id}/{action}")
+def task_action(project_id: str, task_id: str, action: Literal["complete", "skip"], body: TaskAction,
+                session: Session = Depends(get_session)) -> TaskState:
+    _get(session, project_id)
+    try:
+        return orchestrator.set_task_status(project_id, task_id, "done" if action == "complete" else "skipped",
+                                            (body.note or "").strip() or None)
+    except LookupError as exc:
+        raise HTTPException(404, str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(409, str(exc)) from exc
+
+
+@router.get("/{project_id}/workspace/files")
+def workspace_files(project_id: str, session: Session = Depends(get_session)) -> list[dict]:
+    _get(session, project_id)
+    root = sandbox_for(project_id).root
+    if not root.exists():
+        return []
+    out = []
+    for p in sorted(root.rglob("*")):
+        rel = p.relative_to(root)
+        if p.is_file() and not any(part.startswith(".") for part in rel.parts):
+            out.append({"path": str(rel), "size": p.stat().st_size})
+        if len(out) >= 1000:
+            break
+    return out
+
+
+@router.get("/{project_id}/workspace/file")
+def workspace_file(project_id: str, path: str, session: Session = Depends(get_session)) -> FileResponse:
+    _get(session, project_id)
+    sb = sandbox_for(project_id)
+    try:
+        p = sb.path(path)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    rel = p.relative_to(sb.root)
+    if not p.is_file() or any(part.startswith(".") for part in rel.parts):
+        raise HTTPException(404, "No such file")
+    return FileResponse(p, filename=p.name, content_disposition_type="inline")
 
 
 @router.get("/{project_id}/files/{name}")

@@ -1,7 +1,7 @@
 """Stage chaining: which job starts after which, and autonomous auto-decisions.
 
 confirm brief → literature → gaps → choose gap (autonomous: recommended) → plan
-→ approve plan → blueprint → approve blueprint → ready
+→ approve plan → blueprint → approve blueprint → ready → execute → executed
 (autonomous mode makes every choice and approval itself)
 """
 
@@ -15,6 +15,7 @@ from .agents import gaps, literature
 from .agents import blueprint as blueprint_agent
 from .agents import plan as plan_agent
 from .db import Project, Run, engine
+from .execution import orchestrator
 
 
 def _set_stage(project_id: str, stage: str) -> None:
@@ -110,3 +111,8 @@ async def _after_blueprint(project_id: str) -> None:
         autonomous = s.get(Project, project_id).autonomous
     if autonomous:
         blueprint_agent.approve(project_id)
+        start_execution(project_id)
+
+
+def start_execution(project_id: str) -> Run:
+    return jobs.start(project_id, "execute", orchestrator.run)

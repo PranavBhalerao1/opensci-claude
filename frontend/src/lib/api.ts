@@ -1,6 +1,6 @@
 export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
-export type Stage = "clarify" | "literature" | "gaps" | "plan" | "done" | "blueprint" | "ready";
+export type Stage = "clarify" | "literature" | "gaps" | "plan" | "done" | "blueprint" | "ready" | "executing" | "executed";
 
 export type Depth = "quick" | "standard" | "deep";
 
@@ -9,7 +9,10 @@ export interface ProjectSettings {
   max_papers?: number;
   citation_hops?: number;
   budget?: { llm_usd: number; gpu_hours: number };
+  model_policy?: ModelPolicy;
 }
+
+export type ModelPolicy = "default" | "economy" | "minimal";
 
 export interface KeyConcept {
   term: string;
@@ -456,4 +459,64 @@ export const usageApi = {
     fetch(`${API_URL}/api/projects/${id}/usage`).then(
       json<{ total: number; by_model: Record<string, number>; calls: number }>,
     ),
+};
+
+// ── Execution ──────────────────────────────────────────────────────────────
+
+export interface AgentEvent {
+  type: "tool" | "message";
+  step: number;
+  tool?: string;
+  args?: string;
+  result?: string;
+  text?: string;
+  cost: number;
+  t: string;
+}
+
+export interface TaskState {
+  id: string;
+  task_id: string;
+  agent: string;
+  status: "pending" | "running" | "done" | "failed" | "blocked" | "human" | "skipped" | "cancelled";
+  attempts: number;
+  cost: number;
+  summary: string | null;
+  artifacts: string[];
+  checks: { check: string; passed: boolean; reason: string }[];
+  issues: string[];
+  events: AgentEvent[];
+  note: string | null;
+  started_at: string | null;
+  finished_at: string | null;
+}
+
+export interface Execution {
+  run: Run | null;
+  project: Project;
+  tasks: TaskState[];
+  spent: number;
+  budget: number;
+  model_policy: ModelPolicy;
+  paused: string | null;
+  live: boolean;
+}
+
+const post = (url: string, body: unknown = {}) =>
+  fetch(url, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+
+export const executionApi = {
+  get: (id: string) => fetch(`${API_URL}/api/projects/${id}/execution`).then(json<Execution>),
+  start: (id: string, body: { budget_usd?: number; model_policy?: ModelPolicy }) =>
+    post(`${API_URL}/api/projects/${id}/execution/start`, body).then(json<Run>),
+  pause: (id: string) => post(`${API_URL}/api/projects/${id}/execution/pause`).then(json<unknown>),
+  resume: (id: string, body: { budget_usd?: number } = {}) =>
+    post(`${API_URL}/api/projects/${id}/execution/resume`, body).then(json<unknown>),
+  cancel: (id: string) => post(`${API_URL}/api/projects/${id}/execution/cancel`).then(json<unknown>),
+  task: (id: string, taskId: string, action: "complete" | "skip", note?: string) =>
+    post(`${API_URL}/api/projects/${id}/execution/tasks/${taskId}/${action}`, { note }).then(json<TaskState>),
+  files: (id: string) =>
+    fetch(`${API_URL}/api/projects/${id}/workspace/files`).then(json<{ path: string; size: number }[]>),
+  fileUrl: (id: string, path: string) =>
+    `${API_URL}/api/projects/${id}/workspace/file?path=${encodeURIComponent(path)}`,
 };

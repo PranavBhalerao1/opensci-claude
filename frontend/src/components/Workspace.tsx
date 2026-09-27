@@ -7,6 +7,7 @@ import remarkGfm from "remark-gfm";
 import {
   api,
   blueprintApi,
+  executionApi,
   gapsApi,
   literatureApi,
   planApi,
@@ -14,6 +15,8 @@ import {
   type Answer,
   type BlueprintRun as BlueprintRunT,
   type Depth,
+  type Execution,
+  type ModelPolicy,
   type GapsRun as GapsRunT,
   type Literature,
   type Message,
@@ -23,6 +26,7 @@ import {
 } from "@/lib/api";
 import BlueprintRun from "./BlueprintRun";
 import BriefCard from "./BriefCard";
+import ExecutionRun from "./ExecutionRun";
 import GapsRun from "./GapsRun";
 import Library from "./Library";
 import LiteratureRun from "./LiteratureRun";
@@ -30,6 +34,7 @@ import PlanRun from "./PlanRun";
 import Notebook from "./Notebook";
 import QuestionCards from "./QuestionCards";
 import Sidebar from "./Sidebar";
+import WorkspaceFiles from "./WorkspaceFiles";
 import StageBar from "./StageBar";
 
 const EXAMPLES = [
@@ -54,6 +59,9 @@ export default function Workspace({ projectId: initialId }: { projectId?: string
   const [gapsRun, setGapsRun] = useState<GapsRunT | null>(null);
   const [planRun, setPlanRun] = useState<{ run: PlanRunT | null; revisions: number } | null>(null);
   const [bpRun, setBpRun] = useState<BlueprintRunT | null>(null);
+  const [exec, setExec] = useState<Execution | null>(null);
+  const [execKick, setExecKick] = useState(0);
+  const [files, setFiles] = useState<{ focus?: string } | null>(null);
   const [library, setLibrary] = useState<{ focus?: string } | null>(null);
   // A project created in this tab already has its state locally; skip the reload.
   const justCreated = useRef<string | null>(null);
@@ -195,6 +203,39 @@ export default function Workspace({ projectId: initialId }: { projectId?: string
     }
   };
 
+  // Execution: poll while the run is live (and once whenever an action kicks it).
+  const execFor = project?.blueprint ? project.id : null;
+  const execLive = Boolean(exec?.live);
+  useEffect(() => {
+    if (!execFor) return;
+    let cancelled = false;
+    const load = () =>
+      executionApi
+        .get(execFor)
+        .then((d) => {
+          if (cancelled) return;
+          setExec(d);
+          setProject(d.project);
+        })
+        .catch((e) => !cancelled && setError(String(e)));
+    void load();
+    if (!execLive && execKick === 0) return () => void (cancelled = true);
+    const timer = setInterval(load, 2000);
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+    };
+  }, [execFor, execLive, execKick]);
+
+  const execAction = async (fn: () => Promise<unknown>) => {
+    try {
+      await fn();
+      setExecKick((k) => k + 1);
+    } catch (e) {
+      setError(String(e));
+    }
+  };
+
   const startedPlan = (run: PlanRunT) => setPlanRun((p) => ({ run, revisions: p?.revisions ?? 0 }));
 
   const approvePlan = async () => {
@@ -260,6 +301,9 @@ export default function Workspace({ projectId: initialId }: { projectId?: string
     setGapsRun(null);
     setPlanRun(null);
     setBpRun(null);
+    setExec(null);
+    setExecKick(0);
+    setFiles(null);
     setLibrary(null);
     setProjectId(id);
   };
@@ -371,7 +415,7 @@ export default function Workspace({ projectId: initialId }: { projectId?: string
       <main className="flex min-w-0 flex-1 flex-col">
         <header className="flex h-14 shrink-0 items-center justify-between border-b border-rule px-6">
           <StageBar stage={project?.stage ?? "clarify"} />
-          <span className="font-mono text-[11px] uppercase tracking-[0.12em] text-faint">
+          <span className="shrink-0 pl-4 font-mono text-[11px] uppercase tracking-[0.12em] text-faint">
             {project ? (project.autonomous ? "Autonomous" : "Guided") : ""}
           </span>
         </header>
@@ -397,12 +441,14 @@ export default function Workspace({ projectId: initialId }: { projectId?: string
               literature={
                 project && project.stage !== "clarify" ? (
                   <>
-                    <LiteratureRun
-                      project={project}
-                      lit={lit}
-                      onRetry={retryLiterature}
-                      onOpenLibrary={(focus) => setLibrary({ focus })}
-                    />
+                    {(lit?.run || project.stage === "literature") && (
+                      <LiteratureRun
+                        project={project}
+                        lit={lit}
+                        onRetry={retryLiterature}
+                        onOpenLibrary={(focus) => setLibrary({ focus })}
+                      />
+                    )}
                     {gapsFor && (
                       <GapsRun
                         project={project}
@@ -429,6 +475,23 @@ export default function Workspace({ projectId: initialId }: { projectId?: string
                     {bpFor && (
                       <BlueprintRun project={project} run={bpRun} onStart={startBlueprint} onApprove={approveBlueprint} />
                     )}
+                    {execFor && bpRun?.result && (
+                      <ExecutionRun
+                        project={project}
+                        exec={exec}
+                        mp={bpRun.result.master_plan}
+                        onStart={(budget: number, policy: ModelPolicy) =>
+                          execAction(() => executionApi.start(project.id, { budget_usd: budget, model_policy: policy }))
+                        }
+                        onPause={() => execAction(() => executionApi.pause(project.id))}
+                        onResume={(budget?: number) =>
+                          execAction(() => executionApi.resume(project.id, budget ? { budget_usd: budget } : {}))
+                        }
+                        onCancel={() => execAction(() => executionApi.cancel(project.id))}
+                        onTask={(taskId, action, note) => execAction(() => executionApi.task(project.id, taskId, action, note))}
+                        onOpenFiles={(focus) => setFiles({ focus })}
+                      />
+                    )}
                   </>
                 ) : null
               }
@@ -450,8 +513,13 @@ export default function Workspace({ projectId: initialId }: { projectId?: string
         gapsRun={gapsRun}
         planRun={planRun?.run ?? null}
         bpRun={bpRun}
+        exec={exec}
+        onOpenFiles={() => setFiles({})}
         onOpenLibrary={() => setLibrary({})}
       />
+      {files && projectId && (
+        <WorkspaceFiles projectId={projectId} focus={files.focus} onClose={() => setFiles(null)} />
+      )}
       {library && projectId && lit && (
         <Library projectId={projectId} papers={lit.papers} focus={library.focus} onClose={() => setLibrary(null)} />
       )}
@@ -606,6 +674,7 @@ function Thread({
               return <Bubble key={m.id} role={m.role} content={m.content} />;
           }
         })}
+        {!latestBrief && literature}
         {streaming !== null && <Bubble role="assistant" content={streaming} live />}
         {busy && streaming === null && <StatusLine text={status ?? "Thinking"} />}
         {error && (
