@@ -92,6 +92,20 @@ def _download(vol, root: Path, manifest: dict[str, int], since: float) -> list[s
     return changed
 
 
+CONTAINER_STARTUP_S = 45
+
+
+def _running_seconds(time_file: Path) -> float | None:
+    """Seconds between the in-container start and end stamps, if both were written."""
+    if not time_file.exists():
+        return None
+    stamps = dict(line.split()[:2] for line in time_file.read_text().splitlines() if line.startswith("__OS_"))
+    try:
+        return float(stamps["__OS_END__"]) - float(stamps["__OS_START__"])
+    except (KeyError, ValueError):
+        return None
+
+
 def run_jobs(project_id: str, root: Path, jobs: list[dict], gpu: str, timeout_s: int,
              packages: list[str]) -> dict:
     """Run jobs in parallel Modal sandboxes (blocking; call from a thread)."""
@@ -107,7 +121,10 @@ def run_jobs(project_id: str, root: Path, jobs: list[dict], gpu: str, timeout_s:
     def one(job: dict) -> dict:
         name = job["name"]
         log = f"logs/gpu/{name}.log"
-        script = (f"mkdir -p logs/gpu && {{ {job['command']} ; }} > {log} 2>&1; rc=$?; "
+        # Timestamps written inside the container: billing covers running time, not queueing
+        # for a free GPU (plans cap concurrent GPUs, so large grids wait in waves).
+        script = (f"mkdir -p logs/gpu && echo __OS_START__ $(date +%s) > {log}.time && "
+                  f"{{ {job['command']} ; }} > {log} 2>&1; rc=$?; echo __OS_END__ $(date +%s) >> {log}.time; "
                   f"nvidia-smi --query-gpu=name --format=csv,noheader >> {log} 2>/dev/null; sync; exit $rc")
         start = time.time()
         try:
@@ -129,6 +146,11 @@ def run_jobs(project_id: str, root: Path, jobs: list[dict], gpu: str, timeout_s:
     for r in results:
         path = root / r["log"]
         r["log_tail"] = "\n".join(path.read_text(errors="replace").splitlines()[-25:]) if path.exists() else ""
+        r["wall_seconds"] = r["seconds"]  # includes queueing for a GPU
+        run = _running_seconds(root / f"{r['log']}.time")
+        if run is not None:
+            # Running time plus container start-up (~45 s), which Modal also bills.
+            r["seconds"] = round(run + CONTAINER_STARTUP_S, 1)
         r["cost"] = round(r["seconds"] * rate(gpu), 4)
     with Session(engine) as s:
         for r in results:

@@ -20,7 +20,7 @@ from sqlmodel import Session, select
 
 from ..db import Paper, Project, ProjectPaper, Run, TaskState, engine
 from ..execution.agent import AgentSpec, run_agent
-from ..execution.orchestrator import TEXT_SUFFIXES, model_for
+from ..execution.orchestrator import TEXT_SUFFIXES, model_for, project_amendments
 from ..execution.sandbox import sandbox_for
 from ..execution.tools import ToolContext
 from ..jobs import RunHandle
@@ -244,6 +244,7 @@ async def run(project_id: str, h: RunHandle) -> dict:
         f"BRIEF: {json.dumps(g['brief'], ensure_ascii=False)[:4000]}\n\nCHOSEN GAP: "
         f"{json.dumps({k: g['gap'][k] for k in ('title', 'question', 'hypothesis', 'why_open')} if g['gap'] else None, ensure_ascii=False)}\n\n"
         f"PLAN: {json.dumps(plan, ensure_ascii=False)[:8000]}\n\n"
+        f"REVIEWER-APPROVED AMENDMENTS (override the plan where they conflict):\n{project_amendments(project_id) or '(none)'}\n\n"
         f"BLUEPRINT SUMMARY: {g['blueprint']['title']} — {g['blueprint']['summary']}\n\n"
         f"LITERATURE OVERVIEW: {json.dumps(g['overview'], ensure_ascii=False)[:6000] if g['overview'] else '(none)'}\n\n"
         f"REFERENCE KEYS:\n{ref_list}\n\nTASK OUTCOMES:\n{tasks}\n\n"

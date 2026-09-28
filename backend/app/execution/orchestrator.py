@@ -187,7 +187,8 @@ def _append_event(state_id: str, event: dict) -> None:
 # ── Task execution ─────────────────────────────────────────────────────────
 
 
-def _task_prompt(mp: dict, task: dict, states: dict[str, TaskState], feedback: str | None) -> str:
+def _task_prompt(mp: dict, task: dict, states: dict[str, TaskState], feedback: str | None,
+                 amendments: str = "") -> str:
     datasets = {d["id"]: d for d in mp["datasets"]}
     used = [datasets[r] for r in task["resources"] if r in datasets]
     used += [datasets[i["source"].split(":", 1)[1]] for i in task["inputs"]
@@ -211,6 +212,9 @@ def _task_prompt(mp: dict, task: dict, states: dict[str, TaskState], feedback: s
         parts.append("Datasets:\n" + json.dumps(list({d["id"]: d for d in used}.values()), ensure_ascii=False))
     if resources:
         parts.append("Resource notes:\n" + json.dumps(resources, ensure_ascii=False))
+    if amendments:
+        parts.insert(1, "REVIEWER-APPROVED AMENDMENTS (they override the blueprint, including your steps and "
+                        "acceptance checks, wherever they conflict; also in context/AMENDMENTS.md):\n" + amendments)
     if feedback:
         parts.append(
             f"PREVIOUS ATTEMPT FAILED. Fix this:\n{feedback}\n\nFiles written by the failed attempt may be "
@@ -268,10 +272,14 @@ async def _run_tests(sandbox, outputs: list[dict]) -> str | None:
     return f"FACTS: platform ran `pytest -q {' '.join(tests)}` → exit code {res.exit_code}\n{tail}"
 
 
-async def _verify(task: dict, sandbox, policy: str, report: dict | None = None) -> list[dict]:
+async def _verify(task: dict, sandbox, policy: str, report: dict | None = None,
+                  amendments: str | None = None) -> list[dict]:
     if not task["acceptance_checks"]:
         return []
     evidence = "Output previews:\n" + _previews(sandbox, task["outputs"])
+    if amendments:
+        evidence = ("REVIEWER-APPROVED AMENDMENTS (authoritative: where an acceptance check conflicts with them, "
+                    "judge the check as amended and say so):\n" + amendments + "\n\n" + evidence)
     if tests := await _run_tests(sandbox, task["outputs"]):
         evidence = tests + "\n\n" + evidence
     if report:
@@ -330,9 +338,11 @@ async def _execute(project_id: str, mp: dict, task: dict, state_id: str, policy:
         states = {st.task_id: st for st in s.exec(select(TaskState).where(TaskState.blueprint_run_id == s.get(TaskState, state_id).blueprint_run_id))}
     me = next(st for st in states.values() if st.id == state_id)
     feedback = me.note if me.attempts else None
+    amendments = project_amendments(project_id)
     if me.feedback:
         feedback = f"REVIEWER-APPROVED CHANGE (overrides earlier protocol where they conflict):\n{me.feedback}"
-    _update(state_id, status="running", attempts=me.attempts + 1, started_at=_now(), finished_at=None, feedback=None)
+    # Keep the amendment on the task (the verifier needs it); it is replaced by the next review.
+    _update(state_id, status="running", attempts=me.attempts + 1, started_at=_now(), finished_at=None)
 
     agent = next(a for a in mp["agents"] if a["id"] == task["agent"])
     sandbox = sandbox_for(project_id)
@@ -356,7 +366,7 @@ async def _execute(project_id: str, mp: dict, task: dict, state_id: str, policy:
     sub_cost = [0.0]
     if "spawn_subagents" in spec.tools:
         ctx.spawn = _subagent_runner(spec, ctx, state_id, spec.max_cost, sub_cost)
-    res = await run_agent(spec, _task_prompt(mp, task, states, feedback), ctx,
+    res = await run_agent(spec, _task_prompt(mp, task, states, feedback, amendments), ctx,
                           on_event=lambda e: _append_event(state_id, e))
 
     if res.status == "needs_credential":
@@ -374,7 +384,7 @@ async def _execute(project_id: str, mp: dict, task: dict, state_id: str, policy:
     # Verify whenever every output exists — an agent cut off by its budget or step limit
     # may already have finished the work. An explicit "failed" report is trusted.
     verifiable = not missing and res.status != "failed"
-    checks = await _verify(task, sandbox, policy, report) if verifiable else []
+    checks = await _verify(task, sandbox, policy, report, amendments) if verifiable else []
     passed = verifiable and bool(checks or not task["acceptance_checks"]) and all(c["passed"] for c in checks)
     if passed and res.status in ("budget_exceeded", "step_limit"):
         res.issues.append(f"Agent stopped ({res.status}) before reporting; outputs verified by the platform.")
@@ -573,6 +583,29 @@ async def run(project_id: str, h: RunHandle) -> dict:
 # ── Human actions ──────────────────────────────────────────────────────────
 
 
+def project_amendments(project_id: str) -> str:
+    """All reviewer-approved amendments, oldest first, as text for prompts and verifiers."""
+    with Session(engine) as s:
+        items = (s.get(Project, project_id).settings or {}).get("amendments", [])
+    return "\n\n".join(f"[{i + 1}] (via {a['task']}, {a['at'][:16]}) {a['text']}" for i, a in enumerate(items))
+
+
+def _record_amendment(project_id: str, task_id: str, text: str) -> None:
+    with Session(engine) as s:
+        project = s.get(Project, project_id)
+        cfg = dict(project.settings or {})
+        cfg["amendments"] = [*cfg.get("amendments", []), {"task": task_id, "text": text, "at": _now().isoformat()}]
+        project.settings = cfg
+        s.add(project)
+        s.commit()
+    out = sandbox_for(project_id).path("context")
+    out.mkdir(parents=True, exist_ok=True)
+    (out / "AMENDMENTS.md").write_text(
+        "# Reviewer-approved protocol amendments\n\nThese override the plan and blueprint wherever they conflict.\n\n"
+        + project_amendments(project_id) + "\n"
+    )
+
+
 def request_changes(project_id: str, task_id: str, feedback: str) -> list[str]:
     """Re-run a finished task with reviewer feedback; downstream tasks that consumed its
     outputs are reset too. Returns the task ids that will re-run."""
@@ -603,6 +636,8 @@ def request_changes(project_id: str, task_id: str, feedback: str) -> list[str]:
         states[task_id].feedback = feedback
         s.add(states[task_id])
         s.commit()
+    # Amendments apply to the whole study, not just this task: every later agent and check sees them.
+    _record_amendment(project_id, task_id, feedback)
     ctl = control(project_id)
     if ctl and ctl.reason and ctl.reason.startswith("checkpoint"):
         ctl.resume()

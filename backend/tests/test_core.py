@@ -290,7 +290,7 @@ def test_request_changes_resets_dependents():
             from sqlmodel import select
             st = {x.task_id: x for x in s.exec(select(TaskState).where(TaskState.blueprint_run_id == rid))}
             assert st["T1"].status == "done" and st["T2"].status == "pending" and st["T3"].status == "pending"
-            assert st["T2"].feedback == "use T=10000" and st["T3"].feedback is None
+            assert st["T2"].feedback == "use T=10000" and st["T3"].feedback is None  # kept for the verifier
     finally:
         with Session(engine) as s:
             from sqlmodel import select
