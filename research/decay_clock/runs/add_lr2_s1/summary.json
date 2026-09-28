@@ -1,0 +1,1 @@
+{"run_id": "add_lr2_s1", "task": "add", "cond": "lr2", "seed": 1, "T": 50000, "t_mem": 200, "t_gen": 15000, "B_mem": 0.2001000667167071, "B_gen": 15.007505003755451, "B_total": 50.02501667912759, "final_test_acc": 1.0, "max_test_acc": 1.0, "final_train_acc": 1.0, "seconds": 1247.1, "device": "cuda"}

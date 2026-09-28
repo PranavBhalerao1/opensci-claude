@@ -1,0 +1,1 @@
+{"run_id": "sub_lr2_s3", "task": "sub", "cond": "lr2", "seed": 3, "T": 50000, "t_mem": 300, "t_gen": null, "B_mem": 0.30015010007505943, "B_gen": null, "B_total": 50.02501667912759, "final_test_acc": 0.039927128702402115, "max_test_acc": 0.042811598628759384, "final_train_acc": 1.0, "seconds": 1247.6, "device": "cuda"}

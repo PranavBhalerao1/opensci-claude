@@ -1,0 +1,1 @@
+{"run_id": "add_early_s6", "task": "add", "cond": "early", "seed": 6, "T": 50000, "t_mem": 300, "t_gen": 10000, "B_mem": 0.6006008012019227, "B_gen": 20.02002670673074, "B_total": 50.050066766806886, "final_test_acc": 0.9971155524253845, "max_test_acc": 1.0, "final_train_acc": 1.0, "seconds": 1200.2, "device": "cuda"}

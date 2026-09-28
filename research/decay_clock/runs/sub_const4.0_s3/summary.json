@@ -1,0 +1,1 @@
+{"run_id": "sub_const4.0_s3", "task": "sub", "cond": "const4.0", "seed": 3, "T": 50000, "t_mem": 300, "t_gen": null, "B_mem": 1.2024064192616526, "B_gen": null, "B_total": 200.40106987693218, "final_test_acc": 0.006224381271749735, "max_test_acc": 0.009867921471595764, "final_train_acc": 1.0, "seconds": 1197.9, "device": "cuda"}

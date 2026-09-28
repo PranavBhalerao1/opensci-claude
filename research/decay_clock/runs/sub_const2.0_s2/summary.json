@@ -1,0 +1,1 @@
+{"run_id": "sub_const2.0_s2", "task": "sub", "cond": "const2.0", "seed": 2, "T": 50000, "t_mem": 300, "t_gen": 37200, "B_mem": 0.6006008012019227, "B_gen": 74.47449934903933, "B_total": 100.1001335337286, "final_test_acc": 0.9911947846412659, "max_test_acc": 0.9934719800949097, "final_train_acc": 1.0, "seconds": 1202.1, "device": "cuda"}

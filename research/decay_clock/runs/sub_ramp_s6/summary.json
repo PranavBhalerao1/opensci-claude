@@ -1,0 +1,1 @@
+{"run_id": "sub_ramp_s6", "task": "sub", "cond": "ramp", "seed": 6, "T": 50000, "t_mem": 200, "t_gen": null, "B_mem": 0.0007960180377715518, "B_gen": null, "B_total": 50.03336704072824, "final_test_acc": 0.011234248988330364, "max_test_acc": 0.011386063881218433, "final_train_acc": 1.0, "seconds": 1247.8, "device": "cuda"}

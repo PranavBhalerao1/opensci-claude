@@ -1,0 +1,1 @@
+{"run_id": "add_ramp_s7", "task": "add", "cond": "ramp", "seed": 7, "T": 50000, "t_mem": 400, "t_gen": 35900, "B_mem": 0.0031920808448128147, "B_gen": 25.788344572198405, "B_total": 50.03336704072824, "final_test_acc": 1.0, "max_test_acc": 1.0, "final_train_acc": 1.0, "seconds": 1245.2, "device": "cuda"}

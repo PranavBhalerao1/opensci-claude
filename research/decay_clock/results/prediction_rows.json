@@ -1,0 +1,648 @@
+{
+ "add": {
+  "B_star": 18.109056037861446,
+  "n_pred": 40,
+  "n_mismatch_grok_status": 1,
+  "median_abs_log_error_Bclock": 0.1431008436406733,
+  "median_abs_pct_error_Bclock": 15.384615384615374,
+  "median_abs_log_error_stepclock": 0.6565748909366015,
+  "median_abs_pct_error_stepclock": 92.81767955801105,
+  "rows": [
+   {
+    "cond": "const0.5",
+    "seed": 0,
+    "t_gen": 47900,
+    "t_pred": 36300
+   },
+   {
+    "cond": "const0.5",
+    "seed": 1,
+    "t_gen": 38400,
+    "t_pred": 36300
+   },
+   {
+    "cond": "const0.5",
+    "seed": 2,
+    "t_gen": 37800,
+    "t_pred": 36300
+   },
+   {
+    "cond": "const0.5",
+    "seed": 3,
+    "t_gen": 49300,
+    "t_pred": 36300
+   },
+   {
+    "cond": "const0.5",
+    "seed": 4,
+    "t_gen": 46400,
+    "t_pred": 36300
+   },
+   {
+    "cond": "const0.5",
+    "seed": 5,
+    "t_gen": 31500,
+    "t_pred": 36300
+   },
+   {
+    "cond": "const0.5",
+    "seed": 6,
+    "t_gen": 47400,
+    "t_pred": 36300
+   },
+   {
+    "cond": "const0.5",
+    "seed": 7,
+    "t_gen": null,
+    "t_pred": 36300
+   },
+   {
+    "cond": "const2.0",
+    "seed": 0,
+    "t_gen": 12200,
+    "t_pred": 9100
+   },
+   {
+    "cond": "const2.0",
+    "seed": 1,
+    "t_gen": 10500,
+    "t_pred": 9100
+   },
+   {
+    "cond": "const2.0",
+    "seed": 2,
+    "t_gen": 7200,
+    "t_pred": 9100
+   },
+   {
+    "cond": "const2.0",
+    "seed": 3,
+    "t_gen": 11300,
+    "t_pred": 9100
+   },
+   {
+    "cond": "const2.0",
+    "seed": 4,
+    "t_gen": 7700,
+    "t_pred": 9100
+   },
+   {
+    "cond": "const2.0",
+    "seed": 5,
+    "t_gen": 6000,
+    "t_pred": 9100
+   },
+   {
+    "cond": "const2.0",
+    "seed": 6,
+    "t_gen": 8600,
+    "t_pred": 9100
+   },
+   {
+    "cond": "const2.0",
+    "seed": 7,
+    "t_gen": 16800,
+    "t_pred": 9100
+   },
+   {
+    "cond": "early",
+    "seed": 0,
+    "t_gen": 9600,
+    "t_pred": 9100
+   },
+   {
+    "cond": "early",
+    "seed": 1,
+    "t_gen": 8600,
+    "t_pred": 9100
+   },
+   {
+    "cond": "early",
+    "seed": 2,
+    "t_gen": 7600,
+    "t_pred": 9100
+   },
+   {
+    "cond": "early",
+    "seed": 3,
+    "t_gen": 13700,
+    "t_pred": 9100
+   },
+   {
+    "cond": "early",
+    "seed": 4,
+    "t_gen": 8100,
+    "t_pred": 9100
+   },
+   {
+    "cond": "early",
+    "seed": 5,
+    "t_gen": 6200,
+    "t_pred": 9100
+   },
+   {
+    "cond": "early",
+    "seed": 6,
+    "t_gen": 10000,
+    "t_pred": 9100
+   },
+   {
+    "cond": "early",
+    "seed": 7,
+    "t_gen": 17100,
+    "t_pred": 9100
+   },
+   {
+    "cond": "late",
+    "seed": 0,
+    "t_gen": 35700,
+    "t_pred": 34100
+   },
+   {
+    "cond": "late",
+    "seed": 1,
+    "t_gen": 31500,
+    "t_pred": 34100
+   },
+   {
+    "cond": "late",
+    "seed": 2,
+    "t_gen": 32300,
+    "t_pred": 34100
+   },
+   {
+    "cond": "late",
+    "seed": 3,
+    "t_gen": 34500,
+    "t_pred": 34100
+   },
+   {
+    "cond": "late",
+    "seed": 4,
+    "t_gen": 32000,
+    "t_pred": 34100
+   },
+   {
+    "cond": "late",
+    "seed": 5,
+    "t_gen": 32000,
+    "t_pred": 34100
+   },
+   {
+    "cond": "late",
+    "seed": 6,
+    "t_gen": 34900,
+    "t_pred": 34100
+   },
+   {
+    "cond": "late",
+    "seed": 7,
+    "t_gen": 39900,
+    "t_pred": 34100
+   },
+   {
+    "cond": "ramp",
+    "seed": 0,
+    "t_gen": 34900,
+    "t_pred": 30100
+   },
+   {
+    "cond": "ramp",
+    "seed": 1,
+    "t_gen": 28500,
+    "t_pred": 30100
+   },
+   {
+    "cond": "ramp",
+    "seed": 2,
+    "t_gen": 27600,
+    "t_pred": 30100
+   },
+   {
+    "cond": "ramp",
+    "seed": 3,
+    "t_gen": 36800,
+    "t_pred": 30100
+   },
+   {
+    "cond": "ramp",
+    "seed": 4,
+    "t_gen": 31000,
+    "t_pred": 30100
+   },
+   {
+    "cond": "ramp",
+    "seed": 5,
+    "t_gen": 28400,
+    "t_pred": 30100
+   },
+   {
+    "cond": "ramp",
+    "seed": 6,
+    "t_gen": 39600,
+    "t_pred": 30100
+   },
+   {
+    "cond": "ramp",
+    "seed": 7,
+    "t_gen": 35900,
+    "t_pred": 30100
+   },
+   {
+    "cond": "lr2",
+    "seed": 0,
+    "t_gen": 18200,
+    "t_pred": 18100
+   },
+   {
+    "cond": "lr2",
+    "seed": 1,
+    "t_gen": 15000,
+    "t_pred": 18100
+   },
+   {
+    "cond": "lr2",
+    "seed": 2,
+    "t_gen": 11600,
+    "t_pred": 18100
+   },
+   {
+    "cond": "lr2",
+    "seed": 3,
+    "t_gen": 16600,
+    "t_pred": 18100
+   },
+   {
+    "cond": "lr2",
+    "seed": 4,
+    "t_gen": 16200,
+    "t_pred": 18100
+   },
+   {
+    "cond": "lr2",
+    "seed": 5,
+    "t_gen": 16400,
+    "t_pred": 18100
+   },
+   {
+    "cond": "lr2",
+    "seed": 6,
+    "t_gen": 16800,
+    "t_pred": 18100
+   },
+   {
+    "cond": "lr2",
+    "seed": 7,
+    "t_gen": 26100,
+    "t_pred": 18100
+   },
+   {
+    "cond": "lrhalf",
+    "seed": 0,
+    "t_gen": 24400,
+    "t_pred": 18100
+   },
+   {
+    "cond": "lrhalf",
+    "seed": 1,
+    "t_gen": 19200,
+    "t_pred": 18100
+   },
+   {
+    "cond": "lrhalf",
+    "seed": 2,
+    "t_gen": 17400,
+    "t_pred": 18100
+   },
+   {
+    "cond": "lrhalf",
+    "seed": 3,
+    "t_gen": 26000,
+    "t_pred": 18100
+   },
+   {
+    "cond": "lrhalf",
+    "seed": 4,
+    "t_gen": 16000,
+    "t_pred": 18100
+   },
+   {
+    "cond": "lrhalf",
+    "seed": 5,
+    "t_gen": 16300,
+    "t_pred": 18100
+   },
+   {
+    "cond": "lrhalf",
+    "seed": 6,
+    "t_gen": 18100,
+    "t_pred": 18100
+   },
+   {
+    "cond": "lrhalf",
+    "seed": 7,
+    "t_gen": null,
+    "t_pred": 18100
+   }
+  ]
+ },
+ "sub": {
+  "B_star": NaN,
+  "n_pred": 4,
+  "n_mismatch_grok_status": 4,
+  "median_abs_log_error_Bclock": null,
+  "median_abs_pct_error_Bclock": null,
+  "median_abs_log_error_stepclock": NaN,
+  "median_abs_pct_error_stepclock": NaN,
+  "rows": [
+   {
+    "cond": "const0.5",
+    "seed": 4,
+    "t_gen": null,
+    "t_pred": null
+   },
+   {
+    "cond": "const0.5",
+    "seed": 5,
+    "t_gen": null,
+    "t_pred": null
+   },
+   {
+    "cond": "const0.5",
+    "seed": 6,
+    "t_gen": null,
+    "t_pred": null
+   },
+   {
+    "cond": "const0.5",
+    "seed": 7,
+    "t_gen": null,
+    "t_pred": null
+   },
+   {
+    "cond": "const2.0",
+    "seed": 0,
+    "t_gen": null,
+    "t_pred": null
+   },
+   {
+    "cond": "const2.0",
+    "seed": 1,
+    "t_gen": null,
+    "t_pred": null
+   },
+   {
+    "cond": "const2.0",
+    "seed": 2,
+    "t_gen": 37200,
+    "t_pred": null
+   },
+   {
+    "cond": "const2.0",
+    "seed": 3,
+    "t_gen": null,
+    "t_pred": null
+   },
+   {
+    "cond": "const2.0",
+    "seed": 4,
+    "t_gen": null,
+    "t_pred": null
+   },
+   {
+    "cond": "const2.0",
+    "seed": 5,
+    "t_gen": null,
+    "t_pred": null
+   },
+   {
+    "cond": "const2.0",
+    "seed": 6,
+    "t_gen": null,
+    "t_pred": null
+   },
+   {
+    "cond": "const2.0",
+    "seed": 7,
+    "t_gen": null,
+    "t_pred": null
+   },
+   {
+    "cond": "const4.0",
+    "seed": 0,
+    "t_gen": null,
+    "t_pred": null
+   },
+   {
+    "cond": "const4.0",
+    "seed": 1,
+    "t_gen": 42500,
+    "t_pred": null
+   },
+   {
+    "cond": "const4.0",
+    "seed": 2,
+    "t_gen": 15900,
+    "t_pred": null
+   },
+   {
+    "cond": "const4.0",
+    "seed": 3,
+    "t_gen": null,
+    "t_pred": null
+   },
+   {
+    "cond": "const4.0",
+    "seed": 4,
+    "t_gen": null,
+    "t_pred": null
+   },
+   {
+    "cond": "const4.0",
+    "seed": 5,
+    "t_gen": null,
+    "t_pred": null
+   },
+   {
+    "cond": "const4.0",
+    "seed": 6,
+    "t_gen": null,
+    "t_pred": null
+   },
+   {
+    "cond": "const4.0",
+    "seed": 7,
+    "t_gen": null,
+    "t_pred": null
+   },
+   {
+    "cond": "early",
+    "seed": 0,
+    "t_gen": null,
+    "t_pred": null
+   },
+   {
+    "cond": "early",
+    "seed": 1,
+    "t_gen": null,
+    "t_pred": null
+   },
+   {
+    "cond": "early",
+    "seed": 2,
+    "t_gen": null,
+    "t_pred": null
+   },
+   {
+    "cond": "early",
+    "seed": 3,
+    "t_gen": null,
+    "t_pred": null
+   },
+   {
+    "cond": "early",
+    "seed": 4,
+    "t_gen": null,
+    "t_pred": null
+   },
+   {
+    "cond": "early",
+    "seed": 5,
+    "t_gen": null,
+    "t_pred": null
+   },
+   {
+    "cond": "early",
+    "seed": 6,
+    "t_gen": null,
+    "t_pred": null
+   },
+   {
+    "cond": "early",
+    "seed": 7,
+    "t_gen": null,
+    "t_pred": null
+   },
+   {
+    "cond": "late",
+    "seed": 0,
+    "t_gen": null,
+    "t_pred": null
+   },
+   {
+    "cond": "late",
+    "seed": 1,
+    "t_gen": null,
+    "t_pred": null
+   },
+   {
+    "cond": "late",
+    "seed": 2,
+    "t_gen": 48500,
+    "t_pred": null
+   },
+   {
+    "cond": "late",
+    "seed": 3,
+    "t_gen": null,
+    "t_pred": null
+   },
+   {
+    "cond": "late",
+    "seed": 4,
+    "t_gen": null,
+    "t_pred": null
+   },
+   {
+    "cond": "late",
+    "seed": 5,
+    "t_gen": null,
+    "t_pred": null
+   },
+   {
+    "cond": "late",
+    "seed": 6,
+    "t_gen": null,
+    "t_pred": null
+   },
+   {
+    "cond": "late",
+    "seed": 7,
+    "t_gen": null,
+    "t_pred": null
+   },
+   {
+    "cond": "ramp",
+    "seed": 0,
+    "t_gen": null,
+    "t_pred": null
+   },
+   {
+    "cond": "ramp",
+    "seed": 1,
+    "t_gen": null,
+    "t_pred": null
+   },
+   {
+    "cond": "ramp",
+    "seed": 2,
+    "t_gen": null,
+    "t_pred": null
+   },
+   {
+    "cond": "ramp",
+    "seed": 3,
+    "t_gen": null,
+    "t_pred": null
+   },
+   {
+    "cond": "ramp",
+    "seed": 4,
+    "t_gen": null,
+    "t_pred": null
+   },
+   {
+    "cond": "ramp",
+    "seed": 5,
+    "t_gen": null,
+    "t_pred": null
+   },
+   {
+    "cond": "ramp",
+    "seed": 6,
+    "t_gen": null,
+    "t_pred": null
+   },
+   {
+    "cond": "ramp",
+    "seed": 7,
+    "t_gen": null,
+    "t_pred": null
+   },
+   {
+    "cond": "lr2",
+    "seed": 0,
+    "t_gen": null,
+    "t_pred": null
+   },
+   {
+    "cond": "lr2",
+    "seed": 1,
+    "t_gen": null,
+    "t_pred": null
+   },
+   {
+    "cond": "lr2",
+    "seed": 2,
+    "t_gen": null,
+    "t_pred": null
+   },
+   {
+    "cond": "lr2",
+    "seed": 3,
+    "t_gen": null,
+    "t_pred": null
+   }
+  ]
+ }
+}

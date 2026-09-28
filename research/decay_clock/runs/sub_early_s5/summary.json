@@ -1,0 +1,1 @@
+{"run_id": "sub_early_s5", "task": "sub", "cond": "early", "seed": 5, "T": 50000, "t_mem": 300, "t_gen": null, "B_mem": 0.6006008012019227, "B_gen": null, "B_total": 50.050066766806886, "final_test_acc": 0.013359648175537586, "max_test_acc": 0.01624411717057228, "final_train_acc": 1.0, "seconds": 1232.7, "device": "cuda"}

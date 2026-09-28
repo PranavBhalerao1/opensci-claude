@@ -1,0 +1,1 @@
+{"run_id": "add_early_s4", "task": "add", "cond": "early", "seed": 4, "T": 50000, "t_mem": 400, "t_gen": 8100, "B_mem": 0.8008010682692303, "B_gen": 16.216221632454427, "B_total": 50.050066766806886, "final_test_acc": 0.9966601133346558, "max_test_acc": 1.0, "final_train_acc": 1.0, "seconds": 1200.2, "device": "cuda"}

@@ -1,0 +1,1 @@
+{"run_id": "add_late_s5", "task": "add", "cond": "late", "seed": 5, "T": 50000, "t_mem": 200, "t_gen": 32000, "B_mem": 0.0, "B_gen": 14.01401869471375, "B_total": 50.050066766806886, "final_test_acc": 1.0, "max_test_acc": 1.0, "final_train_acc": 1.0, "seconds": 1229.4, "device": "cuda"}

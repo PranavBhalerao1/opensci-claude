@@ -1,0 +1,1 @@
+{"run_id": "add_const1.0_s0", "task": "add", "cond": "const1.0", "seed": 0, "T": 50000, "t_mem": 400, "t_gen": 22400, "B_mem": 0.4002001334334104, "B_gen": 22.411207472264092, "B_total": 50.02501667912759, "final_test_acc": 0.9987854957580566, "max_test_acc": 1.0, "final_train_acc": 1.0, "seconds": 1209.6, "device": "cuda"}

@@ -1,0 +1,1 @@
+{"run_id": "add_const2.0_s3", "task": "add", "cond": "const2.0", "seed": 3, "T": 50000, "t_mem": 400, "t_gen": 11300, "B_mem": 0.8008010682692303, "B_gen": 22.622630178604005, "B_total": 100.1001335337286, "final_test_acc": 1.0, "max_test_acc": 1.0, "final_train_acc": 1.0, "seconds": 1218.2, "device": "cuda"}
