@@ -151,6 +151,19 @@ class Secret(SQLModel, table=True):
     created_at: datetime = Field(default_factory=_now)
 
 
+class GpuUsage(SQLModel, table=True):
+    """One cloud GPU job's metered runtime and estimated cost."""
+
+    id: str = Field(default_factory=_id, primary_key=True)
+    project_id: str | None = Field(default=None, index=True)
+    run_id: str | None = None
+    gpu: str
+    job: str
+    seconds: float = 0.0
+    cost: float = 0.0
+    created_at: datetime = Field(default_factory=_now)
+
+
 class Usage(SQLModel, table=True):
     """One LLM call's token usage and estimated cost."""
 

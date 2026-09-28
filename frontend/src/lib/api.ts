@@ -457,7 +457,12 @@ export const blueprintApi = {
 export const usageApi = {
   get: (id: string) =>
     fetch(`${API_URL}/api/projects/${id}/usage`).then(
-      json<{ total: number; by_model: Record<string, number>; calls: number }>,
+      json<{
+        total: number;
+        by_model: Record<string, number>;
+        calls: number;
+        gpu: { spent: number; budget: number };
+      }>,
     ),
 };
 

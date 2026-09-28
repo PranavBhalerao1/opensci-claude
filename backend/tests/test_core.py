@@ -339,3 +339,30 @@ def test_budget_is_read_fresh():
         with Session(engine) as s:
             s.delete(s.get(Project, pid))
             s.commit()
+
+
+def test_gpu_budget_refusal(tmp_path, monkeypatch):
+    from app.execution import modal_runner as mr
+
+    monkeypatch.setattr(mr, "configured", lambda: True)
+    monkeypatch.setattr(mr, "gpu_budget", lambda pid: 1.0)
+    monkeypatch.setattr(mr, "gpu_spent", lambda pid: 0.9)
+    sb = LocalSandbox("_t")
+    sb.root = tmp_path
+    ctx = ToolContext("_t", sb, None)
+    out = asyncio.run(TOOLS["run_gpu_jobs"].handler(ctx, {
+        "jobs": [{"name": "a", "command": "python x.py"}], "gpu": "L4", "timeout_minutes": 60, "pip_packages": ["torch"]}))
+    assert out.startswith("Refused") and "$0.10" in out
+    out = asyncio.run(TOOLS["run_gpu_jobs"].handler(ctx, {
+        "jobs": [{"name": "a b", "command": "x"}], "pip_packages": []}))
+    assert "unique names" in out
+
+
+def test_gpu_tool_granted_for_gpu_tasks():
+    sb = LocalSandbox("_t")
+    sb.capabilities = set(sb.BASE_CAPABILITIES) | {"cuda_gpu"}
+    task = {"tools": ["run_python"], "compute": {"kind": "apple_gpu"}}
+    agent = {"tools": ["run_python", "run_shell"]}
+    assert "run_gpu_jobs" in orchestrator._task_tools(task, agent, sb)
+    task["compute"]["kind"] = "cpu"
+    assert "run_gpu_jobs" not in orchestrator._task_tools(task, agent, sb)

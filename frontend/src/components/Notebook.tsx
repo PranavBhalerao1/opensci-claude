@@ -49,7 +49,9 @@ export default function Notebook({ project, lit, gapsRun, planRun, bpRun, exec, 
 }
 
 function Spend({ projectId }: { projectId: string }) {
-  const [usage, setUsage] = useState<{ total: number; calls: number } | null>(null);
+  const [usage, setUsage] = useState<{ total: number; calls: number; gpu: { spent: number; budget: number } } | null>(
+    null,
+  );
   useEffect(() => {
     let cancelled = false;
     const load = () => usageApi.get(projectId).then((u) => !cancelled && setUsage(u)).catch(() => {});
@@ -62,12 +64,22 @@ function Spend({ projectId }: { projectId: string }) {
   }, [projectId]);
   if (!usage) return null;
   return (
-    <div className="flex justify-between border-b border-dashed border-rule py-2">
-      <dt className="uppercase tracking-wider text-faint">Spend</dt>
-      <dd className="text-ink" title={`${usage.calls} model calls`}>
-        ${usage.total.toFixed(usage.total < 1 ? 3 : 2)}
-      </dd>
-    </div>
+    <>
+      <div className="flex justify-between border-b border-dashed border-rule py-2">
+        <dt className="uppercase tracking-wider text-faint">Model spend</dt>
+        <dd className="text-ink" title={`${usage.calls} model calls (estimate)`}>
+          ${usage.total.toFixed(usage.total < 1 ? 3 : 2)}
+        </dd>
+      </div>
+      {usage.gpu.spent > 0 && (
+        <div className="flex justify-between border-b border-dashed border-rule py-2">
+          <dt className="uppercase tracking-wider text-faint">GPU spend</dt>
+          <dd className="text-ink" title="Cloud GPUs (Modal), metered per second">
+            ${usage.gpu.spent.toFixed(2)} / ${usage.gpu.budget.toFixed(0)}
+          </dd>
+        </div>
+      )}
+    </>
   );
 }
 

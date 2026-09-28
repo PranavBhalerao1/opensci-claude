@@ -97,6 +97,19 @@ class LocalSandbox(Sandbox):
         {"apple_gpu"} if sys.platform == "darwin" else set()
     )
 
+    BASE_CAPABILITIES = frozenset(capabilities)
+
+    @property
+    def capabilities(self) -> set[str]:  # type: ignore[override]
+        """Checked on each use, so logging in to Modal takes effect without a restart."""
+        from .modal_runner import configured
+
+        return set(self.BASE_CAPABILITIES) | ({"cuda_gpu"} if configured() else set())
+
+    @capabilities.setter
+    def capabilities(self, value: set[str]) -> None:
+        self.BASE_CAPABILITIES = frozenset(value)
+
     def __init__(self, project_id: str):
         self.root = (WORKSPACES / project_id).resolve()
         self.venv = self.root / ".venv"

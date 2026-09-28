@@ -51,7 +51,12 @@ Work only inside the project workspace (your current directory); other agents sh
   install_packages (pip) or install_conda_packages (conda-forge/bioconda), or
   download and build it in the workspace.
 - For long computations (training, simulations, docking, servers) use
-  start_process and poll with check_process/wait instead of blocking.
+  start_process and poll with check_process/wait instead of blocking. When
+  run_gpu_jobs is available, run GPU-heavy work (training, grids) there, in parallel.
+- Before any experiment grid: run ONE full-length representative job on the target
+  hardware, measure its real wall time, and size horizons/timeouts from that — never
+  from a tiny calibration. Keep instrumentation light (log at checkpoints, not every
+  step) so runs stay fast.
 - Split large independent work (sweeps, per-sample or per-target runs) across
   spawn_subagents when available.
 - Background research is already done: context/ holds the brief, the chosen gap and
@@ -282,6 +287,14 @@ async def _verify(task: dict, sandbox, policy: str, report: dict | None = None) 
     return [r.model_dump() for r in verdict.results]
 
 
+def _task_tools(task: dict, agent: dict, sandbox) -> list[str]:
+    tools = [t for t in task["tools"] if t in agent["tools"] and t in TOOLS] or list(agent["tools"])
+    # GPU work goes to cloud GPUs when they are available, even if the blueprint predates them.
+    if task["compute"]["kind"] in ("cuda_gpu", "apple_gpu") and "cuda_gpu" in sandbox.capabilities:
+        tools += [t for t in ("run_gpu_jobs",) if t not in tools]
+    return tools
+
+
 def _subagent_runner(spec: AgentSpec, ctx: ToolContext, state_id: str, budget: float, cost_box: list[float]):
     """Build the spawn callback: children share the workspace, cannot spawn further, split the budget."""
 
@@ -333,7 +346,7 @@ async def _execute(project_id: str, mp: dict, task: dict, state_id: str, policy:
             name=agent["name"], role=agent["instructions"], today=_now().date().isoformat()
         ),
         model=model,
-        tools=[t for t in task["tools"] if t in agent["tools"] and t in TOOLS] or agent["tools"],
+        tools=_task_tools(task, agent, sandbox),
         max_steps=MAX_AGENT_STEPS,
         # Never let one task spend beyond what is left of the project budget.
         max_cost=min(max(ESCALATED_MIN_BUDGET if escalated else 0.05, float(task["max_cost_usd"])), max(0.02, remaining)),

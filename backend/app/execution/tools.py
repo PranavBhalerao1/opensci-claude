@@ -231,6 +231,36 @@ async def _request_credential(ctx: ToolContext, a: dict) -> str:
     return "The user has been asked for this credential. Stop now; the task resumes once it is provided."
 
 
+async def _run_gpu_jobs(ctx: ToolContext, a: dict) -> str:
+    from . import modal_runner as mr
+
+    if not mr.configured():
+        return "Cloud GPUs are not configured (no Modal credentials)."
+    jobs = list(a["jobs"])[: mr.MAX_PARALLEL_JOBS]
+    names = [j.get("name", "") for j in jobs]
+    if not jobs or any(not re.match(r"^[A-Za-z0-9_-]{1,60}$", n) for n in names) or len(set(names)) != len(names):
+        return "Give 1-40 jobs with unique names (letters, digits, - and _)."
+    gpu = a.get("gpu", "L4")
+    if gpu not in mr.GPU_PRICES:
+        return f"Unknown GPU {gpu}; choose from {', '.join(mr.GPU_PRICES)}."
+    timeout_s = max(60, min(int(a.get("timeout_minutes", 20)) * 60, 3 * 3600))
+    packages = [p for p in a.get("pip_packages", []) if p]
+    from .sandbox import _PKG
+
+    bad = [p for p in packages if not _PKG.match(p)]
+    if bad:
+        return f"Rejected package specs: {', '.join(bad)}"
+    remaining = mr.gpu_budget(ctx.project_id) - mr.gpu_spent(ctx.project_id)
+    worst = len(jobs) * timeout_s * mr.rate(gpu)
+    if worst > remaining:
+        return (f"Refused: worst case {len(jobs)} jobs x {timeout_s // 60} min on {gpu} = ${worst:.2f}, but only "
+                f"${remaining:.2f} of the GPU budget remains. Lower timeout_minutes, use fewer jobs or a cheaper GPU.")
+    result = await asyncio.to_thread(mr.run_jobs, ctx.project_id, ctx.sandbox.root, jobs, gpu, timeout_s, packages)
+    spent = mr.gpu_spent(ctx.project_id)
+    result["gpu_budget"] = {"spent": round(spent, 3), "remaining": round(mr.gpu_budget(ctx.project_id) - spent, 3)}
+    return json.dumps(result, ensure_ascii=False)
+
+
 async def _spawn_subagents(ctx: ToolContext, a: dict) -> str:
     if ctx.spawn is None:
         return "Sub-agents cannot spawn further sub-agents; do the work yourself."
@@ -423,6 +453,19 @@ TOOLS: dict[str, Tool] = {
              "(e.g. 'protein structure', 'building energy'). It is NOT exhaustive: use web_search and read_webpage "
              "to find and learn any other service or tool.",
              _obj({"query": {"type": "string"}, "limit": {"type": "integer"}}, ["query"]), (), _lookup_resources),
+        Tool("run_gpu_jobs", "Run heavy computation on cloud NVIDIA GPUs (Modal), many jobs in parallel. The "
+             "workspace is synced to each job (cwd), and new or changed files are synced back when all jobs finish. "
+             "Use CUDA (torch.device('cuda')). Each job's output goes to logs/gpu/<name>.log. Before a large grid, "
+             "run ONE representative job to measure its real runtime, then size timeouts from that.",
+             _obj({
+                 "jobs": {"type": "array", "items": _obj({"name": {"type": "string"}, "command": {"type": "string"}},
+                                                          ["name", "command"])},
+                 "gpu": {"type": "string", "enum": ["T4", "L4", "A10", "L40S", "A100-40GB", "A100-80GB", "H100"],
+                         "description": "L4 is a good default for small models"},
+                 "timeout_minutes": {"type": "integer", "description": "Per job; worst case is billed against the budget"},
+                 "pip_packages": {"type": "array", "items": {"type": "string"},
+                                  "description": "Packages for the GPU image, e.g. ['torch', 'numpy', 'pandas']"},
+             }, ["jobs", "pip_packages"]), ("cuda_gpu",), _run_gpu_jobs),
         Tool("web_search", "Search the web (hosted).", {}, ("internet",), None),
         Tool("report_result", "Finish the task: summarise what was done and list the artifacts produced.",
              _obj({
