@@ -156,6 +156,17 @@ Rules:
   the steps.
 - Code-heavy tasks should write real modules and tests (src/, tests/) and run them;
   long computations use start_process + check_process.
+- Do not re-review the literature: the Literature and Gaps stages already did, and
+  their results are in the workspace under context/. Agents may look up a specific
+  fact they need, but no task exists only to survey or verify prior work.
+- Do not include paper-writing tasks: the Report stage writes the paper from the
+  execution outputs. The last task produces publication figures (PNG), tables and a
+  results summary (results/SUMMARY.md) with the key numbers.
+- Every task must advance the science (data, code, experiments, analysis, figures).
+  Fold bookkeeping (provenance, configs, logging) into those tasks instead of
+  separate audit/protocol tasks. Prefer 5-10 substantive tasks.
+- Put experiment grids in code and run them as background processes (or fan them
+  out with spawn_subagents), so LLM cost stays low while compute does the work.
 - Estimate costs honestly and keep the total LLM estimate within the budget.
 - In checkpoints, add human reviews after data acquisition and before the paper.
 - Software: prefer pip (install_packages), then conda-forge/bioconda

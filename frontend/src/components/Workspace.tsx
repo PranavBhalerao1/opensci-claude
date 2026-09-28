@@ -567,6 +567,9 @@ export default function Workspace({ projectId: initialId }: { projectId?: string
                         onCancel={() => execAction(() => executionApi.cancel(project.id))}
                         onTask={(taskId, action, note) => execAction(() => executionApi.task(project.id, taskId, action, note))}
                         onSecret={(name, value) => execAction(() => executionApi.provideSecret(project.id, name, value))}
+                        onRequestChanges={(taskId, feedback) =>
+                          execAction(() => executionApi.requestChanges(project.id, taskId, feedback))
+                        }
                         onOpenFiles={(focus) => setFiles({ focus })}
                       />
                     )}

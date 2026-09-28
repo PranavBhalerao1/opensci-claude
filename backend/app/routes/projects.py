@@ -111,7 +111,8 @@ async def confirm_brief(project_id: str, body: BriefConfirm, session: Session = 
         raise HTTPException(409, "No research brief to confirm yet")
     preset = clarify.DEPTH_PRESETS[body.depth]
     max_papers = body.max_papers or preset["max_papers"]
-    project.settings = {**preset, "max_papers": max(10, min(max_papers, 500))}
+    # Merge: budget, model policy and report settings chosen earlier must survive.
+    project.settings = {**(project.settings or {}), **preset, "max_papers": max(10, min(max_papers, 500))}
     project.updated_at = datetime.now(timezone.utc)
     session.add(project)
     session.commit()
@@ -486,6 +487,28 @@ def cancel_stage(project_id: str, kind: Literal["literature", "gaps", "plan", "b
     if not jobs.cancel(project_id, kind):
         raise HTTPException(409, f"No {kind} run in progress")
     return {"cancelled": kind}
+
+
+class ChangeRequest(BaseModel):
+    feedback: str
+
+
+@router.post("/{project_id}/execution/changes/{task_id}")
+async def request_task_changes(project_id: str, task_id: str, body: ChangeRequest,
+                               session: Session = Depends(get_session)) -> dict:
+    """Reviewer feedback on a finished task: re-run it (and its dependents) with the change."""
+    _get(session, project_id)
+    if not body.feedback.strip():
+        raise HTTPException(400, "Describe the change")
+    try:
+        rerun = orchestrator.request_changes(project_id, task_id, body.feedback.strip())
+    except LookupError as exc:
+        raise HTTPException(404, str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(409, str(exc)) from exc
+    if not jobs.is_running(project_id, "execute"):
+        pipeline.start_execution(project_id)
+    return {"rerun": rerun}
 
 
 @router.get("/{project_id}/workspace/files")

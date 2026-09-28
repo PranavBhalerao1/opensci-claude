@@ -14,6 +14,7 @@ interface Props {
   onCancel: () => Promise<void>;
   onTask: (taskId: string, action: "complete" | "skip", note?: string) => Promise<void>;
   onSecret: (name: string, value: string) => Promise<void>;
+  onRequestChanges: (taskId: string, feedback: string) => Promise<void>;
   onOpenFiles: (path?: string) => void;
 }
 
@@ -88,6 +89,7 @@ export default function ExecutionRun(props: Props) {
                     onToggle={() => setOpen(open === t.id ? null : t.id)}
                     onTask={props.onTask}
                     onSecret={props.onSecret}
+                    onRequestChanges={props.onRequestChanges}
                     onOpenFiles={props.onOpenFiles}
                   />
                 ) : null;
@@ -239,7 +241,8 @@ function PausedBanner({ exec, onResume, onOpenFiles }: Pick<Props, "onResume" | 
           <div className="font-mono text-[10px] uppercase tracking-[0.14em]">◆ Checkpoint</div>
           <p className="mt-1 text-[13.5px] leading-relaxed">
             <span className="font-mono">{checkpoint.split(":")[0]}</span> finished.{" "}
-            {checkpoint.split(":").slice(1).join(":").trim().replace(/[.!]?$/, ".")} Review the outputs, then continue.
+            {checkpoint.split(":").slice(1).join(":").trim().replace(/[.!]?$/, ".")} Review the outputs, then continue —
+            or open the task below and request changes.
           </p>
           <div className="mt-3 flex gap-2">
             <button onClick={() => onOpenFiles()} className="border border-ink bg-paper px-4 py-2 text-[13px] hover:bg-ink hover:text-paper">
@@ -337,6 +340,7 @@ function TaskRow({
   onToggle,
   onTask,
   onSecret,
+  onRequestChanges,
   onOpenFiles,
 }: {
   title: string;
@@ -346,8 +350,10 @@ function TaskRow({
   onToggle: () => void;
   onTask: Props["onTask"];
   onSecret: Props["onSecret"];
+  onRequestChanges: Props["onRequestChanges"];
   onOpenFiles: Props["onOpenFiles"];
 }) {
+  const [change, setChange] = useState("");
   const [note, setNote] = useState("");
   const [secret, setSecret] = useState("");
   const credential = st.status === "human" ? /^Needs credential ([A-Z0-9_]+)/.exec(st.note ?? "")?.[1] : undefined;
@@ -418,6 +424,27 @@ function TaskRow({
                 ))}
               </div>
             </details>
+          )}
+          {st.status === "done" && (
+            <form
+              className="flex flex-wrap items-center gap-2"
+              onSubmit={async (e) => {
+                e.preventDefault();
+                if (!change.trim()) return;
+                await onRequestChanges(st.task_id, change.trim());
+                setChange("");
+              }}
+            >
+              <input
+                value={change}
+                onChange={(e) => setChange(e.target.value)}
+                placeholder="Request changes — the task and everything downstream re-runs with your feedback"
+                className="min-w-0 flex-1 border-b border-rule bg-transparent py-1 text-[13px] outline-none placeholder:text-faint focus:border-ink"
+              />
+              <button type="submit" className="border border-ink px-3 py-1.5 text-[12.5px] hover:bg-ink hover:text-paper">
+                Re-run with feedback
+              </button>
+            </form>
           )}
           {credential && (
             <form

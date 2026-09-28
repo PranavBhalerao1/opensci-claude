@@ -105,7 +105,14 @@ simulation, GIS, statistics packages) and search the web. So:
 - Every task must be concrete and executable by an agent: state what to do, with
   what data, producing which named artifacts. No wet-lab or human-subject steps.
 - Wire dependencies explicitly; parallelise independent work.
-- Include baselines, controls and a validation strategy strong enough for peer review.
+- Design experiments strong enough for peer review: proper baselines and ablations,
+  at least 3-5 independent seeds (or resamples) per condition, effect sizes with
+  confidence intervals, and a pre-stated primary comparison. Size the experiments
+  to what the compute estimate can actually run.
+- Spend the effort on science: one focused, decisive main result plus supporting
+  analyses beats many small checks. Do not create tasks whose only purpose is
+  process (protocol freezing, audits, sign-offs); fold such steps into the
+  scientific tasks that need them.
 - Final phase: figures, tables and a conference-style paper draft.
 - Be honest about uncertainty; put unverified assumptions in open_questions.
 Cite papers only by [index]."""

@@ -54,6 +54,8 @@ Work only inside the project workspace (your current directory); other agents sh
   start_process and poll with check_process/wait instead of blocking.
 - Split large independent work (sweeps, per-sample or per-target runs) across
   spawn_subagents when available.
+- Background research is already done: context/ holds the brief, the chosen gap and
+  the literature notes (with closest prior work). Use it rather than re-surveying.
 - Share useful discoveries with post_note; check read_notes for what others found.
 - When a request fails (4xx/5xx), debug it: retry with minimal headers (no custom
   Accept/Content-Type unless the docs require them), compare with the
@@ -138,6 +140,13 @@ def escalated_model(tier: str, policy: str, attempt: int) -> tuple[str, bool]:
         up = "standard"
     stronger = model_for(up, "default" if policy == "minimal" else policy)
     return stronger, stronger != base
+
+
+def current_budget(project_id: str) -> float:
+    """Read the budget fresh each time, so raising it during a live run takes effect."""
+    with Session(engine) as s:
+        cfg = s.get(Project, project_id).settings or {}
+    return float((cfg.get("budget") or {}).get("llm_usd", 15.0))
 
 
 def spent(project_id: str) -> float:
@@ -302,12 +311,15 @@ def _subagent_runner(spec: AgentSpec, ctx: ToolContext, state_id: str, budget: f
     return spawn
 
 
-async def _execute(project_id: str, mp: dict, task: dict, state_id: str, policy: str, http: httpx.AsyncClient) -> None:
+async def _execute(project_id: str, mp: dict, task: dict, state_id: str, policy: str, http: httpx.AsyncClient,
+                   remaining: float = float("inf")) -> None:
     with Session(engine) as s:
         states = {st.task_id: st for st in s.exec(select(TaskState).where(TaskState.blueprint_run_id == s.get(TaskState, state_id).blueprint_run_id))}
     me = next(st for st in states.values() if st.id == state_id)
     feedback = me.note if me.attempts else None
-    _update(state_id, status="running", attempts=me.attempts + 1, started_at=_now(), finished_at=None)
+    if me.feedback:
+        feedback = f"REVIEWER-APPROVED CHANGE (overrides earlier protocol where they conflict):\n{me.feedback}"
+    _update(state_id, status="running", attempts=me.attempts + 1, started_at=_now(), finished_at=None, feedback=None)
 
     agent = next(a for a in mp["agents"] if a["id"] == task["agent"])
     sandbox = sandbox_for(project_id)
@@ -323,7 +335,8 @@ async def _execute(project_id: str, mp: dict, task: dict, state_id: str, policy:
         model=model,
         tools=[t for t in task["tools"] if t in agent["tools"] and t in TOOLS] or agent["tools"],
         max_steps=MAX_AGENT_STEPS,
-        max_cost=max(ESCALATED_MIN_BUDGET if escalated else 0.05, float(task["max_cost_usd"])),
+        # Never let one task spend beyond what is left of the project budget.
+        max_cost=min(max(ESCALATED_MIN_BUDGET if escalated else 0.05, float(task["max_cost_usd"])), max(0.02, remaining)),
         reasoning_effort="medium" if escalated else ("low" if agent["model_tier"] == "bulk" or policy == "minimal" else "medium"),
     )
     ctx = ToolContext(project_id, sandbox, http, agent_name=agent["name"])
@@ -375,6 +388,25 @@ async def _execute(project_id: str, mp: dict, task: dict, state_id: str, policy:
 # ── Scheduler ──────────────────────────────────────────────────────────────
 
 
+def _write_context(project_id: str, sandbox) -> None:
+    """Give agents the planning context (brief, gap, plan, literature notes) as files."""
+    from ..agents.plan import build_context  # local import: plan imports this package
+
+    ctx = build_context(project_id)
+    out = sandbox.path("context")
+    out.mkdir(parents=True, exist_ok=True)
+    (out / "brief.json").write_text(json.dumps(ctx["brief"], indent=2, ensure_ascii=False))
+    (out / "chosen_gap.json").write_text(json.dumps(ctx["gaps"]["chosen"], indent=2, ensure_ascii=False))
+    papers = [{k: p[k] for k in ("title", "year", "venue", "authors", "doi", "url", "notes")}
+              for p in ctx["literature"]["papers"]]
+    (out / "literature.json").write_text(json.dumps(
+        {"overview": ctx["literature"]["overview"], "papers": papers}, indent=2, ensure_ascii=False, default=str))
+    with Session(engine) as s:
+        plan = s.get(Project, project_id).plan
+    if plan:
+        (out / "plan.json").write_text(json.dumps(plan, indent=2, ensure_ascii=False, default=str))
+
+
 def prepare_states(project_id: str, bp_run_id: str, mp: dict) -> None:
     """Create task states on first run; on resume, retry what did not finish."""
     with Session(engine) as s:
@@ -420,6 +452,7 @@ async def run(project_id: str, h: RunHandle) -> dict:
     h.phase("preparing", "Setting up the workspace environment")
     sandbox = sandbox_for(project_id)
     await sandbox.ensure()
+    _write_context(project_id, sandbox)
     if mp["python_packages"]:
         res = await sandbox.install(mp["python_packages"])
         h.note("Installed packages" if res.exit_code == 0 else f"Some packages failed to install: {res.stderr[-300:]}")
@@ -464,6 +497,7 @@ async def run(project_id: str, h: RunHandle) -> dict:
                 ]
 
                 total = spent(project_id)
+                budget = current_budget(project_id)
                 h.counts(**{k: sum(1 for st in states.values() if st.status == k)
                             for k in ("done", "running", "pending", "failed", "blocked", "human", "skipped")},
                          spent_cents=round(total * 100))
@@ -478,8 +512,13 @@ async def run(project_id: str, h: RunHandle) -> dict:
                         continue
                     ready = []  # let running tasks finish; start nothing new
 
-                for tid in ready[: max(0, MAX_PARALLEL - len(running))]:
-                    running[tid] = asyncio.create_task(_execute(project_id, mp, tasks[tid], states[tid].id, policy, http))
+                launch = ready[: max(0, MAX_PARALLEL - len(running))]
+                # Split what is left of the budget between the tasks starting now and those running.
+                share = max(0.0, budget - total) / max(1, len(launch) + len(running))
+                for tid in launch:
+                    running[tid] = asyncio.create_task(
+                        _execute(project_id, mp, tasks[tid], states[tid].id, policy, http, remaining=share)
+                    )
 
                 if not running:
                     if any(st.status == "human" for st in states.values()):
@@ -519,6 +558,42 @@ async def run(project_id: str, h: RunHandle) -> dict:
 
 
 # ── Human actions ──────────────────────────────────────────────────────────
+
+
+def request_changes(project_id: str, task_id: str, feedback: str) -> list[str]:
+    """Re-run a finished task with reviewer feedback; downstream tasks that consumed its
+    outputs are reset too. Returns the task ids that will re-run."""
+    with Session(engine) as s:
+        project = s.get(Project, project_id)
+        bp_run_id = project.blueprint["run_id"]
+        tasks = {t["id"]: t for t in s.get(Run, bp_run_id).result["master_plan"]["tasks"]}
+        states = {st.task_id: st for st in s.exec(select(TaskState).where(TaskState.blueprint_run_id == bp_run_id))}
+        if task_id not in states:
+            raise LookupError(f"Unknown task {task_id}")
+        if states[task_id].status == "running":
+            raise ValueError(f"Task {task_id} is running")
+        # Transitive dependents.
+        reset, frontier = {task_id}, [task_id]
+        while frontier:
+            cur = frontier.pop()
+            for tid, t in tasks.items():
+                if cur in t["depends_on"] and tid not in reset:
+                    reset.add(tid)
+                    frontier.append(tid)
+        for tid in reset:
+            st = states[tid]
+            if st.status == "running":
+                raise ValueError(f"Dependent task {tid} is running; pause first")
+            if st.status in ("done", "failed", "blocked", "cancelled", "pending"):
+                st.status, st.attempts, st.note, st.checks = "pending", 0, None, []
+                s.add(st)
+        states[task_id].feedback = feedback
+        s.add(states[task_id])
+        s.commit()
+    ctl = control(project_id)
+    if ctl and ctl.reason and ctl.reason.startswith("checkpoint"):
+        ctl.resume()
+    return sorted(reset)
 
 
 def load_secrets(project_id: str) -> None:

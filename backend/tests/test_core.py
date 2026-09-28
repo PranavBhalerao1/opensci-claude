@@ -225,3 +225,117 @@ def test_stage_cancel_marks_run():
         return status, error
 
     assert asyncio.run(scenario()) == ("error", "Cancelled")
+
+
+def test_confirm_brief_keeps_settings():
+    from fastapi.testclient import TestClient
+    from sqlmodel import Session
+
+    from app.db import Project, engine
+    from app.main import app
+
+    with Session(engine) as s:
+        p = Project(title="_settings_test", brief={"title": "x"},
+                    settings={"budget": {"llm_usd": 2.0, "gpu_hours": 1}, "model_policy": "economy"})
+        s.add(p)
+        s.commit()
+        s.refresh(p)
+        pid = p.id
+    import app.routes.projects as routes
+
+    started = []
+    original = routes.pipeline.start_literature
+    routes.pipeline.start_literature = lambda project_id: started.append(project_id)
+    try:
+        with TestClient(app) as client:
+            r = client.post(f"/api/projects/{pid}/brief/confirm", json={"depth": "quick"})
+            assert r.status_code == 200
+            cfg = r.json()["settings"]
+    finally:
+        routes.pipeline.start_literature = original
+        with Session(engine) as s:
+            s.delete(s.get(Project, pid))
+            s.commit()
+    assert cfg["budget"]["llm_usd"] == 2.0 and cfg["model_policy"] == "economy" and cfg["depth"] == "quick"
+    assert started == [pid]
+
+
+def test_request_changes_resets_dependents():
+    from sqlmodel import Session
+
+    from app.db import Project, Run, TaskState, engine
+
+    mp = _mp()
+    mp["tasks"].append({**mp["tasks"][1], "id": "T3", "depends_on": ["T2"],
+                        "inputs": [{"path": "data/b.csv", "source": "task:T2"}], "outputs": [
+                            {"path": "data/c.csv", "format": "csv", "description": "d"}]})
+    with Session(engine) as s:
+        p = Project(title="_rc_test")
+        s.add(p)
+        s.commit()
+        s.refresh(p)
+        r = Run(project_id=p.id, kind="blueprint", status="done", result={"master_plan": mp})
+        s.add(r)
+        s.commit()
+        s.refresh(r)
+        p.blueprint = {"run_id": r.id}
+        s.add(p)
+        for tid in ("T1", "T2", "T3"):
+            s.add(TaskState(project_id=p.id, blueprint_run_id=r.id, task_id=tid, agent="A1", status="done", attempts=1))
+        s.commit()
+        pid, rid = p.id, r.id
+    try:
+        assert orchestrator.request_changes(pid, "T2", "use T=10000") == ["T2", "T3"]
+        with Session(engine) as s:
+            from sqlmodel import select
+            st = {x.task_id: x for x in s.exec(select(TaskState).where(TaskState.blueprint_run_id == rid))}
+            assert st["T1"].status == "done" and st["T2"].status == "pending" and st["T3"].status == "pending"
+            assert st["T2"].feedback == "use T=10000" and st["T3"].feedback is None
+    finally:
+        with Session(engine) as s:
+            from sqlmodel import select
+            for x in s.exec(select(TaskState).where(TaskState.blueprint_run_id == rid)):
+                s.delete(x)
+            s.delete(s.get(Run, rid))
+            s.delete(s.get(Project, pid))
+            s.commit()
+
+
+def test_routes_do_not_shadow_each_other():
+    """Every declared POST route must be reachable (a generic path param can swallow a sibling)."""
+    from fastapi.testclient import TestClient
+
+    from app.main import app
+
+    with TestClient(app) as client:
+        r = client.post("/api/projects/nope/execution/changes/T1", json={"feedback": "x"})
+        assert r.status_code == 404 and "Project not found" in r.text
+        r = client.post("/api/projects/nope/execution/tasks/T1/skip", json={})
+        assert r.status_code == 404 and "Project not found" in r.text
+        r = client.post("/api/projects/nope/runs/report/cancel")
+        assert r.status_code == 404 and "Project not found" in r.text
+
+
+def test_budget_is_read_fresh():
+    from sqlmodel import Session
+
+    from app.db import Project, engine
+
+    with Session(engine) as s:
+        p = Project(title="_budget_test", settings={"budget": {"llm_usd": 1.0}})
+        s.add(p)
+        s.commit()
+        s.refresh(p)
+        pid = p.id
+    try:
+        assert orchestrator.current_budget(pid) == 1.0
+        with Session(engine) as s:
+            p = s.get(Project, pid)
+            p.settings = {"budget": {"llm_usd": 3.5}}
+            s.add(p)
+            s.commit()
+        assert orchestrator.current_budget(pid) == 3.5
+    finally:
+        with Session(engine) as s:
+            s.delete(s.get(Project, pid))
+            s.commit()

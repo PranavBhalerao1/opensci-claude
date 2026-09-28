@@ -135,6 +135,7 @@ class TaskState(SQLModel, table=True):
     issues: list = Field(default_factory=list, sa_column=Column(JSON))
     events: list = Field(default_factory=list, sa_column=Column(JSON))
     note: str | None = None  # human note, block reason, or failure reason
+    feedback: str | None = None  # reviewer's requested changes for the next run of this task
     started_at: datetime | None = None
     finished_at: datetime | None = None
 

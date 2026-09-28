@@ -516,6 +516,10 @@ export const executionApi = {
   cancel: (id: string) => post(`${API_URL}/api/projects/${id}/execution/cancel`).then(json<unknown>),
   task: (id: string, taskId: string, action: "complete" | "skip", note?: string) =>
     post(`${API_URL}/api/projects/${id}/execution/tasks/${taskId}/${action}`, { note }).then(json<TaskState>),
+  requestChanges: (id: string, taskId: string, feedback: string) =>
+    post(`${API_URL}/api/projects/${id}/execution/changes/${taskId}`, { feedback }).then(
+      json<{ rerun: string[] }>,
+    ),
   provideSecret: (id: string, name: string, value: string) =>
     post(`${API_URL}/api/projects/${id}/secrets`, { name, value }).then(json<{ name: string; requeued_tasks: number }>),
   files: (id: string) =>
