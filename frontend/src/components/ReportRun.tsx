@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 
 import { executionApi, reportApi, type Project, type ReportRun as ReportRunT } from "@/lib/api";
+import { useAuth } from "@/lib/supabase/AuthProvider";
 
 interface Props {
   project: Project;
@@ -20,7 +21,9 @@ const VERDICT: Record<string, string> = {
 
 export default function ReportRun({ project, run, onStart, onOpenFiles }: Props) {
   const r = run?.status === "done" ? run.result : null;
-  const file = (p: string) => executionApi.fileUrl(project.id, p);
+  const { session } = useAuth();
+  const token = session?.access_token ?? null;
+  const file = (p: string) => executionApi.fileUrl(project.id, p, token);
 
   return (
     <section className="mb-10">
@@ -148,7 +151,7 @@ export default function ReportRun({ project, run, onStart, onOpenFiles }: Props)
               {r.files.tex && <Download href={file("paper/paper.tex")} label="paper.tex" />}
               <Download href={file("paper/references.bib")} label="references.bib" />
               <Download href={file("paper/scaffold.json")} label="scaffold.json" />
-              <Download href={reportApi.packageUrl(project.id)} label="research package (.zip)" strong />
+              <Download href={reportApi.packageUrl(project.id, token)} label="research package (.zip)" strong />
               <button onClick={() => onOpenFiles()} className="px-3 py-1.5 text-muted hover:text-ink">
                 Browse workspace
               </button>

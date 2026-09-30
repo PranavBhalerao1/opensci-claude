@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 
 import { PlanEditError, planApi, type PlanRun as PlanRunT, type PlanTask, type Project, type ResearchPlan } from "@/lib/api";
+import { useAuth } from "@/lib/supabase/AuthProvider";
 
 interface Props {
   project: Project;
@@ -19,6 +20,7 @@ export default function PlanRun({ project, run, revisions, onApprove, onRetry, o
   const current = plan && run?.result?.gap_id === project.chosen_gap?.id;
   const approved = Boolean(project.plan && project.plan.run_id === run?.id);
   const [editing, setEditing] = useState(false);
+  const { session } = useAuth();
 
   return (
     <section className="mb-10">
@@ -62,7 +64,7 @@ export default function PlanRun({ project, run, revisions, onApprove, onRetry, o
         )}
 
         {plan && current && !editing && (approved ? (
-          <Approved project={project} onEdit={() => setEditing(true)} />
+          <Approved project={project} onEdit={() => setEditing(true)} token={session?.access_token ?? null} />
         ) : (
           !project.autonomous && <ApproveBar onApprove={onApprove} onEdit={() => setEditing(true)} />
         ))}
@@ -398,7 +400,7 @@ function ApproveBar({ onApprove, onEdit }: { onApprove: () => Promise<void>; onE
   );
 }
 
-function Approved({ project, onEdit }: { project: Project; onEdit: () => void }) {
+function Approved({ project, onEdit, token }: { project: Project; onEdit: () => void; token: string | null }) {
   return (
     <div className="border-t border-ink bg-wash px-6 py-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -413,7 +415,7 @@ function Approved({ project, onEdit }: { project: Project; onEdit: () => void })
           {["vague_research_plan.json", "context.json"].map((f) => (
             <a
               key={f}
-              href={planApi.fileUrl(project.id, f)}
+              href={planApi.fileUrl(project.id, f, token)}
               className="border border-ink bg-paper px-3 py-1.5 font-mono text-[11.5px] hover:bg-ink hover:text-paper"
             >
               ↓ {f}

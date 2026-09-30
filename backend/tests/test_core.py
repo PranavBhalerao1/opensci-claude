@@ -231,11 +231,12 @@ def test_confirm_brief_keeps_settings():
     from fastapi.testclient import TestClient
     from sqlmodel import Session
 
+    from app.auth import CurrentUser, get_current_user
     from app.db import Project, engine
     from app.main import app
 
     with Session(engine) as s:
-        p = Project(title="_settings_test", brief={"title": "x"},
+        p = Project(title="_settings_test", user_id="11111111-1111-1111-1111-111111111111", brief={"title": "x"},
                     settings={"budget": {"llm_usd": 2.0, "gpu_hours": 1}, "model_policy": "economy"})
         s.add(p)
         s.commit()
@@ -246,6 +247,9 @@ def test_confirm_brief_keeps_settings():
     started = []
     original = routes.pipeline.start_literature
     routes.pipeline.start_literature = lambda project_id: started.append(project_id)
+    app.dependency_overrides[get_current_user] = lambda: CurrentUser(
+        id="11111111-1111-1111-1111-111111111111", email="u1@example.com"
+    )
     try:
         with TestClient(app) as client:
             r = client.post(f"/api/projects/{pid}/brief/confirm", json={"depth": "quick"})
@@ -253,6 +257,7 @@ def test_confirm_brief_keeps_settings():
             cfg = r.json()["settings"]
     finally:
         routes.pipeline.start_literature = original
+        app.dependency_overrides.pop(get_current_user, None)
         with Session(engine) as s:
             s.delete(s.get(Project, pid))
             s.commit()
@@ -305,15 +310,20 @@ def test_routes_do_not_shadow_each_other():
     """Every declared POST route must be reachable (a generic path param can swallow a sibling)."""
     from fastapi.testclient import TestClient
 
+    from app.auth import CurrentUser, get_current_user
     from app.main import app
 
-    with TestClient(app) as client:
-        r = client.post("/api/projects/nope/execution/changes/T1", json={"feedback": "x"})
-        assert r.status_code == 404 and "Project not found" in r.text
-        r = client.post("/api/projects/nope/execution/tasks/T1/skip", json={})
-        assert r.status_code == 404 and "Project not found" in r.text
-        r = client.post("/api/projects/nope/runs/report/cancel")
-        assert r.status_code == 404 and "Project not found" in r.text
+    app.dependency_overrides[get_current_user] = lambda: CurrentUser(id="_u1", email="u1@example.com")
+    try:
+        with TestClient(app) as client:
+            r = client.post("/api/projects/nope/execution/changes/T1", json={"feedback": "x"})
+            assert r.status_code == 404 and "Project not found" in r.text
+            r = client.post("/api/projects/nope/execution/tasks/T1/skip", json={})
+            assert r.status_code == 404 and "Project not found" in r.text
+            r = client.post("/api/projects/nope/runs/report/cancel")
+            assert r.status_code == 404 and "Project not found" in r.text
+    finally:
+        app.dependency_overrides.pop(get_current_user, None)
 
 
 def test_budget_is_read_fresh():
@@ -356,6 +366,118 @@ def test_gpu_budget_refusal(tmp_path, monkeypatch):
     out = asyncio.run(TOOLS["run_gpu_jobs"].handler(ctx, {
         "jobs": [{"name": "a b", "command": "x"}], "pip_packages": []}))
     assert "unique names" in out
+
+
+# ── Auth ─────────────────────────────────────────────────────────────────
+
+
+def test_missing_or_malformed_bearer_token_rejected():
+    import asyncio
+
+    from fastapi import HTTPException
+
+    from app.auth import get_current_user
+
+    for header in (None, "", "Token abc", "Bearer", "Bearer   "):
+        with pytest.raises(HTTPException) as exc:
+            asyncio.run(get_current_user(header, None))
+        assert exc.value.status_code == 401
+
+
+def test_get_current_user_falls_back_to_query_token(monkeypatch):
+    import asyncio
+
+    from app import auth
+
+    monkeypatch.setattr(auth, "verify_token", lambda token: {"sub": f"user-for-{token}", "email": "e@x.com"})
+    # No Authorization header: falls back to the query param (used by <a>/<img>/<iframe> links).
+    user = asyncio.run(auth.get_current_user(None, "querytoken"))
+    assert user.id == "user-for-querytoken"
+    # Header present: takes priority over the query param.
+    user = asyncio.run(auth.get_current_user("Bearer headertoken", "querytoken"))
+    assert user.id == "user-for-headertoken"
+
+
+def test_verify_token_rejects_garbage(monkeypatch):
+    from app import auth
+    from app.config import settings
+
+    monkeypatch.setattr(settings, "supabase_url", "https://example.supabase.co")
+    with pytest.raises(Exception):
+        auth.verify_token("not-a-jwt")
+
+
+def test_project_routes_require_auth():
+    from fastapi.testclient import TestClient
+
+    from app.main import app
+
+    with TestClient(app) as client:
+        assert client.get("/api/projects").status_code == 401
+        assert client.post("/api/projects", json={}).status_code == 401
+        assert client.get("/api/projects/nope").status_code == 401
+
+
+def test_user_cannot_access_another_users_project():
+    from fastapi.testclient import TestClient
+    from sqlmodel import Session
+
+    from app.auth import CurrentUser, get_current_user
+    from app.db import Project, engine
+    from app.main import app
+
+    owner = "22222222-2222-2222-2222-222222222222"
+    other = "33333333-3333-3333-3333-333333333333"
+    with Session(engine) as s:
+        p = Project(title="_owner_test", user_id=owner)
+        s.add(p)
+        s.commit()
+        s.refresh(p)
+        pid = p.id
+    try:
+        app.dependency_overrides[get_current_user] = lambda: CurrentUser(id=other, email="other@example.com")
+        with TestClient(app) as client:
+            r = client.get(f"/api/projects/{pid}")
+            assert r.status_code == 404
+        app.dependency_overrides[get_current_user] = lambda: CurrentUser(id=owner, email="owner@example.com")
+        with TestClient(app) as client:
+            r = client.get(f"/api/projects/{pid}")
+            assert r.status_code == 200
+            r = client.get("/api/projects")
+            assert all(proj["id"] != pid or proj["id"] == pid for proj in r.json())  # sanity: list succeeds
+            assert any(proj["id"] == pid for proj in r.json())
+    finally:
+        app.dependency_overrides.pop(get_current_user, None)
+        with Session(engine) as s:
+            s.delete(s.get(Project, pid))
+            s.commit()
+
+
+def test_create_project_ignores_client_supplied_user_id():
+    from fastapi.testclient import TestClient
+    from sqlmodel import Session
+
+    from app.auth import CurrentUser, get_current_user
+    from app.db import Project, engine
+    from app.main import app
+
+    real_user = "44444444-4444-4444-4444-444444444444"
+    app.dependency_overrides[get_current_user] = lambda: CurrentUser(id=real_user, email="real@example.com")
+    pid = None
+    try:
+        with TestClient(app) as client:
+            r = client.post("/api/projects", json={"title": "spoof test", "user_id": "not-the-real-user"})
+            assert r.status_code == 200
+            body = r.json()
+            pid = body["id"]
+        with Session(engine) as s:
+            assert s.get(Project, pid).user_id == real_user
+    finally:
+        app.dependency_overrides.pop(get_current_user, None)
+        if pid:
+            with Session(engine) as s:
+                s.delete(s.get(Project, pid))
+                s.commit()
 
 
 def test_gpu_tool_granted_for_gpu_tasks():

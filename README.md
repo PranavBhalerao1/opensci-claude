@@ -104,9 +104,21 @@ Models: `gpt-6-astra` only for heavy reasoning / agentic stages (gaps, plan); `g
 - Workspaces live in `~/.openscientist/workspaces` (outside the repo, so tools like pytest/git work).
 - Tests: `cd backend && uv run pytest` (offline regression suite).
 
+## Auth & multi-user
+
+Every project belongs to a signed-in user (Supabase Auth: email/password + Google).
+The frontend never talks to the database directly — it calls FastAPI with the
+user's Supabase access token, and FastAPI verifies that token and derives the
+user id itself before touching the database; it never trusts a user id from the
+client. Postgres (the Supabase project's own, not local SQLite) enforces Row
+Level Security so a user's data is scoped to them even if an app-layer check is
+ever missed. See `supabase/migrations/` for the schema and policies, and
+`backend/app/auth.py` for token verification.
+
 ## Run locally
 
-Put keys in `.env` at the repo root (see `.env.example`), then in two terminals:
+Put keys in `.env` at the repo root and `frontend/.env.local` (see the two
+`.env.example` files), then in two terminals:
 
 ```bash
 cd backend && uv run uvicorn app.main:app --reload --reload-dir app --port 8000

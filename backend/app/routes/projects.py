@@ -17,6 +17,7 @@ from ..agents import clarify
 from ..agents import blueprint as blueprint_agent
 from ..agents import plan as plan_agent
 from ..agents import report as report_agent
+from ..auth import CurrentUser, get_current_user
 from ..config import settings
 from ..db import Message, Paper, Project, ProjectPaper, Run, Secret, TaskState, Usage, engine, get_session
 from ..graph import project_graph
@@ -59,21 +60,31 @@ def _messages(session: Session, project_id: str) -> list[Message]:
     return list(session.exec(select(Message).where(Message.project_id == project_id).order_by(Message.created_at)))
 
 
-def _get(session: Session, project_id: str) -> Project:
+def _get(session: Session, project_id: str, user: CurrentUser) -> Project:
+    """Fetch a project, scoped to its owner. Returns 404 (never 403) for a project
+    that exists but belongs to someone else, so its existence is never leaked."""
     project = session.get(Project, project_id)
-    if not project:
+    if not project or project.user_id != user.id:
         raise HTTPException(404, "Project not found")
     return project
 
 
 @router.get("")
-def list_projects(session: Session = Depends(get_session)) -> list[Project]:
-    return list(session.exec(select(Project).order_by(Project.updated_at.desc())))
+def list_projects(
+    session: Session = Depends(get_session), user: CurrentUser = Depends(get_current_user)
+) -> list[Project]:
+    return list(
+        session.exec(select(Project).where(Project.user_id == user.id).order_by(Project.updated_at.desc()))
+    )
 
 
 @router.post("")
-def create_project(body: ProjectCreate, session: Session = Depends(get_session)) -> Project:
-    project = Project(autonomous=body.autonomous, settings={**clarify.DEFAULT_SETTINGS, **body.settings})
+def create_project(
+    body: ProjectCreate, session: Session = Depends(get_session), user: CurrentUser = Depends(get_current_user)
+) -> Project:
+    project = Project(
+        user_id=user.id, autonomous=body.autonomous, settings={**clarify.DEFAULT_SETTINGS, **body.settings}
+    )
     if body.title:
         project.title = body.title
     session.add(project)
@@ -83,14 +94,18 @@ def create_project(body: ProjectCreate, session: Session = Depends(get_session))
 
 
 @router.get("/{project_id}")
-def get_project(project_id: str, session: Session = Depends(get_session)) -> dict:
-    project = _get(session, project_id)
+def get_project(
+    project_id: str, session: Session = Depends(get_session), user: CurrentUser = Depends(get_current_user)
+) -> dict:
+    project = _get(session, project_id, user)
     return {"project": project, "messages": _messages(session, project_id)}
 
 
 @router.delete("/{project_id}", status_code=204)
-def delete_project(project_id: str, session: Session = Depends(get_session)) -> None:
-    project = _get(session, project_id)
+def delete_project(
+    project_id: str, session: Session = Depends(get_session), user: CurrentUser = Depends(get_current_user)
+) -> None:
+    project = _get(session, project_id, user)
     if any(jobs.is_running(project_id, k) for k in ("literature", "gaps", "plan", "blueprint", "execute", "report")):
         raise HTTPException(409, "Stop the running stage before deleting")
     # Papers stay in the shared cache and usage rows stay for spend history.
@@ -105,8 +120,9 @@ def delete_project(project_id: str, session: Session = Depends(get_session)) -> 
 
 
 @router.post("/{project_id}/brief/confirm")
-async def confirm_brief(project_id: str, body: BriefConfirm, session: Session = Depends(get_session)) -> Project:
-    project = _get(session, project_id)
+async def confirm_brief(project_id: str, body: BriefConfirm, session: Session = Depends(get_session),
+                        user: CurrentUser = Depends(get_current_user)) -> Project:
+    project = _get(session, project_id, user)
     if not project.brief:
         raise HTTPException(409, "No research brief to confirm yet")
     preset = clarify.DEPTH_PRESETS[body.depth]
@@ -123,8 +139,9 @@ async def confirm_brief(project_id: str, body: BriefConfirm, session: Session = 
 
 
 @router.post("/{project_id}/literature/run")
-async def rerun_literature(project_id: str, session: Session = Depends(get_session)) -> Run:
-    project = _get(session, project_id)
+async def rerun_literature(project_id: str, session: Session = Depends(get_session),
+                           user: CurrentUser = Depends(get_current_user)) -> Run:
+    project = _get(session, project_id, user)
     if project.stage == "clarify" or not project.brief:
         raise HTTPException(409, "Confirm the research brief first")
     if jobs.is_running(project_id, "literature"):
@@ -133,8 +150,9 @@ async def rerun_literature(project_id: str, session: Session = Depends(get_sessi
 
 
 @router.get("/{project_id}/literature")
-def get_literature(project_id: str, session: Session = Depends(get_session)) -> dict:
-    _get(session, project_id)
+def get_literature(project_id: str, session: Session = Depends(get_session),
+                   user: CurrentUser = Depends(get_current_user)) -> dict:
+    _get(session, project_id, user)
     run = session.exec(
         select(Run).where(Run.project_id == project_id, Run.kind == "literature").order_by(Run.started_at.desc())
     ).first()
@@ -165,8 +183,9 @@ class GapSelect(BaseModel):
 
 
 @router.get("/{project_id}/gaps")
-def get_gaps(project_id: str, session: Session = Depends(get_session)) -> dict:
-    project = _get(session, project_id)
+def get_gaps(project_id: str, session: Session = Depends(get_session),
+            user: CurrentUser = Depends(get_current_user)) -> dict:
+    project = _get(session, project_id, user)
     run = session.exec(
         select(Run).where(Run.project_id == project_id, Run.kind == "gaps").order_by(Run.started_at.desc())
     ).first()
@@ -174,8 +193,9 @@ def get_gaps(project_id: str, session: Session = Depends(get_session)) -> dict:
 
 
 @router.post("/{project_id}/gaps/run")
-async def rerun_gaps(project_id: str, body: GapsRerun, session: Session = Depends(get_session)) -> Run:
-    _get(session, project_id)
+async def rerun_gaps(project_id: str, body: GapsRerun, session: Session = Depends(get_session),
+                     user: CurrentUser = Depends(get_current_user)) -> Run:
+    _get(session, project_id, user)
     lit_done = session.exec(
         select(Run).where(Run.project_id == project_id, Run.kind == "literature", Run.status == "done")
     ).first()
@@ -187,8 +207,9 @@ async def rerun_gaps(project_id: str, body: GapsRerun, session: Session = Depend
 
 
 @router.post("/{project_id}/gaps/select")
-async def select_gap(project_id: str, body: GapSelect, session: Session = Depends(get_session)) -> Project:
-    _get(session, project_id)
+async def select_gap(project_id: str, body: GapSelect, session: Session = Depends(get_session),
+                     user: CurrentUser = Depends(get_current_user)) -> Project:
+    _get(session, project_id, user)
     if jobs.is_running(project_id, "gaps"):
         raise HTTPException(409, "Gap analysis still running")
     if jobs.is_running(project_id, "plan"):
@@ -208,8 +229,9 @@ class PlanEdit(BaseModel):
 
 
 @router.get("/{project_id}/plan")
-def get_plan(project_id: str, session: Session = Depends(get_session)) -> dict:
-    project = _get(session, project_id)
+def get_plan(project_id: str, session: Session = Depends(get_session),
+            user: CurrentUser = Depends(get_current_user)) -> dict:
+    project = _get(session, project_id, user)
     run = session.exec(
         select(Run).where(Run.project_id == project_id, Run.kind == "plan").order_by(Run.started_at.desc())
     ).first()
@@ -220,8 +242,9 @@ def get_plan(project_id: str, session: Session = Depends(get_session)) -> dict:
 
 
 @router.post("/{project_id}/plan/run")
-async def rerun_plan(project_id: str, session: Session = Depends(get_session)) -> Run:
-    project = _get(session, project_id)
+async def rerun_plan(project_id: str, session: Session = Depends(get_session),
+                     user: CurrentUser = Depends(get_current_user)) -> Run:
+    project = _get(session, project_id, user)
     if not project.chosen_gap:
         raise HTTPException(409, "Choose a research gap first")
     if jobs.is_running(project_id, "plan"):
@@ -230,8 +253,9 @@ async def rerun_plan(project_id: str, session: Session = Depends(get_session)) -
 
 
 @router.post("/{project_id}/plan/revise")
-async def revise_plan(project_id: str, body: PlanRevise, session: Session = Depends(get_session)) -> dict:
-    _get(session, project_id)
+async def revise_plan(project_id: str, body: PlanRevise, session: Session = Depends(get_session),
+                      user: CurrentUser = Depends(get_current_user)) -> dict:
+    _get(session, project_id, user)
     instruction = body.instruction.strip()
     if not instruction:
         raise HTTPException(400, "Empty instruction")
@@ -248,8 +272,9 @@ async def revise_plan(project_id: str, body: PlanRevise, session: Session = Depe
 
 
 @router.put("/{project_id}/plan")
-def edit_plan(project_id: str, body: PlanEdit, session: Session = Depends(get_session)) -> Run:
-    project = _get(session, project_id)
+def edit_plan(project_id: str, body: PlanEdit, session: Session = Depends(get_session),
+             user: CurrentUser = Depends(get_current_user)) -> Run:
+    project = _get(session, project_id, user)
     if jobs.is_running(project_id, "plan"):
         raise HTTPException(409, "Plan is being revised")
     plan, errors = plan_agent.parse_plan(body.plan)
@@ -264,8 +289,9 @@ def edit_plan(project_id: str, body: PlanEdit, session: Session = Depends(get_se
 
 
 @router.post("/{project_id}/plan/approve")
-async def approve_plan(project_id: str, session: Session = Depends(get_session)) -> Project:
-    _get(session, project_id)
+async def approve_plan(project_id: str, session: Session = Depends(get_session),
+                       user: CurrentUser = Depends(get_current_user)) -> Project:
+    _get(session, project_id, user)
     if jobs.is_running(project_id, "plan"):
         raise HTTPException(409, "Plan is being revised")
     if jobs.is_running(project_id, "blueprint"):
@@ -281,8 +307,9 @@ class BlueprintRevise(BaseModel):
 
 
 @router.get("/{project_id}/blueprint")
-def get_blueprint(project_id: str, session: Session = Depends(get_session)) -> dict:
-    project = _get(session, project_id)
+def get_blueprint(project_id: str, session: Session = Depends(get_session),
+                  user: CurrentUser = Depends(get_current_user)) -> dict:
+    project = _get(session, project_id, user)
     run = session.exec(
         select(Run).where(Run.project_id == project_id, Run.kind == "blueprint").order_by(Run.started_at.desc())
     ).first()
@@ -290,8 +317,9 @@ def get_blueprint(project_id: str, session: Session = Depends(get_session)) -> d
 
 
 @router.post("/{project_id}/blueprint/run")
-async def rerun_blueprint(project_id: str, session: Session = Depends(get_session)) -> Run:
-    project = _get(session, project_id)
+async def rerun_blueprint(project_id: str, session: Session = Depends(get_session),
+                          user: CurrentUser = Depends(get_current_user)) -> Run:
+    project = _get(session, project_id, user)
     if not project.plan:
         raise HTTPException(409, "Approve the research plan first")
     if jobs.is_running(project_id, "blueprint"):
@@ -300,8 +328,9 @@ async def rerun_blueprint(project_id: str, session: Session = Depends(get_sessio
 
 
 @router.post("/{project_id}/blueprint/revise")
-async def revise_blueprint(project_id: str, body: BlueprintRevise, session: Session = Depends(get_session)) -> dict:
-    _get(session, project_id)
+async def revise_blueprint(project_id: str, body: BlueprintRevise, session: Session = Depends(get_session),
+                           user: CurrentUser = Depends(get_current_user)) -> dict:
+    _get(session, project_id, user)
     instruction = body.instruction.strip()
     if not instruction:
         raise HTTPException(400, "Empty instruction")
@@ -317,8 +346,9 @@ async def revise_blueprint(project_id: str, body: BlueprintRevise, session: Sess
 
 
 @router.post("/{project_id}/blueprint/approve")
-def approve_blueprint(project_id: str, session: Session = Depends(get_session)) -> Project:
-    _get(session, project_id)
+def approve_blueprint(project_id: str, session: Session = Depends(get_session),
+                      user: CurrentUser = Depends(get_current_user)) -> Project:
+    _get(session, project_id, user)
     if jobs.is_running(project_id, "blueprint"):
         raise HTTPException(409, "Blueprint is being revised")
     try:
@@ -348,8 +378,9 @@ def _apply_exec_settings(session: Session, project: Project, body: ExecutionStar
 
 
 @router.get("/{project_id}/execution")
-def get_execution(project_id: str, session: Session = Depends(get_session)) -> dict:
-    project = _get(session, project_id)
+def get_execution(project_id: str, session: Session = Depends(get_session),
+                  user: CurrentUser = Depends(get_current_user)) -> dict:
+    project = _get(session, project_id, user)
     run = session.exec(
         select(Run).where(Run.project_id == project_id, Run.kind == "execute").order_by(Run.started_at.desc())
     ).first()
@@ -376,8 +407,9 @@ def get_execution(project_id: str, session: Session = Depends(get_session)) -> d
 
 
 @router.post("/{project_id}/execution/start")
-async def start_execution(project_id: str, body: ExecutionStart, session: Session = Depends(get_session)) -> Run:
-    project = _get(session, project_id)
+async def start_execution(project_id: str, body: ExecutionStart, session: Session = Depends(get_session),
+                          user: CurrentUser = Depends(get_current_user)) -> Run:
+    project = _get(session, project_id, user)
     if not project.blueprint:
         raise HTTPException(409, "Approve the blueprint first")
     if jobs.is_running(project_id, "execute"):
@@ -387,7 +419,9 @@ async def start_execution(project_id: str, body: ExecutionStart, session: Sessio
 
 
 @router.post("/{project_id}/execution/pause")
-def pause_execution(project_id: str) -> dict:
+def pause_execution(project_id: str, session: Session = Depends(get_session),
+                    user: CurrentUser = Depends(get_current_user)) -> dict:
+    _get(session, project_id, user)
     ctl = orchestrator.control(project_id)
     if not ctl:
         raise HTTPException(409, "Execution is not running")
@@ -396,8 +430,9 @@ def pause_execution(project_id: str) -> dict:
 
 
 @router.post("/{project_id}/execution/resume")
-async def resume_execution(project_id: str, body: ExecutionStart, session: Session = Depends(get_session)) -> dict:
-    project = _get(session, project_id)
+async def resume_execution(project_id: str, body: ExecutionStart, session: Session = Depends(get_session),
+                           user: CurrentUser = Depends(get_current_user)) -> dict:
+    project = _get(session, project_id, user)
     _apply_exec_settings(session, project, body)
     ctl = orchestrator.control(project_id)
     if ctl:
@@ -410,7 +445,9 @@ async def resume_execution(project_id: str, body: ExecutionStart, session: Sessi
 
 
 @router.post("/{project_id}/execution/cancel")
-def cancel_execution(project_id: str) -> dict:
+def cancel_execution(project_id: str, session: Session = Depends(get_session),
+                     user: CurrentUser = Depends(get_current_user)) -> dict:
+    _get(session, project_id, user)
     ctl = orchestrator.control(project_id)
     if not ctl:
         raise HTTPException(409, "Execution is not running")
@@ -421,8 +458,8 @@ def cancel_execution(project_id: str) -> dict:
 
 @router.post("/{project_id}/execution/tasks/{task_id}/{action}")
 def task_action(project_id: str, task_id: str, action: Literal["complete", "skip"], body: TaskAction,
-                session: Session = Depends(get_session)) -> TaskState:
-    _get(session, project_id)
+                session: Session = Depends(get_session), user: CurrentUser = Depends(get_current_user)) -> TaskState:
+    _get(session, project_id, user)
     try:
         return orchestrator.set_task_status(project_id, task_id, "done" if action == "complete" else "skipped",
                                             (body.note or "").strip() or None)
@@ -438,14 +475,16 @@ class SecretIn(BaseModel):
 
 
 @router.get("/{project_id}/secrets")
-def list_secrets(project_id: str, session: Session = Depends(get_session)) -> list[str]:
-    _get(session, project_id)
+def list_secrets(project_id: str, session: Session = Depends(get_session),
+                 user: CurrentUser = Depends(get_current_user)) -> list[str]:
+    _get(session, project_id, user)
     return [r.name for r in session.exec(select(Secret).where(Secret.project_id == project_id))]
 
 
 @router.post("/{project_id}/secrets")
-def add_secret(project_id: str, body: SecretIn, session: Session = Depends(get_session)) -> dict:
-    _get(session, project_id)
+def add_secret(project_id: str, body: SecretIn, session: Session = Depends(get_session),
+               user: CurrentUser = Depends(get_current_user)) -> dict:
+    _get(session, project_id, user)
     name = body.name.strip().upper()
     if not re.match(r"^[A-Z][A-Z0-9_]{1,63}$", name) or not body.value.strip():
         raise HTTPException(400, "Invalid credential name or empty value")
@@ -454,8 +493,9 @@ def add_secret(project_id: str, body: SecretIn, session: Session = Depends(get_s
 
 
 @router.get("/{project_id}/report")
-def get_report(project_id: str, session: Session = Depends(get_session)) -> dict:
-    project = _get(session, project_id)
+def get_report(project_id: str, session: Session = Depends(get_session),
+               user: CurrentUser = Depends(get_current_user)) -> dict:
+    project = _get(session, project_id, user)
     run = session.exec(
         select(Run).where(Run.project_id == project_id, Run.kind == "report").order_by(Run.started_at.desc())
     ).first()
@@ -463,8 +503,9 @@ def get_report(project_id: str, session: Session = Depends(get_session)) -> dict
 
 
 @router.post("/{project_id}/report/run")
-async def run_report(project_id: str, session: Session = Depends(get_session)) -> Run:
-    project = _get(session, project_id)
+async def run_report(project_id: str, session: Session = Depends(get_session),
+                     user: CurrentUser = Depends(get_current_user)) -> Run:
+    project = _get(session, project_id, user)
     if project.stage not in ("executed", "complete", "reporting"):
         raise HTTPException(409, "Execute the blueprint first")
     if jobs.is_running(project_id, "execute") or jobs.is_running(project_id, "report"):
@@ -473,17 +514,18 @@ async def run_report(project_id: str, session: Session = Depends(get_session)) -
 
 
 @router.get("/{project_id}/package")
-def download_package(project_id: str, session: Session = Depends(get_session)) -> FileResponse:
-    _get(session, project_id)
+def download_package(project_id: str, session: Session = Depends(get_session),
+                     user: CurrentUser = Depends(get_current_user)) -> FileResponse:
+    _get(session, project_id, user)
     path = report_agent.package(project_id)
     return FileResponse(path, media_type="application/zip", filename=path.name)
 
 
 @router.post("/{project_id}/runs/{kind}/cancel")
 def cancel_stage(project_id: str, kind: Literal["literature", "gaps", "plan", "blueprint", "report"],
-                 session: Session = Depends(get_session)) -> dict:
+                 session: Session = Depends(get_session), user: CurrentUser = Depends(get_current_user)) -> dict:
     """Stop a running planning or report stage (execution has its own pause/cancel)."""
-    _get(session, project_id)
+    _get(session, project_id, user)
     if not jobs.cancel(project_id, kind):
         raise HTTPException(409, f"No {kind} run in progress")
     return {"cancelled": kind}
@@ -495,9 +537,10 @@ class ChangeRequest(BaseModel):
 
 @router.post("/{project_id}/execution/changes/{task_id}")
 async def request_task_changes(project_id: str, task_id: str, body: ChangeRequest,
-                               session: Session = Depends(get_session)) -> dict:
+                               session: Session = Depends(get_session),
+                               user: CurrentUser = Depends(get_current_user)) -> dict:
     """Reviewer feedback on a finished task: re-run it (and its dependents) with the change."""
-    _get(session, project_id)
+    _get(session, project_id, user)
     if not body.feedback.strip():
         raise HTTPException(400, "Describe the change")
     try:
@@ -512,8 +555,9 @@ async def request_task_changes(project_id: str, task_id: str, body: ChangeReques
 
 
 @router.get("/{project_id}/workspace/files")
-def workspace_files(project_id: str, session: Session = Depends(get_session)) -> list[dict]:
-    _get(session, project_id)
+def workspace_files(project_id: str, session: Session = Depends(get_session),
+                    user: CurrentUser = Depends(get_current_user)) -> list[dict]:
+    _get(session, project_id, user)
     root = sandbox_for(project_id).root
     if not root.exists():
         return []
@@ -528,8 +572,9 @@ def workspace_files(project_id: str, session: Session = Depends(get_session)) ->
 
 
 @router.get("/{project_id}/workspace/file")
-def workspace_file(project_id: str, path: str, session: Session = Depends(get_session)) -> FileResponse:
-    _get(session, project_id)
+def workspace_file(project_id: str, path: str, session: Session = Depends(get_session),
+                   user: CurrentUser = Depends(get_current_user)) -> FileResponse:
+    _get(session, project_id, user)
     sb = sandbox_for(project_id)
     try:
         p = sb.path(path)
@@ -542,8 +587,9 @@ def workspace_file(project_id: str, path: str, session: Session = Depends(get_se
 
 
 @router.get("/{project_id}/files/{name}")
-def download_file(project_id: str, name: str, session: Session = Depends(get_session)) -> FileResponse:
-    _get(session, project_id)
+def download_file(project_id: str, name: str, session: Session = Depends(get_session),
+                  user: CurrentUser = Depends(get_current_user)) -> FileResponse:
+    _get(session, project_id, user)
     path = plan_agent.export_path(project_id, name)
     if not path:
         raise HTTPException(404, "File not exported yet")
@@ -551,8 +597,9 @@ def download_file(project_id: str, name: str, session: Session = Depends(get_ses
 
 
 @router.get("/{project_id}/usage")
-def get_usage(project_id: str, session: Session = Depends(get_session)) -> dict:
-    _get(session, project_id)
+def get_usage(project_id: str, session: Session = Depends(get_session),
+              user: CurrentUser = Depends(get_current_user)) -> dict:
+    _get(session, project_id, user)
     rows = session.exec(select(Usage).where(Usage.project_id == project_id)).all()
     by_model: dict[str, float] = {}
     for u in rows:
@@ -564,14 +611,16 @@ def get_usage(project_id: str, session: Session = Depends(get_session)) -> dict:
 
 
 @router.get("/{project_id}/graph")
-def get_graph(project_id: str, session: Session = Depends(get_session)) -> dict:
-    _get(session, project_id)
+def get_graph(project_id: str, session: Session = Depends(get_session),
+              user: CurrentUser = Depends(get_current_user)) -> dict:
+    _get(session, project_id, user)
     return project_graph(project_id)
 
 
 @router.post("/{project_id}/messages")
-def post_turn(project_id: str, body: TurnCreate, session: Session = Depends(get_session)):
-    project = _get(session, project_id)
+def post_turn(project_id: str, body: TurnCreate, session: Session = Depends(get_session),
+              user: CurrentUser = Depends(get_current_user)):
+    project = _get(session, project_id, user)
 
     if body.kind == "answers":
         q_msg = session.get(Message, body.question_message_id or "")

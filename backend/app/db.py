@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from uuid import uuid4
 
-from sqlalchemy import JSON, Column, inspect, text
+from sqlalchemy import JSON, Column, Uuid, inspect, text
 from sqlmodel import Field, Session, SQLModel, create_engine
 
 from .config import settings
@@ -23,7 +23,18 @@ def _id() -> str:
 
 
 class Project(SQLModel, table=True):
+    # SQLModel's default table name is the bare lowercased class name ("project"),
+    # which does not match supabase/migrations (snake_case, pluralised). Every
+    # table below sets __tablename__ explicitly so the ORM and the RLS-protected
+    # Postgres schema refer to the same tables.
+    __tablename__ = "projects"
+
     id: str = Field(default_factory=_id, primary_key=True)
+    # The Supabase auth.users.id that owns this project. Set only from a verified bearer
+    # token (see app/auth.py); the API never trusts a user_id supplied by the client.
+    # Nullable at the ORM level so the offline SQLite test suite can create projects
+    # without a real Supabase user; the Postgres migration enforces NOT NULL for real data.
+    user_id: str | None = Field(default=None, sa_column=Column(Uuid(as_uuid=False), index=True))
     title: str = "Untitled research"
     # clarify -> literature -> gaps -> plan -> blueprint -> ready -> executing -> executed
     #   -> reporting -> complete
@@ -43,8 +54,10 @@ class Project(SQLModel, table=True):
 
 
 class Message(SQLModel, table=True):
+    __tablename__ = "messages"
+
     id: str = Field(default_factory=_id, primary_key=True)
-    project_id: str = Field(foreign_key="project.id", index=True)
+    project_id: str = Field(foreign_key="projects.id", index=True)
     role: str  # "user" | "assistant"
     # text | questions | answers | brief. Structured kinds carry their data in payload;
     # content always holds a plain-text rendering for the model transcript.
@@ -58,6 +71,8 @@ class Paper(SQLModel, table=True):
     """Global paper cache shared by every project. Notes and references are
     question-independent, so once a paper is read it is never read again; the
     knowledge graph grows as more projects touch a field."""
+
+    __tablename__ = "papers"
 
     id: str = Field(default_factory=_id, primary_key=True)
     title: str
@@ -83,9 +98,11 @@ class Paper(SQLModel, table=True):
 class ProjectPaper(SQLModel, table=True):
     """A paper considered by one project's literature review."""
 
+    __tablename__ = "project_papers"
+
     id: str = Field(default_factory=_id, primary_key=True)
-    project_id: str = Field(foreign_key="project.id", index=True)
-    paper_id: str = Field(foreign_key="paper.id", index=True)
+    project_id: str = Field(foreign_key="projects.id", index=True)
+    paper_id: str = Field(foreign_key="papers.id", index=True)
     origin: str = "search"  # search | citation
     score: float = 0.0  # retrieval score before screening
     relevance: int | None = None  # 0-3 from screening
@@ -96,6 +113,8 @@ class ProjectPaper(SQLModel, table=True):
 class SearchCache(SQLModel, table=True):
     """Recent search results, so repeat queries in a field skip the API."""
 
+    __tablename__ = "search_cache"
+
     key: str = Field(primary_key=True)  # source:normalised query:limit
     paper_ids: list = Field(default_factory=list, sa_column=Column(JSON))
     fetched_at: datetime = Field(default_factory=_now)
@@ -104,8 +123,10 @@ class SearchCache(SQLModel, table=True):
 class Run(SQLModel, table=True):
     """A long-running stage job; the UI polls it for progress."""
 
+    __tablename__ = "runs"
+
     id: str = Field(default_factory=_id, primary_key=True)
-    project_id: str = Field(foreign_key="project.id", index=True)
+    project_id: str = Field(foreign_key="projects.id", index=True)
     kind: str  # literature | gaps | plan
     status: str = "running"  # running | done | error
     phase: str = "starting"
@@ -120,8 +141,10 @@ class Run(SQLModel, table=True):
 class TaskState(SQLModel, table=True):
     """Execution state of one blueprint task (see execution/orchestrator.py)."""
 
+    __tablename__ = "task_states"
+
     id: str = Field(default_factory=_id, primary_key=True)
-    project_id: str = Field(foreign_key="project.id", index=True)
+    project_id: str = Field(foreign_key="projects.id", index=True)
     blueprint_run_id: str = Field(index=True)
     task_id: str
     agent: str
@@ -144,8 +167,10 @@ class Secret(SQLModel, table=True):
     """A credential the user supplied for one project (exposed to its sandbox as an env var).
     Stored in the local database; never returned by the API after saving."""
 
+    __tablename__ = "secrets"
+
     id: str = Field(default_factory=_id, primary_key=True)
-    project_id: str = Field(foreign_key="project.id", index=True)
+    project_id: str = Field(foreign_key="projects.id", index=True)
     name: str
     value: str
     created_at: datetime = Field(default_factory=_now)
@@ -153,6 +178,8 @@ class Secret(SQLModel, table=True):
 
 class GpuUsage(SQLModel, table=True):
     """One cloud GPU job's metered runtime and estimated cost."""
+
+    __tablename__ = "gpu_usage"
 
     id: str = Field(default_factory=_id, primary_key=True)
     project_id: str | None = Field(default=None, index=True)
@@ -167,6 +194,8 @@ class GpuUsage(SQLModel, table=True):
 class Usage(SQLModel, table=True):
     """One LLM call's token usage and estimated cost."""
 
+    __tablename__ = "usage"
+
     id: str = Field(default_factory=_id, primary_key=True)
     project_id: str | None = Field(default=None, index=True)
     run_id: str | None = Field(default=None, index=True)
@@ -179,10 +208,23 @@ class Usage(SQLModel, table=True):
     created_at: datetime = Field(default_factory=_now)
 
 
-if settings.database_url.startswith("sqlite:///"):
-    Path(settings.database_url.removeprefix("sqlite:///")).parent.mkdir(parents=True, exist_ok=True)
+def _engine_url(url: str) -> str:
+    """Normalise a raw Postgres connection string (as copied from the Supabase dashboard)
+    to the psycopg3 driver SQLAlchemy needs; sqlite URLs pass through unchanged."""
+    if url.startswith("postgres://"):
+        return "postgresql+psycopg://" + url.removeprefix("postgres://")
+    if url.startswith("postgresql://"):
+        return "postgresql+psycopg://" + url.removeprefix("postgresql://")
+    return url
 
-engine = create_engine(settings.database_url, connect_args={"check_same_thread": False})
+
+DATABASE_URL = _engine_url(settings.database_url)
+_is_sqlite = DATABASE_URL.startswith("sqlite:///")
+
+if _is_sqlite:
+    Path(DATABASE_URL.removeprefix("sqlite:///")).parent.mkdir(parents=True, exist_ok=True)
+
+engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False} if _is_sqlite else {})
 
 
 def init_db() -> None:

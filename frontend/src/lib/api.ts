@@ -1,3 +1,5 @@
+import { createClient } from "./supabase/client";
+
 export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
 export type Stage = "clarify" | "literature" | "gaps" | "plan" | "done" | "blueprint" | "ready" | "executing" | "executed" | "reporting" | "complete";
@@ -98,19 +100,40 @@ async function json<T>(res: Response): Promise<T> {
   return res.json() as Promise<T>;
 }
 
+/** The current Supabase access token, or null if signed out. Cheap: the SDK
+ * caches the session in memory/localStorage and only hits the network to
+ * refresh an expiring token. */
+export async function accessToken(): Promise<string | null> {
+  const supabase = createClient();
+  const { data } = await supabase.auth.getSession();
+  return data.session?.access_token ?? null;
+}
+
+/** fetch() with the current user's bearer token attached, so FastAPI can verify
+ * who is calling and never has to trust a user id from the request body. */
+async function apiFetch(url: string, init: RequestInit = {}): Promise<Response> {
+  const token = await accessToken();
+  const headers = new Headers(init.headers);
+  if (token) headers.set("Authorization", `Bearer ${token}`);
+  return fetch(url, { ...init, headers });
+}
+
+const post = (url: string, body: unknown = {}) =>
+  apiFetch(url, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+
 export const api = {
-  listProjects: () => fetch(`${API_URL}/api/projects`).then(json<Project[]>),
+  listProjects: () => apiFetch(`${API_URL}/api/projects`).then(json<Project[]>),
   getProject: (id: string) =>
-    fetch(`${API_URL}/api/projects/${id}`).then(json<{ project: Project; messages: Message[] }>),
+    apiFetch(`${API_URL}/api/projects/${id}`).then(json<{ project: Project; messages: Message[] }>),
   createProject: (body: { autonomous?: boolean } = {}) =>
-    fetch(`${API_URL}/api/projects`, {
+    apiFetch(`${API_URL}/api/projects`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify(body),
     }).then(json<Project>),
-  deleteProject: (id: string) => fetch(`${API_URL}/api/projects/${id}`, { method: "DELETE" }),
+  deleteProject: (id: string) => apiFetch(`${API_URL}/api/projects/${id}`, { method: "DELETE" }),
   confirmBrief: (id: string, body: { depth: Depth; max_papers: number }) =>
-    fetch(`${API_URL}/api/projects/${id}/brief/confirm`, {
+    apiFetch(`${API_URL}/api/projects/${id}/brief/confirm`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify(body),
@@ -131,7 +154,7 @@ export type StreamEvent =
 
 /** POST a user turn and yield server-sent events as they arrive. */
 export async function* sendTurn(projectId: string, turn: Turn): AsyncGenerator<StreamEvent> {
-  const res = await fetch(`${API_URL}/api/projects/${projectId}/messages`, {
+  const res = await apiFetch(`${API_URL}/api/projects/${projectId}/messages`, {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify(turn),
@@ -243,10 +266,10 @@ export interface GraphLink {
 }
 
 export const literatureApi = {
-  get: (id: string) => fetch(`${API_URL}/api/projects/${id}/literature`).then(json<Literature>),
-  rerun: (id: string) => fetch(`${API_URL}/api/projects/${id}/literature/run`, { method: "POST" }).then(json<Run>),
+  get: (id: string) => apiFetch(`${API_URL}/api/projects/${id}/literature`).then(json<Literature>),
+  rerun: (id: string) => post(`${API_URL}/api/projects/${id}/literature/run`).then(json<Run>),
   graph: (id: string) =>
-    fetch(`${API_URL}/api/projects/${id}/graph`).then(json<{ nodes: GraphNode[]; links: GraphLink[] }>),
+    apiFetch(`${API_URL}/api/projects/${id}/graph`).then(json<{ nodes: GraphNode[]; links: GraphLink[] }>),
 };
 
 // ── Gaps ───────────────────────────────────────────────────────────────────
@@ -291,19 +314,12 @@ export interface GapsRun extends Omit<Run, "result"> {
 }
 
 export const gapsApi = {
-  get: (id: string) => fetch(`${API_URL}/api/projects/${id}/gaps`).then(json<{ run: GapsRun | null; project: Project }>),
+  get: (id: string) =>
+    apiFetch(`${API_URL}/api/projects/${id}/gaps`).then(json<{ run: GapsRun | null; project: Project }>),
   rerun: (id: string, feedback?: string) =>
-    fetch(`${API_URL}/api/projects/${id}/gaps/run`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ feedback: feedback ?? null }),
-    }).then(json<GapsRun>),
+    post(`${API_URL}/api/projects/${id}/gaps/run`, { feedback: feedback ?? null }).then(json<GapsRun>),
   select: (id: string, gapId: string) =>
-    fetch(`${API_URL}/api/projects/${id}/gaps/select`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ gap_id: gapId }),
-    }).then(json<Project>),
+    post(`${API_URL}/api/projects/${id}/gaps/select`, { gap_id: gapId }).then(json<Project>),
 };
 
 // ── Plan ───────────────────────────────────────────────────────────────────
@@ -354,16 +370,12 @@ export class PlanEditError extends Error {
 
 export const planApi = {
   get: (id: string) =>
-    fetch(`${API_URL}/api/projects/${id}/plan`).then(json<{ run: PlanRun | null; project: Project; revisions: number }>),
-  rerun: (id: string) => fetch(`${API_URL}/api/projects/${id}/plan/run`, { method: "POST" }).then(json<PlanRun>),
+    apiFetch(`${API_URL}/api/projects/${id}/plan`).then(json<{ run: PlanRun | null; project: Project; revisions: number }>),
+  rerun: (id: string) => post(`${API_URL}/api/projects/${id}/plan/run`).then(json<PlanRun>),
   revise: (id: string, instruction: string) =>
-    fetch(`${API_URL}/api/projects/${id}/plan/revise`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ instruction }),
-    }).then(json<{ message: Message; run: PlanRun }>),
+    post(`${API_URL}/api/projects/${id}/plan/revise`, { instruction }).then(json<{ message: Message; run: PlanRun }>),
   edit: async (id: string, plan: unknown) => {
-    const res = await fetch(`${API_URL}/api/projects/${id}/plan`, {
+    const res = await apiFetch(`${API_URL}/api/projects/${id}/plan`, {
       method: "PUT",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ plan }),
@@ -374,9 +386,10 @@ export const planApi = {
     }
     return json<PlanRun>(res);
   },
-  approve: (id: string) =>
-    fetch(`${API_URL}/api/projects/${id}/plan/approve`, { method: "POST" }).then(json<Project>),
-  fileUrl: (id: string, name: string) => `${API_URL}/api/projects/${id}/files/${name}`,
+  approve: (id: string) => post(`${API_URL}/api/projects/${id}/plan/approve`).then(json<Project>),
+  /** Signed for direct <a>/<img> use, which can't carry an Authorization header. */
+  fileUrl: (id: string, name: string, token: string | null) =>
+    `${API_URL}/api/projects/${id}/files/${name}${token ? `?token=${encodeURIComponent(token)}` : ""}`,
 };
 
 // ── Blueprint ──────────────────────────────────────────────────────────────
@@ -442,21 +455,18 @@ export interface BlueprintRun extends Omit<Run, "result"> {
 
 export const blueprintApi = {
   get: (id: string) =>
-    fetch(`${API_URL}/api/projects/${id}/blueprint`).then(json<{ run: BlueprintRun | null; project: Project }>),
-  run: (id: string) => fetch(`${API_URL}/api/projects/${id}/blueprint/run`, { method: "POST" }).then(json<BlueprintRun>),
+    apiFetch(`${API_URL}/api/projects/${id}/blueprint`).then(json<{ run: BlueprintRun | null; project: Project }>),
+  run: (id: string) => post(`${API_URL}/api/projects/${id}/blueprint/run`).then(json<BlueprintRun>),
   revise: (id: string, instruction: string) =>
-    fetch(`${API_URL}/api/projects/${id}/blueprint/revise`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ instruction }),
-    }).then(json<{ message: Message; run: BlueprintRun }>),
-  approve: (id: string) =>
-    fetch(`${API_URL}/api/projects/${id}/blueprint/approve`, { method: "POST" }).then(json<Project>),
+    post(`${API_URL}/api/projects/${id}/blueprint/revise`, { instruction }).then(
+      json<{ message: Message; run: BlueprintRun }>,
+    ),
+  approve: (id: string) => post(`${API_URL}/api/projects/${id}/blueprint/approve`).then(json<Project>),
 };
 
 export const usageApi = {
   get: (id: string) =>
-    fetch(`${API_URL}/api/projects/${id}/usage`).then(
+    apiFetch(`${API_URL}/api/projects/${id}/usage`).then(
       json<{
         total: number;
         by_model: Record<string, number>;
@@ -508,11 +518,8 @@ export interface Execution {
   live: boolean;
 }
 
-const post = (url: string, body: unknown = {}) =>
-  fetch(url, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
-
 export const executionApi = {
-  get: (id: string) => fetch(`${API_URL}/api/projects/${id}/execution`).then(json<Execution>),
+  get: (id: string) => apiFetch(`${API_URL}/api/projects/${id}/execution`).then(json<Execution>),
   start: (id: string, body: { budget_usd?: number; model_policy?: ModelPolicy }) =>
     post(`${API_URL}/api/projects/${id}/execution/start`, body).then(json<Run>),
   pause: (id: string) => post(`${API_URL}/api/projects/${id}/execution/pause`).then(json<unknown>),
@@ -528,9 +535,12 @@ export const executionApi = {
   provideSecret: (id: string, name: string, value: string) =>
     post(`${API_URL}/api/projects/${id}/secrets`, { name, value }).then(json<{ name: string; requeued_tasks: number }>),
   files: (id: string) =>
-    fetch(`${API_URL}/api/projects/${id}/workspace/files`).then(json<{ path: string; size: number }[]>),
-  fileUrl: (id: string, path: string) =>
-    `${API_URL}/api/projects/${id}/workspace/file?path=${encodeURIComponent(path)}`,
+    apiFetch(`${API_URL}/api/projects/${id}/workspace/files`).then(json<{ path: string; size: number }[]>),
+  /** Signed for direct <a>/<img> use, which can't carry an Authorization header. */
+  fileUrl: (id: string, path: string, token: string | null) =>
+    `${API_URL}/api/projects/${id}/workspace/file?path=${encodeURIComponent(path)}${
+      token ? `&token=${encodeURIComponent(token)}` : ""
+    }`,
 };
 
 // ── Report ─────────────────────────────────────────────────────────────────
@@ -559,11 +569,13 @@ export interface ReportRun extends Omit<Run, "result"> {
 
 export const stageApi = {
   cancel: (id: string, kind: "literature" | "gaps" | "plan" | "blueprint" | "report") =>
-    fetch(`${API_URL}/api/projects/${id}/runs/${kind}/cancel`, { method: "POST" }).then(json<{ cancelled: string }>),
+    post(`${API_URL}/api/projects/${id}/runs/${kind}/cancel`).then(json<{ cancelled: string }>),
 };
 
 export const reportApi = {
-  get: (id: string) => fetch(`${API_URL}/api/projects/${id}/report`).then(json<{ run: ReportRun | null; project: Project }>),
-  run: (id: string) => fetch(`${API_URL}/api/projects/${id}/report/run`, { method: "POST" }).then(json<ReportRun>),
-  packageUrl: (id: string) => `${API_URL}/api/projects/${id}/package`,
+  get: (id: string) => apiFetch(`${API_URL}/api/projects/${id}/report`).then(json<{ run: ReportRun | null; project: Project }>),
+  run: (id: string) => post(`${API_URL}/api/projects/${id}/report/run`).then(json<ReportRun>),
+  /** Signed for direct <a>/<iframe> use, which can't carry an Authorization header. */
+  packageUrl: (id: string, token: string | null) =>
+    `${API_URL}/api/projects/${id}/package${token ? `?token=${encodeURIComponent(token)}` : ""}`,
 };

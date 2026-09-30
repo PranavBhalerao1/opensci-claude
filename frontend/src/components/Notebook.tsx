@@ -10,6 +10,7 @@ import {
   type PlanRun,
   type Project,
 } from "@/lib/api";
+import { useAuth } from "@/lib/supabase/AuthProvider";
 
 interface Props {
   project: Project | null;
@@ -84,6 +85,8 @@ function Spend({ projectId }: { projectId: string }) {
 }
 
 function Entries({ project, lit, gapsRun, planRun, bpRun, exec, onOpenFiles, onOpenLibrary }: Props & { project: Project }) {
+  const { session } = useAuth();
+  const token = session?.access_token ?? null;
   const { brief, settings } = project;
   const run = lit?.run;
   const overview = run?.result?.overview;
@@ -198,7 +201,7 @@ function Entries({ project, lit, gapsRun, planRun, bpRun, exec, onOpenFiles, onO
                 {["vague_research_plan.json", "context.json"].map((f) => (
                   <a
                     key={f}
-                    href={planApi.fileUrl(project.id, f)}
+                    href={planApi.fileUrl(project.id, f, token)}
                     className="border border-ink px-3 py-1.5 font-mono text-[11px] transition-colors hover:bg-ink hover:text-paper"
                   >
                     ↓ {f}
@@ -229,7 +232,7 @@ function Entries({ project, lit, gapsRun, planRun, bpRun, exec, onOpenFiles, onO
             )}
             {project.blueprint && (
               <a
-                href={planApi.fileUrl(project.id, "master_plan.json")}
+                href={planApi.fileUrl(project.id, "master_plan.json", token)}
                 className="mt-2 block border border-ink px-3 py-1.5 font-mono text-[11px] transition-colors hover:bg-ink hover:text-paper"
               >
                 ↓ master_plan.json

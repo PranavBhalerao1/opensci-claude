@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { planApi, type BlueprintRun as BlueprintRunT, type BpTask, type MasterPlan, type Project } from "@/lib/api";
+import { useAuth } from "@/lib/supabase/AuthProvider";
 
 interface Props {
   project: Project;
@@ -14,6 +15,7 @@ interface Props {
 export default function BlueprintRun({ project, run, onStart, onApprove }: Props) {
   const result = run?.status === "done" ? run.result : null;
   const approved = Boolean(project.blueprint && project.blueprint.run_id === run?.id);
+  const { session } = useAuth();
 
   return (
     <section className="mb-10">
@@ -59,7 +61,7 @@ export default function BlueprintRun({ project, run, onStart, onApprove }: Props
                   {project.blueprint ? new Date(project.blueprint.approved_at).toLocaleString() : ""}
                 </span>
                 <a
-                  href={planApi.fileUrl(project.id, "master_plan.json")}
+                  href={planApi.fileUrl(project.id, "master_plan.json", session?.access_token ?? null)}
                   className="border border-ink bg-paper px-3 py-1.5 font-mono text-[11.5px] hover:bg-ink hover:text-paper"
                 >
                   ↓ master_plan.json

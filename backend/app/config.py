@@ -14,6 +14,12 @@ class Settings(BaseSettings):
     # OpenAlex works keyless on a small free daily budget; a key raises it.
     openalex_api_key: str | None = None
 
+    # Supabase project used for authentication. supabase_url is required to verify
+    # bearer tokens (fetches the project's JWKS); supabase_jwt_secret is only needed
+    # for projects still on the legacy shared-secret (HS256) signing key.
+    supabase_url: str | None = None
+    supabase_jwt_secret: str | None = None
+
     # Model tiers. The flagship is reserved for heavy reasoning / agentic work (gap
     # finding, planning, blueprint). Everything else uses the fast, cheap tiers:
     # standard for clarify/extraction/chat, bulk for high-volume screening.

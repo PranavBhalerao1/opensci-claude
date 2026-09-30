@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 
 import { executionApi } from "@/lib/api";
+import { useAuth } from "@/lib/supabase/AuthProvider";
 
 const IMAGE = /\.(png|jpe?g|gif|svg|webp)$/i;
 const TEXT = /\.(csv|tsv|json|md|txt|py|ya?ml|tex|bib|r|qmd|log)$/i;
@@ -82,7 +83,8 @@ export default function WorkspaceFiles({
 }
 
 function Preview({ projectId, path }: { projectId: string; path: string }) {
-  const url = executionApi.fileUrl(projectId, path);
+  const { session } = useAuth();
+  const url = executionApi.fileUrl(projectId, path, session?.access_token ?? null);
   const [text, setText] = useState<string | null>(null);
 
   useEffect(() => {

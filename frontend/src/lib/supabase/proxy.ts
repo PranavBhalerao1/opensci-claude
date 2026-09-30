@@ -1,0 +1,60 @@
+import { createServerClient } from "@supabase/ssr";
+import { NextResponse, type NextRequest } from "next/server";
+
+// Pages reachable without a session. Everything else redirects to /login.
+const PUBLIC_PATHS = ["/login", "/signup", "/forgot-password", "/auth"];
+
+function isPublic(path: string): boolean {
+  return PUBLIC_PATHS.some((p) => path === p || path.startsWith(`${p}/`));
+}
+
+/**
+ * Refreshes the Supabase session cookie on every request and redirects
+ * unauthenticated visitors away from protected pages.
+ *
+ * This is an optimistic, page-level check only (per Next.js's own guidance —
+ * see the "Optimistic checks with Proxy" pattern). The FastAPI backend is the
+ * real authorization boundary: it verifies the bearer token and project
+ * ownership on every API call, independent of anything decided here.
+ */
+export async function updateSession(request: NextRequest) {
+  let response = NextResponse.next({ request });
+
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return request.cookies.getAll();
+        },
+        setAll(cookiesToSet) {
+          for (const { name, value } of cookiesToSet) request.cookies.set(name, value);
+          response = NextResponse.next({ request });
+          for (const { name, value, options } of cookiesToSet) response.cookies.set(name, value, options);
+        },
+      },
+    },
+  );
+
+  // getUser() (not getSession()) revalidates the token against Supabase's auth
+  // server rather than trusting the cookie as-is.
+  const { data: { user } } = await supabase.auth.getUser();
+  const path = request.nextUrl.pathname;
+
+  if (!user && !isPublic(path)) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/login";
+    url.search = `?next=${encodeURIComponent(path)}`;
+    return NextResponse.redirect(url);
+  }
+
+  if (user && (path === "/login" || path === "/signup")) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/";
+    url.search = "";
+    return NextResponse.redirect(url);
+  }
+
+  return response;
+}
