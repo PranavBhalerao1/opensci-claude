@@ -84,7 +84,7 @@ class ExecTask(BaseModel):
     tools: list[str]
     resources: list[str] = Field(description="Catalog resource names or dataset ids used")
     compute: Compute
-    max_cost_usd: float = Field(description="LLM budget for this task's agent")
+    max_cost_usd: float = Field(description="Estimated LLM cost (USD) for this task; informational, not a limit")
     retries: int
     human_required: bool = Field(description="True if a person must do this (lab, fieldwork, credentials)")
 
@@ -266,7 +266,7 @@ def validate(mp: MasterPlan, capabilities: set[str], budget: dict) -> tuple[list
             warnings.append(f"Dataset {d.id} ({d.name}) has no confirmed source")
     total = sum(t.max_cost_usd for t in mp.tasks)
     if total > budget["llm_usd"]:
-        warnings.append(f"Task budgets total ${total:.2f}, above the ${budget['llm_usd']:.2f} project budget")
+        warnings.append(f"Task cost estimates total ${total:.2f}, above the ${budget['llm_usd']:.2f} project budget")
     gpu_hours = sum(t.compute.est_minutes for t in mp.tasks if t.compute.kind != "cpu") / 60
     if gpu_hours > budget["gpu_hours"]:
         warnings.append(f"Estimated {gpu_hours:.1f} GPU-hours exceeds the {budget['gpu_hours']} h budget")

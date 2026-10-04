@@ -91,7 +91,7 @@ def test_live_tool_use_cycle(run_id):
     """A real run_agent loop: tool_use → our handler → tool_result → report_result."""
     tools = ["lookup_resources", "read_webpage", "http_request", "search_papers", "post_note", "read_notes"]
     spec = AgentSpec(
-        name="Data scout", model=MODEL, tools=tools, max_steps=6, max_cost=0.5, reasoning_effort="low",
+        name="Data scout", model=MODEL, tools=tools, max_steps=6, reasoning_effort="low",
         instructions=COMMON_INSTRUCTIONS.format(name="Data scout", today=date.today().isoformat(),
                                                 role="You find data sources for a study."),
     )

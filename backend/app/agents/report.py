@@ -18,6 +18,7 @@ import httpx
 from pydantic import BaseModel, Field
 from sqlmodel import Session, select
 
+from .. import beta
 from ..db import Paper, Project, ProjectPaper, Run, TaskState, engine
 from ..execution.agent import AgentSpec, run_agent
 from ..execution.orchestrator import TEXT_SUFFIXES, model_for, project_amendments
@@ -212,8 +213,7 @@ def _gather(project_id: str) -> dict:
         cfg = project.settings or {}
         brief, plan, gap = project.brief, project.plan, project.chosen_gap
     return {"brief": brief, "plan": plan, "gap": gap, "blueprint": bp, "states": states,
-            "overview": lit.result["overview"] if lit else None, "policy": cfg.get("model_policy", "default"),
-            "report_budget": float(cfg.get("report_budget", 1.0))}
+            "overview": lit.result["overview"] if lit else None, "policy": cfg.get("model_policy", "default")}
 
 
 # ── Job ────────────────────────────────────────────────────────────────────
@@ -277,7 +277,6 @@ async def run(project_id: str, h: RunHandle) -> dict:
         tools=["read_file", "list_files", "write_file", "edit_file", "run_shell", "run_python", "install_conda_packages",
                "report_result"],
         max_steps=60,
-        max_cost=g["report_budget"],
         reasoning_effort="medium",
     )
     prompt = (f"Report scaffold ({REPORT_DIR}/scaffold.json):\n{scaffold.model_dump_json()}\n\n"
@@ -286,6 +285,8 @@ async def run(project_id: str, h: RunHandle) -> dict:
         result = await run_agent(spec, prompt, ToolContext(project_id, sandbox, http, agent_name="Report Agent"),
                                  on_event=lambda e: h.note(f"{e.get('tool') or e['type']}: {str(e.get('args') or e.get('text') or '')[:90]}")
                                  if e.get("tool") in ("write_file", "run_shell", "install_conda_packages", "report_result") else None)
+    if result.status == "credit_limit":
+        raise beta.BetaLimitReached()
 
     # 3 · Audit
     h.phase("auditing", "Checking citations and claims against the evidence")

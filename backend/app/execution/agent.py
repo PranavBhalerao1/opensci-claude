@@ -1,4 +1,5 @@
-"""Agent runtime: a Claude tool-use loop with step and cost limits.
+"""Agent runtime: a Claude tool-use loop bounded by a step limit and the project
+owner's credit allowance (checked before every step). Cost is tracked, not capped.
 
 The transcript is kept here for one run and resent each step with a prompt-cache
 breakpoint at its end, so the repeated prefix is billed at the cached rate.
@@ -8,7 +9,7 @@ import json
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 
-from .. import llm
+from .. import beta, llm
 from ..llm import MAX_TOKENS, THINKING, record_usage
 from .tools import TOOLS, ToolContext, specs
 
@@ -22,13 +23,12 @@ class AgentSpec:
     model: str
     tools: list[str]
     max_steps: int = 30
-    max_cost: float = 1.0  # USD
     reasoning_effort: str = "medium"
 
 
 @dataclass
 class AgentResult:
-    status: str  # success | partial | failed | step_limit | budget_exceeded | needs_credential
+    status: str  # success | partial | failed | step_limit | credit_limit | needs_credential
     summary: str
     artifacts: list[str] = field(default_factory=list)
     metrics: dict = field(default_factory=dict)
@@ -68,6 +68,9 @@ async def run_agent(spec: AgentSpec, task: str, ctx: ToolContext, on_event: Even
     transcript: list[dict] = [{"role": "user", "content": [{"type": "text", "text": task}]}]
 
     for step in range(1, spec.max_steps + 1):
+        # The owner's credits are the only monetary limit; stop before spending more.
+        if beta.project_allowance(ctx.project_id) <= 0:
+            return AgentResult("credit_limit", beta.LIMIT_MESSAGE, steps=step - 1, cost=cost)
         response = await llm.client.messages.create(
             model=spec.model,
             max_tokens=MAX_TOKENS,
@@ -120,7 +123,5 @@ async def run_agent(spec: AgentSpec, task: str, ctx: ToolContext, on_event: Even
                 status=r.get("status", "success"), summary=r.get("summary", ""), artifacts=r.get("artifacts", []),
                 metrics=r.get("metrics") or {}, issues=r.get("issues") or [], steps=step, cost=cost,
             )
-        if cost >= spec.max_cost:
-            return AgentResult("budget_exceeded", f"Stopped at the ${spec.max_cost:.2f} budget.", steps=step, cost=cost)
 
     return AgentResult("step_limit", f"Stopped after {spec.max_steps} steps.", steps=spec.max_steps, cost=cost)

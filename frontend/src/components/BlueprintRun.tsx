@@ -466,7 +466,7 @@ function TaskDetail({ task: t, agentName }: { task: BpTask; agentName: string })
       </div>
       <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1 font-mono text-[11px] text-muted">
         <span>compute: {t.compute.kind.replace("_", " ")} · ~{t.compute.est_minutes} min (timeout {t.compute.timeout_minutes})</span>
-        <span>budget: ${t.max_cost_usd.toFixed(2)}</span>
+        <span>est. cost: ${t.max_cost_usd.toFixed(2)}</span>
         <span>retries: {t.retries}</span>
         <span>tools: {t.tools.join(", ")}</span>
         {t.human_required && <span className="text-ink">needs a person</span>}
