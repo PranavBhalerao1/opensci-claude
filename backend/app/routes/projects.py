@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Literal
 
+from anyio import from_thread
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
@@ -517,6 +518,7 @@ async def run_report(project_id: str, session: Session = Depends(get_session),
 def download_package(project_id: str, session: Session = Depends(get_session),
                      user: CurrentUser = Depends(get_current_user)) -> FileResponse:
     _get(session, project_id, user)
+    from_thread.run(sandbox_for(project_id).pull)
     path = report_agent.package(project_id)
     return FileResponse(path, media_type="application/zip", filename=path.name)
 
@@ -558,6 +560,7 @@ async def request_task_changes(project_id: str, task_id: str, body: ChangeReques
 def workspace_files(project_id: str, session: Session = Depends(get_session),
                     user: CurrentUser = Depends(get_current_user)) -> list[dict]:
     _get(session, project_id, user)
+    from_thread.run(sandbox_for(project_id).pull)  # files still being written by remote processes
     root = sandbox_for(project_id).root
     if not root.exists():
         return []
@@ -576,6 +579,7 @@ def workspace_file(project_id: str, path: str, session: Session = Depends(get_se
                    user: CurrentUser = Depends(get_current_user)) -> FileResponse:
     _get(session, project_id, user)
     sb = sandbox_for(project_id)
+    from_thread.run(sb.pull)
     try:
         p = sb.path(path)
     except ValueError as exc:

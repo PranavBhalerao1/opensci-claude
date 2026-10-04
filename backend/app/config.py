@@ -36,6 +36,10 @@ class Settings(BaseSettings):
     }
     web_search_price: float = 0.01
 
+    # Agent code always runs in E2B cloud sandboxes; explicit CUDA GPU jobs go to Modal.
+    e2b_api_key: str | None = None
+    e2b_template: str = "openscientist-cpu"
+
     database_url: str = f"sqlite:///{BACKEND_DIR / 'data' / 'openscientist.db'}"
     cors_origins: list[str] = ["http://localhost:3000"]
 

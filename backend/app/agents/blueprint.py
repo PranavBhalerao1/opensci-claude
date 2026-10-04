@@ -328,7 +328,7 @@ async def run(project_id: str, h: RunHandle) -> dict:
         f"APPROVED PLAN:\n{json.dumps(plan, ensure_ascii=False)}\n\n"
         f"RESOLVED DATASETS:\n{resolution.model_dump_json()}\n\n"
         f"TOOLS:\n{describe(capabilities)}\n\n"
-        f"RUNTIME CAPABILITIES: {', '.join(sorted(capabilities))} (Apple GPU via PyTorch MPS, no CUDA GPU; "
+        f"RUNTIME CAPABILITIES: {', '.join(sorted(capabilities))} (no Apple GPU, no CUDA GPU; "
         "conda available; background processes; ~1 GB per download; small disk)\n\n"
         f"BUDGET: ${budget['llm_usd']:.2f} LLM, {budget['gpu_hours']} GPU-hours\n\n"
         f"RESOURCE CATALOG:\n{catalog.summary()}"

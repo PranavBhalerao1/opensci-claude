@@ -35,10 +35,13 @@ Step 1 · Planning Agent — complete:
 
 Step 2 · Blueprint & execution:
 
-6. **Execution runtime** (`backend/app/execution/`) — `LocalSandbox` runs agent code in a
-   per-project workspace with its own Python env, confined by macOS `sandbox-exec` (writes only in
-   the workspace; no access to the repo, `.env`, database or `~/.ssh`; API keys never reach agent
-   code; network allowed). A cloud runner can implement the same `Sandbox` interface later.
+6. **Execution runtime** (`backend/app/execution/`) — `E2BSandbox` runs agent code in an E2B
+   cloud sandbox (`E2B_API_KEY`, template `E2B_TEMPLATE`, default `openscientist-cpu`) with its own
+   Python and conda envs. The per-project workspace on this machine stays the source of truth:
+   changed files are pushed before each command and results pulled back after it (and before
+   verification, reports, the workspace browser and package export). API keys never reach agent
+   code; only the project's own credentials do. Explicit CUDA work goes to Modal (`run_gpu_jobs`).
+   There is no local execution: without E2B, code-running tools fail with a clear error.
    Tools: `run_python`, `run_shell`, files, `install_packages` (validated specs), `http_request`
    and `download_file` (private/loopback addresses blocked on every redirect hop),
    `search_papers`, `lookup_resources`, hosted `web_search`, `report_result`. A catalog of

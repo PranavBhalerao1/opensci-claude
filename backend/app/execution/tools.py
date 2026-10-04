@@ -6,6 +6,7 @@ tool; everything else runs here.
 """
 
 import asyncio
+import inspect
 import ipaddress
 import json
 import re
@@ -91,6 +92,7 @@ async def _write_file(ctx: ToolContext, a: dict) -> str:
 
 
 async def _read_file(ctx: ToolContext, a: dict) -> str:
+    await ctx.sandbox.pull()  # files a background process wrote remotely
     p = ctx.sandbox.path(a["path"])
     if not p.is_file():
         return f"No such file: {a['path']}"
@@ -100,6 +102,7 @@ async def _read_file(ctx: ToolContext, a: dict) -> str:
 
 
 async def _list_files(ctx: ToolContext, a: dict) -> str:
+    await ctx.sandbox.pull()
     base = ctx.sandbox.path(a.get("path", "."))
     if not base.exists():
         return f"No such directory: {a.get('path', '.')}"
@@ -143,11 +146,13 @@ async def _start_process(ctx: ToolContext, a: dict) -> str:
 
 
 async def _check_process(ctx: ToolContext, a: dict) -> str:
-    return ctx.sandbox.status(a["name"], min(int(a.get("tail_lines", 30)), 200))
+    out = ctx.sandbox.status(a["name"], min(int(a.get("tail_lines", 30)), 200))
+    return await out if inspect.isawaitable(out) else out  # async for remote sandboxes
 
 
 async def _stop_process(ctx: ToolContext, a: dict) -> str:
-    return ctx.sandbox.stop(a["name"])
+    out = ctx.sandbox.stop(a["name"])
+    return await out if inspect.isawaitable(out) else out
 
 
 async def _wait(ctx: ToolContext, a: dict) -> str:
@@ -255,6 +260,7 @@ async def _run_gpu_jobs(ctx: ToolContext, a: dict) -> str:
     if worst > remaining:
         return (f"Refused: worst case {len(jobs)} jobs x {timeout_s // 60} min on {gpu} = ${worst:.2f}, but only "
                 f"${remaining:.2f} of the GPU budget remains. Lower timeout_minutes, use fewer jobs or a cheaper GPU.")
+    await ctx.sandbox.pull()  # Modal uploads the host workspace; the next sandbox command picks up its results
     result = await asyncio.to_thread(mr.run_jobs, ctx.project_id, ctx.sandbox.root, jobs, gpu, timeout_s, packages)
     spent = mr.gpu_spent(ctx.project_id)
     result["gpu_budget"] = {"spent": round(spent, 3), "remaining": round(mr.gpu_budget(ctx.project_id) - spent, 3)}
