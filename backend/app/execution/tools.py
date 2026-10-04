@@ -11,6 +11,7 @@ import ipaddress
 import json
 import re
 import socket
+import uuid
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -34,7 +35,11 @@ class ToolContext:
     sandbox: Sandbox
     http: httpx.AsyncClient
     agent_name: str = "agent"
+    # Task id when running a task attempt: tags every process the agent starts (see Sandbox.reap).
+    owner: str | None = None
+    live: Callable[[], bool] = lambda: True  # False once the attempt has ended
     cell: int = 0
+    scratch: str = field(default_factory=lambda: uuid.uuid4().hex[:6])  # parallel agents' cells never collide
     result: dict | None = None  # set by report_result
     # Set by request_credential when the user must supply a key; ends the agent's turn.
     credential_request: dict | None = None
@@ -65,17 +70,17 @@ def _obj(props: dict, required: list[str]) -> dict:
 
 async def _run_python(ctx: ToolContext, a: dict) -> str:
     ctx.cell += 1
-    path = ctx.sandbox.path(f".scratch/cell_{ctx.cell:03d}.py")
+    path = ctx.sandbox.path(f".scratch/cell_{ctx.scratch}_{ctx.cell:03d}.py")
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(a["code"])
     timeout = min(int(a.get("timeout_seconds", 300)), 3600)
-    res = await ctx.sandbox.run([str(ctx.sandbox.python), str(path)], timeout)
+    res = await ctx.sandbox.run([str(ctx.sandbox.python), str(path)], timeout, owner=ctx.owner)
     return res.render()
 
 
 async def _run_shell(ctx: ToolContext, a: dict) -> str:
     timeout = min(int(a.get("timeout_seconds", 120)), 3600)
-    return (await ctx.sandbox.run(["/bin/bash", "-c", a["command"]], timeout)).render()
+    return (await ctx.sandbox.run(["/bin/bash", "-c", a["command"]], timeout, owner=ctx.owner)).render()
 
 
 async def _write_file(ctx: ToolContext, a: dict) -> str:
@@ -136,7 +141,7 @@ async def _install_conda(ctx: ToolContext, a: dict) -> str:
 
 
 async def _start_process(ctx: ToolContext, a: dict) -> str:
-    return await ctx.sandbox.spawn(a["name"], a["command"])
+    return await ctx.sandbox.spawn(a["name"], a["command"], owner=ctx.owner)
 
 
 async def _check_process(ctx: ToolContext, a: dict) -> str:
@@ -255,7 +260,9 @@ async def _run_gpu_jobs(ctx: ToolContext, a: dict) -> str:
         return (f"Refused: worst case {len(jobs)} jobs x {timeout_s // 60} min on {gpu} = ${worst:.2f}, but only "
                 f"${remaining:.2f} of the GPU budget remains. Lower timeout_minutes, use fewer jobs or a cheaper GPU.")
     await ctx.sandbox.pull()  # Modal uploads the host workspace; the next sandbox command picks up its results
-    result = await asyncio.to_thread(mr.run_jobs, ctx.project_id, ctx.sandbox.root, jobs, gpu, timeout_s, packages)
+    # The thread outlives a cancelled attempt; ctx.live stops it writing results after that.
+    result = await asyncio.to_thread(mr.run_jobs, ctx.project_id, ctx.sandbox.root, jobs, gpu, timeout_s, packages,
+                                     ctx.live)
     spent = mr.gpu_spent(ctx.project_id)
     result["gpu_budget"] = {"spent": round(spent, 3), "remaining": round(mr.gpu_budget(ctx.project_id) - spent, 3)}
     return json.dumps(result, ensure_ascii=False)

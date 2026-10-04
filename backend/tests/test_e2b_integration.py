@@ -163,6 +163,94 @@ async def _scenario(sb, pid: str) -> None:
     _step("expired sandbox recreated from the host workspace", t0)
 
 
+async def _fence_scenario(sb, pid: str) -> None:
+    """A retry boundary in a real sandbox: attempt 1's processes are stopped and can never publish;
+    attempt 2's own output is accepted; attempt 1's leftover output is not."""
+    from app.execution.tools import TOOLS, ToolContext
+
+    async def tool(ctx, tool_name: str, **args) -> str:
+        return await TOOLS[tool_name].handler(ctx, args)
+
+    t0 = time.monotonic()
+    await sb.ensure()
+    _step("sandbox created", t0)
+
+    t0 = time.monotonic()
+    a1 = ToolContext(pid, sb, None, owner="T2.2")
+    other = ToolContext(pid, sb, None, owner="T9")
+    wait_go = "while [ ! -f go ]; do sleep 0.2; done"
+    await tool(a1, "write_file", path="src/runner.py", content="print('v1')\n")
+    out = await tool(a1, "run_shell", command="mkdir -p data && echo leftover-v1 > data/left.txt")
+    assert "exit_code: 0" in out, out
+    out = await tool(a1, "start_process", name="run", command=f"{wait_go}; echo stale > data/out.txt")
+    assert out.startswith("Started run"), out
+    # An untracked job: detached into its own session, with a child that clears its environment.
+    out = await tool(a1, "run_shell", command=(
+        "nohup setsid bash -c 'env -i /bin/sh -c \"while [ ! -f go ]; do /bin/sleep 0.2; done; "
+        "echo stale2 > data/out2.txt\" & sleep 600' >/dev/null 2>&1 & echo started"))
+    assert "started" in out, out
+    await tool(other, "start_process", name="other", command=f"{wait_go}; echo other > data/other.txt")
+    out = await tool(a1, "run_shell", command="grep -lzx OPENSCI_TASK=T2.2 /proc/[0-9]*/environ 2>/dev/null | wc -l")
+    assert int(out.split("stdout:\n")[1].split()[0]) >= 3, out  # the tag reached detached processes
+    _step("attempt 1: tagged start_process job, detached run_shell job and a leftover output", t0)
+
+    t0 = time.monotonic()
+    paths = ["data/out.txt", "data/out2.txt", "data/left.txt"]
+    fence = await sb.fence("T2.2", paths)
+    assert fence.clean and fence.leftovers() == ["data/left.txt"]
+    res = await sb._sh("grep -lzx OPENSCI_TASK=T2.2 /proc/[0-9]*/environ 2>/dev/null | wc -l", 30)
+    assert res.stdout.strip() == "0", res  # nothing of attempt 1 is left that could write ...
+    res = await sb._sh("for f in /proc/[0-9]*/cmdline; do tr '\\0' ' ' < $f 2>/dev/null; echo; done | "
+                       "grep -c '[e]cho stale2'", 30)
+    assert res.stdout.strip() == "0", res  # ... including the child that cleared its environment
+    assert "stopped" in await tool(a1, "check_process", name="run")
+    _step("fence: attempt 1's processes stopped and confirmed gone", t0)
+
+    t0 = time.monotonic()
+    a2 = ToolContext(pid, sb, None, owner="T2.2")
+    await tool(a2, "run_shell", command="touch go")  # releases anything still waiting on it
+    for _ in range(50):  # the other task's job proves the release happened
+        if "exited with code 0" in await tool(other, "check_process", name="other"):
+            break
+        await asyncio.sleep(0.2)
+    assert sb.path("data/other.txt").read_text() == "other\n"  # other tasks are untouched
+    assert not sb.path("data/out.txt").exists() and not sb.path("data/out2.txt").exists()
+    _step("released: attempt 1's jobs never published; another task's job ran normally", t0)
+
+    t0 = time.monotonic()
+    await tool(a2, "write_file", path="src/runner.py", content="print('v2')\n")
+    out = await tool(a2, "start_process", name="run", command="python src/runner.py > data/out.txt")
+    assert out.startswith("Started run"), out
+    for _ in range(50):
+        if "exited with code 0" in await tool(a2, "check_process", name="run"):
+            break
+        await asyncio.sleep(0.2)
+    await tool(a2, "run_shell", command="python src/runner.py > data/out2.txt")
+    assert sb.path("data/out.txt").read_text() == "v2\n"
+    assert sb.stale(fence, paths) == {"data/left.txt": ["data/left.txt"]}  # only the leftover is rejected
+    assert await sb.reap("T2.2")
+    _step("attempt 2 publishes its own outputs; the leftover is still flagged", t0)
+
+
+def test_e2b_retry_fence():
+    from app.execution.e2b_sandbox import E2BSandbox
+
+    pid = f"e2bfence-{uuid.uuid4().hex[:8]}"
+    sb = E2BSandbox(pid)
+    print(f"\nE2B template {settings.e2b_template}, project {pid}")
+
+    async def main() -> None:
+        try:
+            await _fence_scenario(sb, pid)
+        finally:
+            await sb.close()
+
+    try:
+        asyncio.run(main())
+    finally:
+        shutil.rmtree(sb.root, ignore_errors=True)
+
+
 def test_e2b_end_to_end():
     from app.execution.e2b_sandbox import E2BSandbox
 

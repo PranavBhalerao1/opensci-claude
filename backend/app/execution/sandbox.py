@@ -8,7 +8,7 @@ is no local execution. Explicit CUDA GPU jobs go to Modal (modal_runner.py).
 
 import re
 import shutil
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 # Host copy of each project's workspace (the source of truth), outside the repo.
@@ -50,13 +50,26 @@ def _clip(text: str, limit: int = OUTPUT_LIMIT) -> str:
     return f"{text[:head]}\n… [{len(text) - limit} chars omitted] …\n{text[-(limit - head):]}"
 
 
+@dataclass
+class Fence:
+    """Where a task attempt starts (see Sandbox.fence)."""
+
+    clean: bool  # every process the task's earlier attempts started is confirmed stopped
+    before: dict[str, frozenset] = field(default_factory=dict)  # output path → its files at the fence
+
+    def leftovers(self) -> list[str]:
+        """Outputs that already existed when the attempt started."""
+        return [p for p, files in self.before.items() if files]
+
+
 class Sandbox:
     """Interface every execution backend implements."""
 
     root: Path
     capabilities: set[str]
 
-    async def run(self, argv: list[str], timeout: float) -> ExecResult: ...
+    # owner: the task id; every process the command starts is tagged with it (see reap).
+    async def run(self, argv: list[str], timeout: float, owner: str | None = None) -> ExecResult: ...
     async def install(self, packages: list[str]) -> ExecResult: ...
 
     def path(self, rel: str) -> Path:
@@ -71,6 +84,44 @@ class Sandbox:
 
     async def pull(self) -> None:
         """Bring files changed by remote execution back into `root`."""
+
+    async def reap(self, task_id: str | None) -> bool:
+        """Stop every process the task's attempts started (every task's if None) and bring back what
+        they wrote. True only if none is left running."""
+        return True
+
+    async def fence(self, task_id: str, paths: list[str]) -> Fence:
+        """Start a task attempt: stop what its earlier attempts left running, then record its outputs'
+        files. A file still unchanged later was not written by this attempt (see stale). If the old
+        processes cannot be confirmed stopped, the fence is not clean and nothing this attempt
+        produces can be told apart from theirs."""
+        clean = await self.reap(task_id)
+        return Fence(clean, {p: self.files(p) for p in paths})
+
+    def files(self, rel: str) -> frozenset:
+        """(path, size, mtime_ns) of each file at `rel`, a file or a directory; empty if missing."""
+        try:
+            p = self.path(rel)
+        except ValueError:
+            return frozenset()
+        found = [p] if p.is_file() else [q for q in p.rglob("*") if q.is_file()] if p.is_dir() else []
+        out = set()
+        for q in found:
+            try:
+                st = q.stat()
+            except OSError:
+                continue
+            out.add((q.relative_to(self.root).as_posix(), st.st_size, st.st_mtime_ns))
+        return frozenset(out)
+
+    def stale(self, fence: Fence, paths: list[str]) -> dict[str, list[str]]:
+        """For each output, its files that are unchanged since the fence: left by an earlier attempt,
+        not written by this one."""
+        out = {}
+        for p in paths:
+            if left := sorted(f[0] for f in self.files(p) & fence.before.get(p, frozenset())):
+                out[p] = left
+        return out
 
 
 _sandboxes: dict[str, Sandbox] = {}

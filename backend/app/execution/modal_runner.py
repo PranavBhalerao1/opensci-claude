@@ -7,8 +7,10 @@ changed or new files are synced back afterwards. GPU spend is metered per second
 and capped per project.
 """
 
+import filecmp
 import os
 import time
+from collections.abc import Callable
 from pathlib import Path
 
 from sqlmodel import Session, func, select
@@ -74,8 +76,11 @@ def _upload(vol, root: Path) -> dict[str, int]:
     return manifest
 
 
-def _download(vol, root: Path, manifest: dict[str, int], since: float) -> list[str]:
-    """Bring back files the jobs created or changed."""
+def _download(vol, root: Path, manifest: dict[str, int], since: float,
+              keep: Callable[[], bool] = lambda: True) -> list[str]:
+    """Bring back files the jobs created or changed (stopping if keep() turns False: the task attempt
+    that ran them has ended). Files whose bytes did not change are left untouched, so a re-download
+    never makes an old file look newly written."""
     changed = []
     for entry in vol.listdir("/", recursive=True):
         if entry.type.name != "FILE":
@@ -88,9 +93,16 @@ def _download(vol, root: Path, manifest: dict[str, int], since: float) -> list[s
         dest = (root / rel).resolve()
         if root not in dest.parents:
             continue  # never write outside the workspace
+        if not keep():
+            break
         dest.parent.mkdir(parents=True, exist_ok=True)
-        with dest.open("wb") as f:
+        tmp = dest.with_name(dest.name + ".os-download")
+        with tmp.open("wb") as f:
             vol.read_file_into_fileobj(entry.path, f)
+        if dest.is_file() and filecmp.cmp(tmp, dest, shallow=False):
+            tmp.unlink()
+            continue
+        os.replace(tmp, dest)
         changed.append(rel)
     return changed
 
@@ -110,7 +122,7 @@ def _running_seconds(time_file: Path) -> float | None:
 
 
 def run_jobs(project_id: str, root: Path, jobs: list[dict], gpu: str, timeout_s: int,
-             packages: list[str]) -> dict:
+             packages: list[str], keep: Callable[[], bool] = lambda: True) -> dict:
     """Run jobs in parallel Modal sandboxes (blocking; call from a thread)."""
     import modal
     from concurrent.futures import ThreadPoolExecutor
@@ -145,7 +157,7 @@ def run_jobs(project_id: str, root: Path, jobs: list[dict], gpu: str, timeout_s:
     with ThreadPoolExecutor(max_workers=min(len(jobs), MAX_PARALLEL_JOBS)) as pool:
         results = list(pool.map(one, jobs))
 
-    changed = _download(vol, root, manifest, since)
+    changed = _download(vol, root, manifest, since, keep)
     for r in results:
         path = root / r["log"]
         r["log_tail"] = "\n".join(path.read_text(errors="replace").splitlines()[-25:]) if path.exists() else ""

@@ -8,6 +8,7 @@ TaskState table, so a restarted server resumes where it left off.
 """
 
 import asyncio
+import inspect
 import json
 import re
 from datetime import datetime, timezone
@@ -274,10 +275,15 @@ async def _run_tests(sandbox, outputs: list[dict]) -> str | None:
 
 
 async def _verify(task: dict, sandbox, policy: str, report: dict | None = None,
-                  amendments: str | None = None) -> list[dict]:
+                  amendments: str | None = None, leftovers: dict[str, list[str]] | None = None) -> list[dict]:
     if not task["acceptance_checks"]:
         return []
     evidence = "Output previews:\n" + _previews(sandbox, task["outputs"])
+    if leftovers:
+        evidence += ("\n\nFACTS: these files in output directories were left by an earlier attempt and NOT written "
+                     "by the attempt being verified:\n"
+                     + "\n".join(f"- {d}: {', '.join(files[:30])}" + (" …" if len(files) > 30 else "")
+                                 for d, files in leftovers.items()))
     if amendments:
         evidence = ("REVIEWER-APPROVED AMENDMENTS (authoritative: where an acceptance check conflicts with them, "
                     "judge the check as amended and say so):\n" + amendments + "\n\n" + evidence)
@@ -317,7 +323,8 @@ def _subagent_runner(spec: AgentSpec, ctx: ToolContext, state_id: str, budget: f
                 name=f"{spec.name} › {name}", instructions=spec.instructions, model=spec.model, tools=child_tools,
                 max_steps=MAX_AGENT_STEPS, max_cost=child_budget, reasoning_effort=spec.reasoning_effort,
             )
-            child_ctx = ToolContext(ctx.project_id, ctx.sandbox, ctx.http, agent_name=child.name)
+            child_ctx = ToolContext(ctx.project_id, ctx.sandbox, ctx.http, agent_name=child.name, owner=ctx.owner,
+                                    live=ctx.live)
             task = sub["instructions"] + "\n\nRequired outputs:\n" + "\n".join(f"- {o}" for o in sub["outputs"])
             res = await run_agent(child, task, child_ctx,
                                   on_event=lambda e: _append_event(state_id, {**e, "sub": name}))
@@ -329,7 +336,11 @@ def _subagent_runner(spec: AgentSpec, ctx: ToolContext, state_id: str, budget: f
 
         _append_event(state_id, {"type": "message", "step": 0, "text": f"Spawning {len(subtasks)} sub-agents",
                                  "cost": 0.0})
-        return list(await asyncio.gather(*(one(s) for s in subtasks)))
+        # Wait for every sub-agent, even if one fails: none may keep working after its attempt ends.
+        results = await asyncio.gather(*(one(s) for s in subtasks), return_exceptions=True)
+        return [r if not isinstance(r, BaseException) else
+                {"name": s["name"], "status": "error", "summary": f"{type(r).__name__}: {r}"}
+                for s, r in zip(subtasks, results)]
 
     return spawn
 
@@ -343,11 +354,23 @@ async def _execute(project_id: str, mp: dict, task: dict, state_id: str, policy:
     amendments = project_amendments(project_id)
     if me.feedback:
         feedback = f"REVIEWER-APPROVED CHANGE (overrides earlier protocol where they conflict):\n{me.feedback}"
+    sandbox = sandbox_for(project_id)
+    outputs = [o["path"] for o in task["outputs"]]
+    # Attempt boundary: stop whatever earlier attempts of this task left running, then record its
+    # outputs. Only output files this attempt writes from here on can be accepted as its result.
+    fence = await sandbox.fence(task["id"], outputs)
+    if not fence.clean:
+        # Fail closed: anything written from now on could be theirs. Not run, so no retry is used up.
+        problem = ("Processes started by an earlier attempt of this task could not be confirmed stopped, so "
+                   "outputs written now could not be told apart from theirs. Not run; resume to try again.")
+        _append_event(state_id, {"type": "message", "step": 0, "text": problem, "cost": 0.0})
+        _update(state_id, status="failed", issues=[problem], note=problem + (f"\n{me.note}" if me.note else ""),
+                finished_at=_now())
+        return
     # Keep the amendment on the task (the verifier needs it); it is replaced by the next review.
     _update(state_id, status="running", attempts=me.attempts + 1, started_at=_now(), finished_at=None)
 
     agent = next(a for a in mp["agents"] if a["id"] == task["agent"])
-    sandbox = sandbox_for(project_id)
     model, escalated = escalated_model(agent["model_tier"], policy, me.attempts + 1)
     if escalated:
         _append_event(state_id, {"type": "message", "step": 0, "text": f"Retrying with a stronger model ({model})",
@@ -364,12 +387,23 @@ async def _execute(project_id: str, mp: dict, task: dict, state_id: str, policy:
         max_cost=min(max(ESCALATED_MIN_BUDGET if escalated else 0.05, float(task["max_cost_usd"])), max(0.02, remaining)),
         reasoning_effort="medium" if escalated else ("low" if agent["model_tier"] == "bulk" or policy == "minimal" else "medium"),
     )
-    ctx = ToolContext(project_id, sandbox, http, agent_name=agent["name"])
+    ended: list[bool] = []
+    ctx = ToolContext(project_id, sandbox, http, agent_name=agent["name"], owner=task["id"], live=lambda: not ended)
     sub_cost = [0.0]
     if "spawn_subagents" in spec.tools:
         ctx.spawn = _subagent_runner(spec, ctx, state_id, spec.max_cost, sub_cost)
-    res = await run_agent(spec, _task_prompt(mp, task, states, feedback, amendments), ctx,
-                          on_event=lambda e: _append_event(state_id, e))
+    prompt = _task_prompt(mp, task, states, feedback, amendments)
+    if leftover := fence.leftovers():
+        prompt += ("\n\nLEFT OVER FROM AN EARLIER ATTEMPT: " + ", ".join(leftover) + ". These required outputs are "
+                   "not accepted unless this attempt writes them again: regenerate them by re-running the code that "
+                   "produces them. Copying or touching an old file is not regeneration.")
+    try:
+        res = await run_agent(spec, prompt, ctx, on_event=lambda e: _append_event(state_id, e))
+    finally:
+        # No process outlives the attempt that started it, whatever the outcome (this also brings
+        # back what they wrote before they stopped). The next attempt's fence re-checks.
+        ended.append(True)
+        await sandbox.reap(task["id"])
 
     if res.status == "needs_credential":
         c = res.credential
@@ -383,16 +417,23 @@ async def _execute(project_id: str, mp: dict, task: dict, state_id: str, policy:
 
     await sandbox.pull()  # checks and the verifier read the host copy of the workspace
     missing = [o["path"] for o in task["outputs"] if not sandbox.path(o["path"]).exists()]
+    # Provenance: an output file left unchanged since the fence (a directory with nothing written in
+    # it) was produced by an earlier attempt, not this one, and cannot pass as its result.
+    left = sandbox.stale(fence, [p for p in outputs if p not in missing])
+    stale = [p for p, files in left.items() if len(files) == len(sandbox.files(p))]
+    leftovers = {p: files for p, files in left.items() if p not in stale}
     report = {"status": res.status, "summary": res.summary, "metrics": res.metrics, "issues": res.issues}
     # Verify whenever every output exists — an agent cut off by its budget or step limit
     # may already have finished the work. An explicit "failed" report is trusted.
-    verifiable = not missing and res.status != "failed"
-    checks = await _verify(task, sandbox, policy, report, amendments) if verifiable else []
+    verifiable = not missing and not stale and res.status != "failed"
+    checks = await _verify(task, sandbox, policy, report, amendments, leftovers) if verifiable else []
     passed = verifiable and bool(checks or not task["acceptance_checks"]) and all(c["passed"] for c in checks)
     if passed and res.status in ("budget_exceeded", "step_limit"):
         res.issues.append(f"Agent stopped ({res.status}) before reporting; outputs verified by the platform.")
     problems = (
         [f"Missing outputs: {', '.join(missing)}"] if missing else []
+    ) + (
+        [f"Not written by this attempt (left over from an earlier attempt): {', '.join(stale)}"] if stale else []
     ) + [f"Check failed: {c['check']} — {c['reason']}" for c in checks if not c["passed"]] + res.issues
     if not passed and res.status not in ("success", "partial"):
         problems.insert(0, f"Agent ended with status {res.status}: {res.summary}")
@@ -566,7 +607,9 @@ async def run(project_id: str, h: RunHandle) -> dict:
                                 ctl.pause(f"checkpoint:{tid}: {checkpoints[tid]}")
     finally:
         _controls.pop(project_id, None)
-        sandbox.stop_all()  # background processes do not outlive the run
+        stopped = sandbox.stop_all()  # background processes do not outlive the run
+        if inspect.isawaitable(stopped):  # awaited, so a late kill cannot hit the next run's processes
+            await stopped
         with Session(engine) as s:
             for st in s.exec(select(TaskState).where(TaskState.blueprint_run_id == bp_run_id, TaskState.status == "running")):
                 st.status, st.note = "cancelled", "Execution stopped"

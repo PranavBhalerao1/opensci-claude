@@ -7,6 +7,9 @@ created, changed or deleted are pulled back. File tools, verification, reports,
 the workspace browser and package export therefore keep reading the host copy.
 Python and conda environments live in the sandbox, outside the synced workspace.
 If a sandbox expires it is recreated from the host copy and its packages reinstalled.
+
+Every process a task attempt starts carries OPENSCI_TASK=<task id> in its environment, inherited by
+all its descendants, so the attempt's processes can be found and stopped when it ends (see reap).
 """
 
 import asyncio
@@ -41,6 +44,64 @@ SKIP = {".venv", ".conda", ".home", ".tmp", "__pycache__", ".pytest_cache", ".sa
 _LIST = ("-printf '%p\\t%s\\t%T@\\n'")
 _FIND_ALL = (f"find . \\( {' -o '.join(f'-name {shlex.quote(s)}' for s in sorted(SKIP))} \\) -prune -o "
              f"-type f {_LIST}")
+TAG = "OPENSCI_TASK"
+# Stops every process whose environment holds argv[1] (exactly, or as a prefix) and all of their
+# descendants (children that cleared their environment, or run via sudo). The whole tree is frozen
+# first, so nothing forks or is orphaned out of sight while it is killed. Prints "clean" only if
+# nothing is left; the pause between rounds only lets the kernel finish killing.
+_REAP = r"""
+import os, signal, sys, time
+want, exact, me = sys.argv[1].encode(), sys.argv[2] == "exact", os.getpid()
+
+def scan():
+    tagged, parent = set(), {}
+    for d in os.listdir("/proc"):
+        if not d.isdigit() or int(d) == me:
+            continue
+        try:
+            with open(f"/proc/{d}/stat") as f:
+                fields = f.read().rsplit(")", 1)[1].split()
+        except (OSError, IndexError):
+            continue
+        if fields[0] in ("Z", "X"):  # zombies cannot run or write
+            continue
+        parent[int(d)] = int(fields[1])
+        try:
+            with open(f"/proc/{d}/environ", "rb") as f:
+                env = f.read().split(b"\0")
+        except OSError:
+            continue
+        if any(v == want if exact else v.startswith(want) for v in env):
+            tagged.add(int(d))
+    found = set(tagged)
+    while more := {p for p, pp in parent.items() if pp in found} - found:
+        found |= more
+    return found
+
+def send(pids, sig):
+    for p in pids:
+        try:
+            os.kill(p, sig)
+        except OSError:
+            pass
+
+seen = set()
+for _ in range(50):
+    found = scan()
+    send(found - seen, signal.SIGSTOP)
+    if found <= seen:
+        break
+    seen |= found
+for _ in range(50):
+    found = scan()
+    if not found:
+        print("clean")
+        break
+    send(found, signal.SIGKILL)
+    time.sleep(0.05)
+else:
+    print("alive", *sorted(scan()))
+"""
 
 
 def _skip(rel: str) -> bool:
@@ -75,7 +136,8 @@ class E2BSandbox(Sandbox):
         self.project_id = project_id
         self.root = (WORKSPACES / project_id).resolve()
         self.secrets: dict[str, str] = {}
-        self.procs: dict[str, str] = {}  # background process name → "running" | "done"
+        self.procs: dict[str, str] = {}  # background process name → "running" | "done" | "stopped"
+        self.proc_owner: dict[str, str | None] = {}  # background process name → task id that started it
         self._sbx = None
         self._lock = asyncio.Lock()  # sandbox creation
         self._sync = asyncio.Lock()  # push / pull
@@ -85,7 +147,6 @@ class E2BSandbox(Sandbox):
         self._pip_specs: list[str] = []  # replayed if the sandbox has to be recreated
         self._conda_specs: list[tuple[list[str], list[str]]] = []
         self._touched = 0.0
-        self._tasks: set[asyncio.Task] = set()
 
     @property
     def python(self) -> PurePosixPath:
@@ -98,10 +159,11 @@ class E2BSandbox(Sandbox):
             return REMOTE_ROOT + arg[len(root):].replace(os.sep, "/")
         return arg
 
-    def _env(self) -> dict[str, str]:
+    def _env(self, owner: str | None = None) -> dict[str, str]:
         # Only the credentials the user supplied for this project; no host secrets.
         return {
             **self.secrets,
+            **({TAG: owner} if owner else {}),
             "PATH": f"{VENV}/bin:{CONDA_ENV}/bin:{HOME}/.local/bin:/usr/local/bin:/usr/bin:/bin",
             "VIRTUAL_ENV": VENV,
             "MPLBACKEND": "Agg",
@@ -304,7 +366,7 @@ class E2BSandbox(Sandbox):
 
     # ── Commands ───────────────────────────────────────────────────────────
 
-    async def run(self, argv: list[str], timeout: float) -> ExecResult:
+    async def run(self, argv: list[str], timeout: float, owner: str | None = None) -> ExecResult:
         cmd = shlex.join(self._remote(a) for a in argv)
         t = max(1, int(timeout))
 
@@ -313,8 +375,9 @@ class E2BSandbox(Sandbox):
             async with self._sync:
                 await self._push()
             start = time.monotonic()
-            # coreutils timeout kills the whole process group, so children die too.
-            res = await self._sh(f"timeout -k 5 {t} {cmd}", t + 30, envs=self._env())
+            # On timeout, coreutils timeout kills the process group. Children detached from it (or
+            # left running when the command ends) are found by their owner tag instead (reap).
+            res = await self._sh(f"timeout -k 5 {t} {cmd}", t + 30, envs=self._env(owner))
             if res.exit_code in (124, 137) and time.monotonic() - start >= t - 1:
                 res = ExecResult(-9, res.stdout, res.stderr, timed_out=True)
             async with self._sync:
@@ -360,7 +423,7 @@ class E2BSandbox(Sandbox):
 
     # ── Background processes (training runs, servers, long simulations) ────
 
-    async def spawn(self, name: str, command: str) -> str:
+    async def spawn(self, name: str, command: str, owner: str | None = None) -> str:
         """Start a shell command in the background; output goes to .logs/<name>.log."""
         if not _NAME.match(name):
             raise ValueError("Process names may use letters, digits, - and _ (max 40)")
@@ -384,13 +447,13 @@ class E2BSandbox(Sandbox):
             res = await self._sh(f"mkdir -p .logs && setsid -f bash -c {shlex.quote(wrapped)} "
                                  f"</dev/null >/dev/null 2>&1; for _ in $(seq 50); do "
                                  f"[ -s .logs/{name}.pid ] && break; sleep 0.1; done; cat .logs/{name}.pid",
-                                 60, envs=self._env())
+                                 60, envs=self._env(owner))
             if res.exit_code:
                 raise RuntimeError(f"Could not start {name}: {res.stderr}")
             return res.stdout.strip()
 
         pid = await self._retrying(go)
-        self.procs[name] = "running"
+        self.procs[name], self.proc_owner[name] = "running", owner
         return f"Started {name} (pid {pid}); logs in .logs/{name}.log"
 
     async def status(self, name: str, tail: int = 30) -> str:
@@ -405,6 +468,8 @@ class E2BSandbox(Sandbox):
         lines = log_file.read_text(errors="replace").splitlines() if log_file.exists() else []
         if exit_file.exists():
             state = f"exited with code {exit_file.read_text().strip()}"
+        elif self.procs[name] == "stopped":
+            state = "stopped (the task attempt that started it ended)"
         elif self.procs[name] == "done":
             state = "ended (the sandbox was recreated; it is no longer running)"
         else:
@@ -421,25 +486,45 @@ class E2BSandbox(Sandbox):
         res = await self._sh(self._kill_cmd(name, "TERM"), 30)
         return f"{name} is not running" if res.stdout.strip() == "done" else f"Sent SIGTERM to {name}"
 
-    def stop_all(self) -> None:
-        """Kill background processes and pull their final output (called from sync code)."""
-        names = [n for n, s in self.procs.items() if s == "running"]
-        if not names or self._sbx is None:
-            return
+    async def _reap(self, task_id: str | None) -> bool:
+        want = f"{TAG}={task_id or ''}"
+        res = await self._sh(f"python3 -c {shlex.quote(_REAP)} {shlex.quote(want)} "
+                             f"{'exact' if task_id else 'prefix'}", 120, cwd=HOME)
+        clean = res.exit_code == 0 and res.stdout.strip() == "clean"
+        if clean:
+            for name, owner in self.proc_owner.items():
+                if owner and (task_id is None or owner == task_id) and self.procs.get(name) == "running":
+                    self.procs[name] = "stopped"
+        return clean
 
-        async def go() -> None:
-            try:
-                await self._sh("; ".join(self._kill_cmd(n, "KILL") for n in names), 60)
-                async with self._sync:
-                    await self._pull()
-            except Exception as exc:
-                log.warning("Stopping E2B processes for %s failed: %s", self.project_id, exc)
-            for n in names:
-                self.procs[n] = "done"
+    async def reap(self, task_id: str | None) -> bool:
+        if self._sbx is None:  # no sandbox in this server process: nothing can be running in it
+            return True
+
+        async def go() -> bool:
+            clean = await self._reap(task_id)
+            async with self._sync:  # whatever they wrote before they died
+                await self._pull()
+            return clean
 
         try:
-            task = asyncio.get_running_loop().create_task(go())
-        except RuntimeError:
+            return await self._retrying(go)  # a dead sandbox is recreated: its processes died with it
+        except Exception as exc:  # unknown, so not clean
+            log.warning("Stopping the processes of %s in %s failed: %s", task_id or "all tasks", self.project_id, exc)
+            return False
+
+    async def stop_all(self) -> None:
+        """Kill every background process (named, or started by any task attempt) and pull their final output."""
+        if self._sbx is None:
             return
-        self._tasks.add(task)
-        task.add_done_callback(self._tasks.discard)
+        names = [n for n, s in self.procs.items() if s == "running"]
+        try:
+            if names:
+                await self._sh("; ".join(self._kill_cmd(n, "KILL") for n in names), 60)
+            await self._reap(None)
+            async with self._sync:
+                await self._pull()
+        except Exception as exc:
+            log.warning("Stopping E2B processes for %s failed: %s", self.project_id, exc)
+        for n in names:
+            self.procs[n] = "done"
