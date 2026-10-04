@@ -167,7 +167,7 @@ def env(tmp_path, monkeypatch):
     monkeypatch.setattr(orchestrator, "_verify", verify)
 
     async def attempt():
-        await orchestrator._execute(e.pid, e.mp, e.task, e.sid, "default", None, remaining=1.0)
+        await orchestrator._execute(e.pid, e.mp, e.task, e.sid, "default", None)
 
     def state() -> TaskState:
         with Session(engine) as s:
@@ -440,7 +440,7 @@ def test_subagents_cannot_outlive_their_attempt(env, monkeypatch):
 
     spec = AgentSpec(name="Runner", instructions="i", model="m", tools=["spawn_subagents"])
     ctx = ToolContext(env.pid, env.sb, None, owner="T2.2")
-    spawn = orchestrator._subagent_runner(spec, ctx, env.sid, 1.0, [0.0])
+    spawn = orchestrator._subagent_runner(spec, ctx, env.sid, [0.0])
     out = asyncio.run(spawn([{"name": "a", "instructions": "crash", "outputs": []},
                              {"name": "b", "instructions": "work", "outputs": []}]))
     assert finished == ["T2.2"]  # the sibling ran to completion, tagged with the attempt's task

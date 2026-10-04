@@ -50,7 +50,7 @@ Step 2 · Blueprint & execution:
    exists and what it requires. `agent.py` is the tool-use loop with step and cost limits.
 7. **Blueprint** — after the plan is approved: locate dataset sources (`gpt-6-sol` + web search),
    compile `master_plan.json` (`gpt-6-astra`: agent team, executable tasks with exact inputs/outputs,
-   acceptance checks, compute, per-task budget, human checkpoints), then validate in code (tools
+   acceptance checks, compute, per-task cost estimate, human checkpoints), then validate in code (tools
    exist and run here, inputs trace to upstream outputs or datasets, no cycles, budget) with one
    repair pass; dataset URLs are checked for reachability. What cannot run locally (CUDA, human
    steps, missing API keys) is flagged, not hidden. Guided users revise by chat and approve;
@@ -101,7 +101,7 @@ Models: `gpt-6-astra` only for heavy reasoning / agentic stages (gaps, plan); `g
 - **Model escalation**: a failed task retries on the next model tier (Luna → Sol → Astra), so most
   work stays cheap and only hard tasks pay for a stronger model.
 - **Platform-verified checks**: the orchestrator runs produced tests itself and gives the verifier
-  exact file facts; agents cut off by budget are still verified if their outputs exist.
+  exact file facts; agents cut off by their step limit are still verified if their outputs exist.
 - **Autonomous safety**: the report is written only when every task finished; any stage can be
   stopped (header "Stop" button) and retried; execution pauses at the budget.
 - Workspaces live in `~/.openscientist/workspaces` (outside the repo, so tools like pytest/git work).

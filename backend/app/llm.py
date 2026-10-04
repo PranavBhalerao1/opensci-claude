@@ -8,7 +8,7 @@ from anthropic import AsyncAnthropicBedrock, transform_schema
 from pydantic import BaseModel, ValidationError
 from sqlmodel import Session
 
-from .beta import owner_of
+from .beta import check_project_allowance, owner_of
 from .config import SONNET_4_6, settings
 from .db import Usage, engine
 from .sources import tavily
@@ -200,7 +200,11 @@ async def parse[T: BaseModel](
     The API enforces the schema (output_config.format) and Pydantic validates the
     result. tools=[{"type": "web_search"}] makes the model search the web before it
     answers (left to choose, Claude often answered from memory at low effort).
+
+    Raises BetaLimitReached before any request once the project owner's credits are
+    used up. A call that starts with credit left runs to completion and is recorded.
     """
+    check_project_allowance(current_project.get())
     msgs = _messages(messages)
     if any(t.get("type") == "web_search" for t in tools or []):
         return await _with_search(model, instructions, msgs, schema, reasoning_effort)

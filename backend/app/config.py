@@ -41,8 +41,8 @@ class Settings(BaseSettings):
     model_standard: str = ""
     model_bulk: str = ""
 
-    # USD per 1M tokens: (input, cached input, output). Used for cost tracking and
-    # budget enforcement; web searches are billed per call. Bedrock regional (us.)
+    # USD per 1M tokens: (input, cached input, output). Used for cost tracking (which
+    # feeds credit and project-budget checks); web searches are billed per call. Bedrock regional (us.)
     # inference profiles cost 10% more than Anthropic's list price ($3 / $0.30 / $15).
     model_prices: dict[str, tuple[float, float, float]] = {
         SONNET_4_6: (3.30, 0.33, 16.50),

@@ -188,10 +188,11 @@ def _tavily_transport(seen: list | None = None) -> httpx.MockTransport:
     return httpx.MockTransport(handler)
 
 
-async def _agent(spec: AgentSpec, task: str = "Do the task.", sandbox=None, transport=None):
+async def _agent(spec: AgentSpec, task: str = "Do the task.", sandbox=None, transport=None,
+                 project_id: str = "proj-test"):
     events: list[dict] = []
     async with httpx.AsyncClient(transport=transport or _tavily_transport()) as http:
-        ctx = ToolContext("proj-test", sandbox or NS(secrets={}), http, agent_name=spec.name)
+        ctx = ToolContext(project_id, sandbox or NS(secrets={}), http, agent_name=spec.name)
         result = await run_agent(spec, task, ctx, on_event=events.append)
     return result, events, ctx
 
@@ -293,11 +294,77 @@ def test_agent_credential_request_stops(provider, test_tools):
     assert result.steps == 1 and len(provider.requests) == 1
 
 
-def test_agent_budget_exceeded(provider, test_tools):
+def test_agent_has_no_dollar_cap(provider, test_tools, run_id):
+    # Each turn costs ~$4.95, far past any old per-task cap ($0.05-$0.30); with no
+    # credit limit in play the agent keeps working until it reports.
+    for text in ("a", "b", "c"):
+        provider.agent_turn(calls=[("echo", {"text": text})], usage=(1_000_000, 0, 100_000))
+    provider.agent_turn(calls=[("report_result", REPORT)])
+    assert not hasattr(AgentSpec, "max_cost")
+    result, _, _ = asyncio.run(_agent(_spec()))
+    assert (result.status, result.steps) == ("success", 4)
+    assert result.cost > 3 * 4.9
+    assert result.cost == pytest.approx(sum(r.cost for r in _usage_rows(run_id)))
+    assert len(_usage_rows(run_id)) == 4
+
+
+def _capped_project(cap: float | None) -> tuple[str, str]:
+    """A beta user with a USD cap and a project they own; returns (user_id, project_id)."""
+    uid = str(uuid.uuid4())
+    with Session(engine) as s:
+        s.add(BetaUser(user_id=uid, approved=True, cap_usd=cap))
+        p = Project(title="_credit_test", user_id=uid)
+        s.add(p)
+        s.commit()
+        return uid, p.id
+
+
+def _owned_agent(pid: str, spec: AgentSpec):
+    token = llm.current_project.set(pid)  # as jobs.start does: usage is charged to the owner
+    try:
+        return asyncio.run(_agent(spec, project_id=pid))
+    finally:
+        llm.current_project.reset(token)
+
+
+def test_agent_spends_past_old_task_caps_while_credits_remain(provider, test_tools, run_id):
+    from app import beta
+
+    uid, pid = _capped_project(100.0)
     provider.agent_turn(calls=[("echo", {"text": "a"})], usage=(1_000_000, 0, 100_000))
-    result, _, _ = asyncio.run(_agent(_spec(max_cost=0.5)))
-    assert (result.status, result.summary, result.steps) == ("budget_exceeded", "Stopped at the $0.50 budget.", 1)
-    assert result.cost > 0.5
+    provider.agent_turn(calls=[("report_result", REPORT)])
+    result, _, _ = _owned_agent(pid, _spec())
+    assert result.status == "success" and result.cost > 4.9
+    rows = _usage_rows(run_id)
+    assert len(rows) == 2 and all(r.user_id == uid for r in rows)
+    assert beta.get_user_spend(uid) == pytest.approx(result.cost)  # credits consumed by actual cost
+    assert beta.get_user_remaining(uid) == pytest.approx(100.0 - result.cost)
+
+
+def test_agent_stops_when_owner_credits_run_out(provider, test_tools, run_id):
+    from app import beta
+
+    uid, pid = _capped_project(5.0)
+    for text in ("a", "b", "c"):  # ~$4.95 each: step 2 crosses the $5 cap
+        provider.agent_turn(calls=[("echo", {"text": text})], usage=(1_000_000, 0, 100_000))
+    provider.agent_turn(calls=[("report_result", REPORT)])
+    result, _, _ = _owned_agent(pid, _spec())
+    assert (result.status, result.summary, result.steps) == ("credit_limit", beta.LIMIT_MESSAGE, 2)
+    assert len(provider.requests) == 2  # checked before step 3: no further model call
+    assert result.cost == pytest.approx(sum(r.cost for r in _usage_rows(run_id)))
+    # Overshoot is bounded by the one call that was already in flight when credits ran out.
+    assert 5.0 < beta.get_user_spend(uid) < 5.0 + 4.95 + 0.01
+    assert beta.get_user_remaining(uid) == 0
+
+
+def test_agent_with_no_credits_left_makes_no_call(provider, test_tools):
+    uid, pid = _capped_project(1.0)
+    with Session(engine) as s:
+        s.add(Usage(project_id=pid, user_id=uid, model=settings.model_standard, cost=1.0))
+        s.commit()
+    result, _, _ = _owned_agent(pid, _spec())
+    assert (result.status, result.steps, result.cost) == ("credit_limit", 0, 0.0)
+    assert provider.requests == []
 
 
 def test_agent_step_limit(provider, test_tools):
@@ -344,6 +411,101 @@ def test_parse_returns_the_schema_object_and_records_usage(provider, run_id):
         settings.model_standard, 100_000, 40_000, 10_000, 0)
     p_in, p_cached, p_out = settings.model_prices[settings.model_standard]
     assert row.cost == pytest.approx((60_000 * p_in + 40_000 * p_cached + 10_000 * p_out) / 1e6)
+
+
+def _owned_parse(pid: str, n: int = 1):
+    """Run n parse calls one after another as the project's job would (usage charged to its owner)."""
+    token = llm.current_project.set(pid)
+    try:
+        async def go():
+            return [await llm.parse(model=settings.model_standard, instructions="Verify.",
+                                    messages=[{"role": "user", "content": f"Check {i}."}], schema=Verdict)
+                    for i in range(n)]
+        return asyncio.run(go())
+    finally:
+        llm.current_project.reset(token)
+
+
+def _project_rows(pid: str) -> list[Usage]:
+    with Session(engine) as s:
+        return list(s.exec(select(Usage).where(Usage.project_id == pid)))
+
+
+EXPENSIVE = (100_000, 0, 30_000)  # $0.33 input + $0.495 output = $0.825 per call
+
+
+def test_parse_refuses_before_any_request_when_credits_are_exhausted(provider):
+    from app import beta
+
+    uid, pid = _capped_project(1.0)
+    with Session(engine) as s:
+        s.add(Usage(project_id=pid, user_id=uid, model=settings.model_standard, cost=1.0))
+        s.commit()
+    provider.parse_result(_verdict())
+    with pytest.raises(beta.BetaLimitReached, match="Beta usage limit reached"):
+        _owned_parse(pid)
+    assert provider.requests == []  # no Bedrock request was issued
+    assert len(_project_rows(pid)) == 1 and beta.get_user_spend(uid) == pytest.approx(1.0)
+
+
+def test_parse_call_that_uses_up_the_credit_blocks_the_next_one(provider):
+    from app import beta
+
+    uid, pid = _capped_project(0.5)
+    provider.parse_result(_verdict(), usage=EXPENSIVE)
+    provider.parse_result(_verdict(), usage=EXPENSIVE)
+    (out,) = _owned_parse(pid)  # starts with $0.50 left; may finish past it
+    assert out == _verdict()
+    (row,) = _project_rows(pid)
+    assert row.user_id == uid
+    assert row.cost == pytest.approx(llm.cost_of(settings.model_standard, *EXPENSIVE)) == pytest.approx(0.825)
+    assert beta.get_user_spend(uid) == pytest.approx(0.825) and beta.get_user_remaining(uid) == 0
+    with pytest.raises(beta.BetaLimitReached):
+        _owned_parse(pid)
+    assert len(provider.requests) == 1 and len(_project_rows(pid)) == 1
+
+
+def test_parse_calls_already_in_flight_are_not_cancelled(provider):
+    from app import beta
+
+    uid, pid = _capped_project(0.5)
+    for _ in range(3):
+        provider.parse_result(_verdict(), usage=EXPENSIVE)
+    started: list[dict] = []
+    gate = asyncio.Event()  # binds to the loop on first use
+    original = provider.messages_api.create
+
+    async def gated(**kw):  # hold every request until both calls are in flight
+        started.append(kw)
+        await gate.wait()
+        return await original(**kw)
+
+    provider.messages_api.create = gated
+
+    async def scenario():
+        calls = [asyncio.create_task(llm.parse(model=settings.model_standard, instructions="Verify.",
+                                               messages=[{"role": "user", "content": f"Check {i}."}],
+                                               schema=Verdict)) for i in range(2)]
+        for _ in range(200):
+            if len(started) == 2:
+                break
+            await asyncio.sleep(0.01)
+        assert len(started) == 2  # both passed the credit check while $0.50 was left
+        gate.set()
+        return await asyncio.gather(*calls)
+
+    token = llm.current_project.set(pid)
+    try:
+        outs = asyncio.run(scenario())
+    finally:
+        llm.current_project.reset(token)
+    assert outs == [_verdict(), _verdict()]  # both completed despite the overshoot
+    rows = _project_rows(pid)
+    assert len(rows) == 2 and all(r.user_id == uid for r in rows)
+    assert beta.get_user_spend(uid) == pytest.approx(2 * 0.825)  # every in-flight call is recorded
+    with pytest.raises(beta.BetaLimitReached):  # but no new call may begin
+        _owned_parse(pid)
+    assert len(started) == 2
 
 
 def test_parse_default_effort_is_medium(provider):

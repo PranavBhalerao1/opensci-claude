@@ -2,8 +2,9 @@
 
 Schedules blueprint tasks in dependency order (parallel where possible), runs
 each with its agent in the project sandbox, verifies outputs (existence in
-code, acceptance checks by a cheap model), retries with feedback, and enforces
-the project budget. Guided mode pauses at human checkpoints. State lives in the
+code, acceptance checks by a cheap model), retries with feedback, and pauses at
+the project budget or when the owner's credits run out (agents also check credits
+before every step). Guided mode pauses at human checkpoints. State lives in the
 TaskState table, so a restarted server resumes where it left off.
 """
 
@@ -132,7 +133,6 @@ def model_for(tier: str, policy: str) -> str:
 
 
 ESCALATE = {"bulk": "standard", "standard": "reasoning", "reasoning": "reasoning"}
-ESCALATED_MIN_BUDGET = 0.12  # a stronger model needs room to debug
 
 
 def escalated_model(tier: str, policy: str, attempt: int) -> tuple[str, bool]:
@@ -310,18 +310,17 @@ def _task_tools(task: dict, agent: dict, sandbox) -> list[str]:
     return tools
 
 
-def _subagent_runner(spec: AgentSpec, ctx: ToolContext, state_id: str, budget: float, cost_box: list[float]):
-    """Build the spawn callback: children share the workspace, cannot spawn further, split the budget."""
+def _subagent_runner(spec: AgentSpec, ctx: ToolContext, state_id: str, cost_box: list[float]):
+    """Build the spawn callback: children share the workspace and cannot spawn further."""
 
     async def spawn(subtasks: list[dict]) -> list[dict]:
-        child_budget = max(0.03, budget * 0.7 / len(subtasks))
         child_tools = [t for t in spec.tools if t != "spawn_subagents"]
 
         async def one(sub: dict) -> dict:
             name = re.sub(r"[^A-Za-z0-9_-]", "_", sub["name"])[:30]
             child = AgentSpec(
                 name=f"{spec.name} › {name}", instructions=spec.instructions, model=spec.model, tools=child_tools,
-                max_steps=MAX_AGENT_STEPS, max_cost=child_budget, reasoning_effort=spec.reasoning_effort,
+                max_steps=MAX_AGENT_STEPS, reasoning_effort=spec.reasoning_effort,
             )
             child_ctx = ToolContext(ctx.project_id, ctx.sandbox, ctx.http, agent_name=child.name, owner=ctx.owner,
                                     live=ctx.live)
@@ -345,8 +344,15 @@ def _subagent_runner(spec: AgentSpec, ctx: ToolContext, state_id: str, budget: f
     return spawn
 
 
-async def _execute(project_id: str, mp: dict, task: dict, state_id: str, policy: str, http: httpx.AsyncClient,
-                   remaining: float = float("inf")) -> None:
+def _requeue_on_credit_limit(state_id: str, me: TaskState, step: int, cost: float) -> None:
+    """Credits ran out: not a failure. Re-queue without using up a retry (the note keeps any
+    earlier feedback); the scheduler pauses on the credit limit and resume re-runs the task."""
+    _append_event(state_id, {"type": "message", "step": step, "text": "Stopped: beta usage limit reached",
+                             "cost": cost})
+    _update(state_id, status="pending", attempts=me.attempts, cost=me.cost + cost, finished_at=_now())
+
+
+async def _execute(project_id: str, mp: dict, task: dict, state_id: str, policy: str, http: httpx.AsyncClient) -> None:
     with Session(engine) as s:
         states = {st.task_id: st for st in s.exec(select(TaskState).where(TaskState.blueprint_run_id == s.get(TaskState, state_id).blueprint_run_id))}
     me = next(st for st in states.values() if st.id == state_id)
@@ -383,15 +389,13 @@ async def _execute(project_id: str, mp: dict, task: dict, state_id: str, policy:
         model=model,
         tools=_task_tools(task, agent, sandbox),
         max_steps=MAX_AGENT_STEPS,
-        # Never let one task spend beyond what is left of the project budget.
-        max_cost=min(max(ESCALATED_MIN_BUDGET if escalated else 0.05, float(task["max_cost_usd"])), max(0.02, remaining)),
         reasoning_effort="medium" if escalated else ("low" if agent["model_tier"] == "bulk" or policy == "minimal" else "medium"),
     )
     ended: list[bool] = []
     ctx = ToolContext(project_id, sandbox, http, agent_name=agent["name"], owner=task["id"], live=lambda: not ended)
     sub_cost = [0.0]
     if "spawn_subagents" in spec.tools:
-        ctx.spawn = _subagent_runner(spec, ctx, state_id, spec.max_cost, sub_cost)
+        ctx.spawn = _subagent_runner(spec, ctx, state_id, sub_cost)
     prompt = _task_prompt(mp, task, states, feedback, amendments)
     if leftover := fence.leftovers():
         prompt += ("\n\nLEFT OVER FROM AN EARLIER ATTEMPT: " + ", ".join(leftover) + ". These required outputs are "
@@ -414,6 +418,9 @@ async def _execute(project_id: str, mp: dict, task: dict, state_id: str, policy:
             finished_at=_now(),
         )
         return
+    if res.status == "credit_limit":
+        _requeue_on_credit_limit(state_id, me, res.steps, res.cost + sub_cost[0])
+        return
 
     await sandbox.pull()  # checks and the verifier read the host copy of the workspace
     missing = [o["path"] for o in task["outputs"] if not sandbox.path(o["path"]).exists()]
@@ -423,12 +430,16 @@ async def _execute(project_id: str, mp: dict, task: dict, state_id: str, policy:
     stale = [p for p, files in left.items() if len(files) == len(sandbox.files(p))]
     leftovers = {p: files for p, files in left.items() if p not in stale}
     report = {"status": res.status, "summary": res.summary, "metrics": res.metrics, "issues": res.issues}
-    # Verify whenever every output exists — an agent cut off by its budget or step limit
+    # Verify whenever every output exists — an agent cut off by its step limit
     # may already have finished the work. An explicit "failed" report is trusted.
     verifiable = not missing and not stale and res.status != "failed"
-    checks = await _verify(task, sandbox, policy, report, amendments, leftovers) if verifiable else []
+    try:
+        checks = await _verify(task, sandbox, policy, report, amendments, leftovers) if verifiable else []
+    except beta.BetaLimitReached:  # the verifier's model call was refused for lack of credit
+        _requeue_on_credit_limit(state_id, me, res.steps, res.cost + sub_cost[0])
+        return
     passed = verifiable and bool(checks or not task["acceptance_checks"]) and all(c["passed"] for c in checks)
-    if passed and res.status in ("budget_exceeded", "step_limit"):
+    if passed and res.status == "step_limit":
         res.issues.append(f"Agent stopped ({res.status}) before reporting; outputs verified by the platform.")
     problems = (
         [f"Missing outputs: {', '.join(missing)}"] if missing else []
@@ -583,12 +594,8 @@ async def run(project_id: str, h: RunHandle) -> dict:
                     ready = []  # let running tasks finish; start nothing new
 
                 launch = ready[: max(0, MAX_PARALLEL - len(running))]
-                # Split what is left of the budget between the tasks starting now and those running.
-                share = max(0.0, min(budget - total, allowance)) / max(1, len(launch) + len(running))
                 for tid in launch:
-                    running[tid] = asyncio.create_task(
-                        _execute(project_id, mp, tasks[tid], states[tid].id, policy, http, remaining=share)
-                    )
+                    running[tid] = asyncio.create_task(_execute(project_id, mp, tasks[tid], states[tid].id, policy, http))
 
                 if not running:
                     if any(st.status == "human" for st in states.values()):

@@ -2,11 +2,11 @@
 
 import asyncio
 import contextlib
-import math
 import uuid
 from pathlib import Path
 from types import SimpleNamespace
 
+import httpx
 import pytest
 from fastapi.testclient import TestClient
 from sqlmodel import Session, select
@@ -15,7 +15,10 @@ from app import beta, jobs
 from app.auth import CurrentUser, get_current_user
 from app.db import BetaUser, GpuUsage, Project, Run, TaskState, Usage, engine
 from app.execution import modal_runner, orchestrator
+from app.execution.sandbox import Sandbox
 from app.main import app
+
+REAL_VERIFY = orchestrator._verify
 
 MIGRATION = (Path(__file__).resolve().parents[2] / "supabase" / "migrations" / "20261003000000_private_beta.sql").read_text()
 
@@ -303,8 +306,8 @@ def _execution_project(uid: str) -> tuple[str, str]:
 def fake_execution(monkeypatch):
     launched: list[tuple[str, float]] = []
 
-    async def fake_execute(project_id, mp, task, state_id, policy, http, remaining=math.inf):
-        launched.append((task["id"], remaining))
+    async def fake_execute(project_id, mp, task, state_id, policy, http):
+        launched.append(task["id"])
         orchestrator._update(state_id, status="done")
 
     monkeypatch.setattr(orchestrator, "sandbox_for", lambda pid: _FakeSandbox())
@@ -338,19 +341,212 @@ def test_execution_pauses_with_beta_reason_when_allowance_is_used(fake_execution
     assert states and all(st.status == "pending" for st in states)
 
 
-@pytest.mark.parametrize("cap,spent,expected", [
-    (None, 0.0, 15.0),   # unlimited: the project budget alone, exactly as before
-    (100.0, 1.0, 15.0),  # project budget is tighter
-    (1.0, 0.4, 0.6),     # beta allowance is tighter
-])
-def test_execution_budget_is_min_of_project_budget_and_allowance(fake_execution, cap, spent, expected):
+@pytest.mark.parametrize("cap,spent", [(None, 0.0), (100.0, 1.0), (1.0, 0.4)])
+def test_execution_runs_while_credits_remain(fake_execution, cap, spent):
+    """No per-task dollar share is handed out: tasks run whenever the owner has credit left."""
     uid = _user(cap=cap)
     _spend(uid, llm=spent)
     pid, run_id = _execution_project(uid)
     result = asyncio.run(orchestrator.run(pid, jobs.RunHandle(run_id)))
-    assert [t for t, _ in fake_execution] == ["T1", "T2"] and result["counts"]["done"] == 2
-    assert all(share == pytest.approx(expected) for _, share in fake_execution)
+    assert fake_execution == ["T1", "T2"] and result["counts"]["done"] == 2
     assert orchestrator.current_budget(pid) == 15.0  # the project's own budget setting is untouched
+
+
+def test_execution_still_pauses_at_the_project_budget(fake_execution):
+    uid = _user(cap=None)
+    pid, run_id = _execution_project(uid)
+    with Session(engine) as s:  # the user-set project budget is already spent by this execution
+        s.add(Usage(project_id=pid, user_id=uid, run_id=run_id, model="m", cost=15.0))
+        s.commit()
+
+    async def scenario():
+        task = asyncio.create_task(orchestrator.run(pid, jobs.RunHandle(run_id)))
+        reason = None
+        for _ in range(100):
+            await asyncio.sleep(0.02)
+            ctl = orchestrator.control(pid)
+            if ctl and ctl.reason:
+                reason = ctl.reason
+                break
+        ctl.cancelled = True
+        ctl.resume()
+        await task
+        return reason
+
+    assert asyncio.run(scenario()) == "budget: $15.00 of $15.00 spent" and fake_execution == []
+
+
+# ── Task execution without per-task dollar caps ────────────────────────────
+
+
+class _TaskSandbox(_FakeSandbox, Sandbox):  # Sandbox: the real fence/stale bookkeeping on local files
+    def __init__(self, root: Path):
+        self.root = root
+
+    def path(self, rel: str) -> Path:
+        return self.root / rel
+
+    async def pull(self):
+        pass
+
+
+@pytest.fixture
+def task_env(monkeypatch, tmp_path):
+    """One real task state (T1 of the test blueprint) run by _execute with run_agent and
+    the verifier faked. Script `agent` with AgentResults; `seen` records each call."""
+    from app.execution.agent import AgentResult
+
+    uid = _user(cap=None)
+    pid, _ = _execution_project(uid)
+    with Session(engine) as s:
+        bp_run_id = s.get(Project, pid).blueprint["run_id"]
+        mp = s.get(Run, bp_run_id).result["master_plan"]
+    orchestrator.prepare_states(pid, bp_run_id, mp)
+    with Session(engine) as s:
+        state_id = s.exec(select(TaskState).where(TaskState.blueprint_run_id == bp_run_id,
+                                                  TaskState.task_id == "T1")).one().id
+    env = SimpleNamespace(uid=uid, pid=pid, mp=mp, task=mp["tasks"][0], state_id=state_id, root=tmp_path,
+                          agent=[], seen=[], verified=[], write=False, Result=AgentResult)
+
+    async def fake_run_agent(spec, prompt, ctx, on_event=None):
+        env.seen.append((spec, prompt))
+        if env.write:  # written during this attempt, so it is not stale
+            env.write = False
+            (env.root / "data").mkdir(exist_ok=True)
+            (env.root / "data" / "a.csv").write_text("x\n1\n")
+        return env.agent.pop(0)
+
+    async def fake_verify(task, sandbox, policy, report=None, amendments=None, leftovers=None):
+        env.verified.append(task["id"])
+        return [{"check": c, "passed": True, "reason": "ok"} for c in task["acceptance_checks"]]
+
+    monkeypatch.setattr(orchestrator, "sandbox_for", lambda p: _TaskSandbox(tmp_path))
+    monkeypatch.setattr(orchestrator, "run_agent", fake_run_agent)
+    monkeypatch.setattr(orchestrator, "_verify", fake_verify)
+    return env
+
+
+def _run_task(env) -> TaskState:
+    async def go():
+        async with httpx.AsyncClient() as http:
+            await orchestrator._execute(env.pid, env.mp, env.task, env.state_id, "default", http)
+
+    asyncio.run(go())
+    with Session(engine) as s:
+        return s.get(TaskState, env.state_id)
+
+
+def _write_output(env) -> None:
+    """The next agent run writes the task's output (output already there beforehand would be stale)."""
+    env.write = True
+
+
+def test_task_spec_has_no_dollar_cap_and_keeps_step_limit(task_env):
+    env = task_env
+    env.task["max_cost_usd"] = 0.05  # a tiny planner estimate no longer limits anything
+    _write_output(env)
+    env.agent.append(env.Result("success", "done", cost=3.75))  # far past the old $0.05 cap
+    st = _run_task(env)
+    spec, _ = env.seen[0]
+    assert not hasattr(spec, "max_cost") and spec.max_steps == orchestrator.MAX_AGENT_STEPS
+    assert (st.status, st.attempts, st.cost) == ("done", 1, pytest.approx(3.75))
+
+
+def test_credit_limit_requeues_task_without_using_a_retry(task_env):
+    env = task_env
+    env.agent.append(env.Result("credit_limit", beta.LIMIT_MESSAGE, steps=3, cost=1.5))
+    st = _run_task(env)
+    assert (st.status, st.attempts, st.cost) == ("pending", 0, pytest.approx(1.5))
+    assert env.verified == []  # no verifier call is spent on an interrupted task
+    assert st.events[-1]["text"] == "Stopped: beta usage limit reached"
+
+
+def test_verifier_refused_for_credit_requeues_task_instead_of_failing(task_env, monkeypatch):
+    """The verifier goes through llm.parse, which refuses once credits are gone."""
+    from app import llm
+
+    env = task_env
+    _set_cap(env.uid, 1.0)
+    _spend(env.uid, llm=1.0)  # the agent's last step used up the allowance
+    monkeypatch.setattr(orchestrator, "_verify", REAL_VERIFY)
+    _write_output(env)
+    env.agent.append(env.Result("success", "done", cost=0.7))
+    token = llm.current_project.set(env.pid)
+    try:
+        st = _run_task(env)
+    finally:
+        llm.current_project.reset(token)
+    assert (st.status, st.attempts, st.cost) == ("pending", 0, pytest.approx(0.7))
+    assert st.events[-1]["text"] == "Stopped: beta usage limit reached"
+
+
+def test_retry_with_feedback_still_works(task_env, monkeypatch):
+    env = task_env
+    for tier, name in (("reasoning", "gpt-6-astra"), ("standard", "gpt-6-sol"), ("bulk", "gpt-6-luna")):
+        monkeypatch.setattr(orchestrator.settings, f"model_{tier}", name)
+    env.agent.append(env.Result("failed", "Source returned 404", issues=["dataset URL dead"], cost=0.4))
+    st = _run_task(env)
+    assert (st.status, st.attempts) == ("pending", 1)  # retries=1 in the test blueprint
+    assert "Source returned 404" in st.note and "dataset URL dead" in st.note
+    assert env.verified == []  # an explicit "failed" report is trusted
+
+    _write_output(env)
+    env.agent.append(env.Result("success", "fixed", cost=0.6))
+    st = _run_task(env)
+    (spec1, _), (spec2, prompt2) = env.seen
+    assert "PREVIOUS ATTEMPT FAILED" in prompt2 and "dataset URL dead" in prompt2
+    assert (spec1.model, spec2.model) == ("gpt-6-sol", "gpt-6-astra")  # tier escalation is unchanged
+    assert (st.status, st.attempts, st.cost) == ("done", 2, pytest.approx(1.0))
+
+
+def test_credit_limit_on_a_retry_keeps_the_feedback(task_env):
+    env = task_env
+    env.agent += [env.Result("failed", "Source returned 404", issues=["dataset URL dead"], cost=0.4),
+                  env.Result("credit_limit", beta.LIMIT_MESSAGE, cost=0.3),
+                  env.Result("failed", "still broken", cost=0.1)]
+    _run_task(env)
+    st = _run_task(env)  # interrupted by the credit limit: still attempt 1, feedback intact
+    assert (st.status, st.attempts) == ("pending", 1) and "dataset URL dead" in st.note
+    st = _run_task(env)  # after the cap is raised and execution resumes
+    assert "dataset URL dead" in env.seen[2][1]
+    assert (st.status, st.attempts, st.cost) == ("failed", 2, pytest.approx(0.8))
+
+
+def test_retries_are_still_limited(task_env):
+    env = task_env
+    env.agent += [env.Result("step_limit", "Stopped after 80 steps.", cost=0.2) for _ in range(2)]
+    assert _run_task(env).status == "pending"
+    st = _run_task(env)
+    assert (st.status, st.attempts) == ("failed", 2)
+    assert "Missing outputs: data/a.csv" in st.note
+
+
+def test_step_limited_agent_with_verified_outputs_is_done(task_env):
+    env = task_env
+    _write_output(env)
+    env.agent.append(env.Result("step_limit", "Stopped after 80 steps.", cost=0.2))
+    st = _run_task(env)
+    assert st.status == "done" and env.verified == ["T1"]
+    assert any("step_limit" in i for i in st.issues)
+
+
+def test_subagents_have_no_dollar_cap_and_report_credit_limit(task_env):
+    from app.execution.agent import AgentSpec
+    from app.execution.tools import ToolContext
+
+    env = task_env
+    env.agent += [env.Result("success", "half 1", cost=2.0), env.Result("credit_limit", beta.LIMIT_MESSAGE, cost=0.5)]
+    parent = AgentSpec(name="P", instructions="i", model="m", tools=["run_python", "spawn_subagents"])
+    ctx = ToolContext(env.pid, _TaskSandbox(env.root), None)
+    cost = [0.0]
+    spawn = orchestrator._subagent_runner(parent, ctx, env.state_id, cost)
+    out = asyncio.run(spawn([{"name": "a", "instructions": "x", "outputs": []},
+                             {"name": "b", "instructions": "y", "outputs": []}]))
+    assert sorted(o["status"] for o in out) == ["credit_limit", "success"] and cost[0] == pytest.approx(2.5)
+    assert len(env.seen) == 2
+    for spec, _ in env.seen:
+        assert not hasattr(spec, "max_cost") and spec.max_steps == orchestrator.MAX_AGENT_STEPS
+        assert "spawn_subagents" not in spec.tools
 
 
 @pytest.mark.parametrize("cap,spent,expected", [(None, 0.0, 10.0), (100.0, 1.0, 10.0), (3.0, 1.0, 2.0)])
