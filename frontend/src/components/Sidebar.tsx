@@ -1,5 +1,6 @@
 import type { Project } from "@/lib/api";
 import { useAuth } from "@/lib/supabase/AuthProvider";
+import { useBeta } from "./BetaGate";
 
 interface Props {
   projects: Project[];
@@ -11,6 +12,7 @@ interface Props {
 
 export default function Sidebar({ projects, activeId, onSelect, onNew, onDelete }: Props) {
   const { user, signOut } = useAuth();
+  const beta = useBeta();
   return (
     <aside className="flex w-64 shrink-0 flex-col border-r border-rule bg-paper max-md:hidden">
       <div className="px-5 pt-5 pb-4">
@@ -49,6 +51,11 @@ export default function Sidebar({ projects, activeId, onSelect, onNew, onDelete 
           </div>
         ))}
       </nav>
+      {beta && beta.cap_usd !== null && (
+        <div className="border-t border-rule px-3 pt-3 font-mono text-[11px] text-muted">
+          Beta usage: ${beta.spent_usd.toFixed(2)} / ${beta.cap_usd.toFixed(2)}
+        </div>
+      )}
       {user && (
         <div className="flex items-center justify-between gap-2 border-t border-rule px-3 py-3">
           <span className="min-w-0 truncate font-mono text-[11px] text-faint" title={user.email ?? undefined}>

@@ -95,8 +95,39 @@ export const DEPTHS: { key: Depth; label: string; papers: number; note: string }
   { key: "deep", label: "Deep", papers: 300, note: "~300 papers + citations" },
 ];
 
+export const BETA_PENDING_MESSAGE =
+  "OpenScientist is currently in private beta. Your account has been created successfully and is awaiting beta approval.";
+export const BETA_LIMIT_MESSAGE =
+  "Beta usage limit reached. You've used your current beta allowance. Contact the OpenScientist team if you need additional access.";
+
+/** A refusal from the private-beta gate, identified by the API's machine-readable code.
+ * toString() is the plain message, so existing `setError(String(e))` sites show it as-is. */
+export class BetaError extends Error {
+  code: "beta_pending" | "beta_limit_reached";
+  constructor(code: BetaError["code"], message: string) {
+    super(message);
+    this.code = code;
+  }
+  toString() {
+    return this.message;
+  }
+}
+
+async function failure(res: Response): Promise<Error> {
+  const text = await res.text();
+  let code: unknown;
+  try {
+    code = JSON.parse(text)?.detail?.code;
+  } catch {
+    // not JSON
+  }
+  if (code === "beta_limit_reached") return new BetaError(code, BETA_LIMIT_MESSAGE);
+  if (code === "beta_pending") return new BetaError(code, BETA_PENDING_MESSAGE);
+  return new Error(`${res.status} ${text}`);
+}
+
 async function json<T>(res: Response): Promise<T> {
-  if (!res.ok) throw new Error(`${res.status} ${await res.text()}`);
+  if (!res.ok) throw await failure(res);
   return res.json() as Promise<T>;
 }
 
@@ -120,6 +151,22 @@ async function apiFetch(url: string, init: RequestInit = {}): Promise<Response> 
 
 const post = (url: string, body: unknown = {}) =>
   apiFetch(url, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+
+/** The signed-in user's private-beta status (GET /api/me). cap_usd and
+ * remaining_usd are null for unlimited accounts. */
+export interface Me {
+  id: string;
+  email: string | null;
+  beta_approved: boolean;
+  unlimited: boolean;
+  cap_usd: number | null;
+  spent_usd: number;
+  remaining_usd: number | null;
+}
+
+export const meApi = {
+  get: () => apiFetch(`${API_URL}/api/me`).then(json<Me>),
+};
 
 export const api = {
   listProjects: () => apiFetch(`${API_URL}/api/projects`).then(json<Project[]>),
@@ -159,7 +206,7 @@ export async function* sendTurn(projectId: string, turn: Turn): AsyncGenerator<S
     headers: { "content-type": "application/json" },
     body: JSON.stringify(turn),
   });
-  if (!res.ok || !res.body) throw new Error(`${res.status} ${await res.text()}`);
+  if (!res.ok || !res.body) throw await failure(res);
 
   const reader = res.body.pipeThrough(new TextDecoderStream()).getReader();
   let buffer = "";

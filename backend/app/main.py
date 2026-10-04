@@ -1,8 +1,10 @@
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from . import beta
+from .auth import CurrentUser, get_current_user
 from .config import settings
 from .db import init_db
 from .jobs import mark_interrupted
@@ -23,7 +25,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-app.include_router(projects.router)
+# Every product route requires an approved beta account; /api/me below does not, so a
+# pending user can still learn their status.
+app.include_router(projects.router, dependencies=[Depends(beta.require_approved)])
 
 
 @app.get("/api/health")
@@ -33,3 +37,8 @@ def health() -> dict:
         "standard": settings.model_standard,
         "bulk": settings.model_bulk,
     }}
+
+
+@app.get("/api/me")
+def me(user: CurrentUser = Depends(get_current_user)) -> dict:
+    return {"id": user.id, "email": user.email, **beta.status(user.id)}

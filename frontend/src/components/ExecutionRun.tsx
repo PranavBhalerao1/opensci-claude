@@ -39,6 +39,7 @@ function statusLabel(exec: Execution | null): string {
   if (!exec?.run) return "Not started";
   if (exec.paused?.startsWith("checkpoint")) return "Paused · review";
   if (exec.paused?.startsWith("budget")) return "Paused · budget";
+  if (exec.paused?.startsWith("beta_limit_reached")) return "Paused · beta limit";
   if (exec.paused?.startsWith("human")) return "Needs a person";
   if (exec.paused) return "Paused";
   if (exec.live) return "Running";
@@ -268,6 +269,19 @@ function PausedBanner({ exec, onResume, onOpenFiles }: Pick<Props, "onResume" | 
             />
             <button onClick={() => onResume(budget)} className="bg-ink px-4 py-2 text-[13px] text-paper">
               Raise &amp; continue →
+            </button>
+          </div>
+        </>
+      ) : reason.startsWith("beta_limit_reached") ? (
+        <>
+          <div className="font-mono text-[10px] uppercase tracking-[0.14em]">Beta usage limit reached</div>
+          <p className="mt-1 text-[13.5px]">
+            You&apos;ve used your current beta allowance. Contact the OpenScientist team if you need additional access.
+            Running tasks finish; nothing new starts.
+          </p>
+          <div className="mt-3 flex gap-2">
+            <button onClick={() => onResume()} className="bg-ink px-4 py-2 text-[13px] text-paper">
+              Continue →
             </button>
           </div>
         </>

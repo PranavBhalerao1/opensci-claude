@@ -8,6 +8,7 @@ from datetime import datetime, timezone
 
 from sqlmodel import Session, select
 
+from .beta import check_project_allowance
 from .db import Run, engine
 from .llm import current_project, current_run
 
@@ -81,6 +82,7 @@ def start(
         current_project.set(project_id)
         current_run.set(run.id)
         try:
+            check_project_allowance(project_id)  # private-beta cap; also covers chained stages
             result = await job(project_id, handle)
         except asyncio.CancelledError:
 

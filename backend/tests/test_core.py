@@ -21,6 +21,18 @@ CAPS = {"python", "shell", "internet", "files", "cpu", "background", "conda", "a
 BUDGET = {"llm_usd": 15.0, "gpu_hours": 5.0}
 
 
+def _approve(*user_ids: str) -> None:
+    """Grant private-beta access (uncapped) so route tests reach the product routes."""
+    from sqlmodel import Session
+
+    from app.db import BetaUser, engine
+
+    with Session(engine) as s:
+        for uid in user_ids:
+            s.merge(BetaUser(user_id=uid, approved=True))
+        s.commit()
+
+
 # ── Plan task graph ────────────────────────────────────────────────────────
 
 
@@ -245,6 +257,7 @@ def test_confirm_brief_keeps_settings():
         pid = p.id
     import app.routes.projects as routes
 
+    _approve("11111111-1111-1111-1111-111111111111")
     started = []
     original = routes.pipeline.start_literature
     routes.pipeline.start_literature = lambda project_id: started.append(project_id)
@@ -314,7 +327,9 @@ def test_routes_do_not_shadow_each_other():
     from app.auth import CurrentUser, get_current_user
     from app.main import app
 
-    app.dependency_overrides[get_current_user] = lambda: CurrentUser(id="_u1", email="u1@example.com")
+    uid = "55555555-5555-5555-5555-555555555555"
+    _approve(uid)
+    app.dependency_overrides[get_current_user] = lambda: CurrentUser(id=uid, email="u1@example.com")
     try:
         with TestClient(app) as client:
             r = client.post("/api/projects/nope/execution/changes/T1", json={"feedback": "x"})
@@ -429,6 +444,7 @@ def test_user_cannot_access_another_users_project():
 
     owner = "22222222-2222-2222-2222-222222222222"
     other = "33333333-3333-3333-3333-333333333333"
+    _approve(owner, other)
     with Session(engine) as s:
         p = Project(title="_owner_test", user_id=owner)
         s.add(p)
@@ -463,6 +479,7 @@ def test_create_project_ignores_client_supplied_user_id():
     from app.main import app
 
     real_user = "44444444-4444-4444-4444-444444444444"
+    _approve(real_user)
     app.dependency_overrides[get_current_user] = lambda: CurrentUser(id=real_user, email="real@example.com")
     pid = None
     try:

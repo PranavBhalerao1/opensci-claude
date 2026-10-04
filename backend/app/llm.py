@@ -5,6 +5,7 @@ from openai import AsyncOpenAI
 from pydantic import BaseModel
 from sqlmodel import Session
 
+from .beta import owner_of
 from .config import settings
 from .db import Usage, engine
 
@@ -33,7 +34,8 @@ def record_usage(model: str, response) -> float:
     with Session(engine) as s:
         s.add(
             Usage(
-                project_id=current_project.get(), run_id=current_run.get(), model=model,
+                project_id=current_project.get(), user_id=owner_of(current_project.get()),
+                run_id=current_run.get(), model=model,
                 input_tokens=usage.input_tokens, cached_tokens=cached, output_tokens=usage.output_tokens,
                 web_searches=searches, cost=cost,
             )

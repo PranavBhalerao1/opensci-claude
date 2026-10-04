@@ -17,6 +17,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import func
 from sqlmodel import Session, select
 
+from .. import beta
 from ..config import settings
 from ..db import Project, Run, Secret, TaskState, Usage, engine
 from ..jobs import RunHandle
@@ -523,11 +524,14 @@ async def run(project_id: str, h: RunHandle) -> dict:
 
                 total = spent(project_id)
                 budget = current_budget(project_id)
+                allowance = beta.project_allowance(project_id)  # owner's remaining beta allowance
                 h.counts(**{k: sum(1 for st in states.values() if st.status == k)
                             for k in ("done", "running", "pending", "failed", "blocked", "human", "skipped")},
                          spent_cents=round(total * 100))
                 if total >= budget and ctl.go.is_set():
                     ctl.pause(f"budget: ${total:.2f} of ${budget:.2f} spent")
+                elif allowance <= 0 and ctl.go.is_set():
+                    ctl.pause(beta.LIMIT_PAUSE)
 
                 if not ctl.go.is_set():
                     if not running:
@@ -539,7 +543,7 @@ async def run(project_id: str, h: RunHandle) -> dict:
 
                 launch = ready[: max(0, MAX_PARALLEL - len(running))]
                 # Split what is left of the budget between the tasks starting now and those running.
-                share = max(0.0, budget - total) / max(1, len(launch) + len(running))
+                share = max(0.0, min(budget - total, allowance)) / max(1, len(launch) + len(running))
                 for tid in launch:
                     running[tid] = asyncio.create_task(
                         _execute(project_id, mp, tasks[tid], states[tid].id, policy, http, remaining=share)

@@ -13,6 +13,7 @@ from pathlib import Path
 
 from sqlmodel import Session, func, select
 
+from ..beta import owner_of, project_allowance
 from ..db import GpuUsage, Project, engine
 from ..llm import current_run
 
@@ -46,7 +47,9 @@ def configured() -> bool:
 def gpu_budget(project_id: str) -> float:
     with Session(engine) as s:
         cfg = s.get(Project, project_id).settings or {}
-    return float(cfg.get("gpu_budget_usd", DEFAULT_GPU_BUDGET))
+    budget = float(cfg.get("gpu_budget_usd", DEFAULT_GPU_BUDGET))
+    # Private beta: GPU jobs may not plan to spend past the owner's remaining allowance.
+    return min(budget, gpu_spent(project_id) + project_allowance(project_id))
 
 
 def gpu_spent(project_id: str) -> float:
@@ -152,9 +155,10 @@ def run_jobs(project_id: str, root: Path, jobs: list[dict], gpu: str, timeout_s:
             # Running time plus container start-up (~45 s), which Modal also bills.
             r["seconds"] = round(run + CONTAINER_STARTUP_S, 1)
         r["cost"] = round(r["seconds"] * rate(gpu), 4)
+    user_id = owner_of(project_id)
     with Session(engine) as s:
         for r in results:
-            s.add(GpuUsage(project_id=project_id, run_id=current_run.get(), gpu=gpu, job=r["name"],
+            s.add(GpuUsage(project_id=project_id, user_id=user_id, run_id=current_run.get(), gpu=gpu, job=r["name"],
                            seconds=r["seconds"], cost=r["cost"]))
         s.commit()
     return {"jobs": results, "files_synced_back": len(changed), "changed_files": changed[:50]}

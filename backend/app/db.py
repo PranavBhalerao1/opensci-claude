@@ -183,6 +183,8 @@ class GpuUsage(SQLModel, table=True):
 
     id: str = Field(default_factory=_id, primary_key=True)
     project_id: str | None = Field(default=None, index=True)
+    # Owner at write time, so spend stays attributable after the project is deleted.
+    user_id: str | None = Field(default=None, sa_column=Column(Uuid(as_uuid=False), index=True))
     run_id: str | None = None
     gpu: str
     job: str
@@ -198,6 +200,8 @@ class Usage(SQLModel, table=True):
 
     id: str = Field(default_factory=_id, primary_key=True)
     project_id: str | None = Field(default=None, index=True)
+    # Owner at write time, so spend stays attributable after the project is deleted.
+    user_id: str | None = Field(default=None, sa_column=Column(Uuid(as_uuid=False), index=True))
     run_id: str | None = Field(default=None, index=True)
     model: str
     input_tokens: int = 0
@@ -205,6 +209,18 @@ class Usage(SQLModel, table=True):
     output_tokens: int = 0
     web_searches: int = 0
     cost: float = 0.0
+    created_at: datetime = Field(default_factory=_now)
+
+
+class BetaUser(SQLModel, table=True):
+    """Private-beta access for one Supabase user (see app/beta.py). Managed by hand in
+    the Supabase table editor: approved false → true, cap_usd in USD (None = unlimited)."""
+
+    __tablename__ = "beta_users"
+
+    user_id: str = Field(sa_column=Column(Uuid(as_uuid=False), primary_key=True))
+    approved: bool = False
+    cap_usd: float | None = None
     created_at: datetime = Field(default_factory=_now)
 
 

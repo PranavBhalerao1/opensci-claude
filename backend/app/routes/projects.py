@@ -13,7 +13,7 @@ from pydantic import BaseModel
 from sqlmodel import Session, select
 from sse_starlette.sse import EventSourceResponse
 
-from .. import jobs, pipeline
+from .. import beta, jobs, pipeline
 from ..agents import clarify
 from ..agents import blueprint as blueprint_agent
 from ..agents import plan as plan_agent
@@ -27,6 +27,9 @@ from ..execution.sandbox import sandbox_for
 from ..llm import current_project, stream_text
 
 router = APIRouter(prefix="/api/projects", tags=["projects"])
+# Routes that start billable work (model calls or GPU jobs) also require the user to be
+# under their beta spending cap; checked before the route changes any state.
+billable = [Depends(beta.require_allowance)]
 
 SYSTEM_PROMPT = (Path(__file__).resolve().parents[1] / "prompts" / "system.md").read_text()
 
@@ -120,7 +123,7 @@ def delete_project(
     (sandbox_for(project_id).root.parent / f"{project_id}-research-package.zip").unlink(missing_ok=True)
 
 
-@router.post("/{project_id}/brief/confirm")
+@router.post("/{project_id}/brief/confirm", dependencies=billable)
 async def confirm_brief(project_id: str, body: BriefConfirm, session: Session = Depends(get_session),
                         user: CurrentUser = Depends(get_current_user)) -> Project:
     project = _get(session, project_id, user)
@@ -139,7 +142,7 @@ async def confirm_brief(project_id: str, body: BriefConfirm, session: Session = 
     return project
 
 
-@router.post("/{project_id}/literature/run")
+@router.post("/{project_id}/literature/run", dependencies=billable)
 async def rerun_literature(project_id: str, session: Session = Depends(get_session),
                            user: CurrentUser = Depends(get_current_user)) -> Run:
     project = _get(session, project_id, user)
@@ -193,7 +196,7 @@ def get_gaps(project_id: str, session: Session = Depends(get_session),
     return {"run": run, "project": project}
 
 
-@router.post("/{project_id}/gaps/run")
+@router.post("/{project_id}/gaps/run", dependencies=billable)
 async def rerun_gaps(project_id: str, body: GapsRerun, session: Session = Depends(get_session),
                      user: CurrentUser = Depends(get_current_user)) -> Run:
     _get(session, project_id, user)
@@ -207,7 +210,7 @@ async def rerun_gaps(project_id: str, body: GapsRerun, session: Session = Depend
     return pipeline.start_gaps(project_id, (body.feedback or "").strip() or None)
 
 
-@router.post("/{project_id}/gaps/select")
+@router.post("/{project_id}/gaps/select", dependencies=billable)
 async def select_gap(project_id: str, body: GapSelect, session: Session = Depends(get_session),
                      user: CurrentUser = Depends(get_current_user)) -> Project:
     _get(session, project_id, user)
@@ -242,7 +245,7 @@ def get_plan(project_id: str, session: Session = Depends(get_session),
     return {"run": run, "project": project, "revisions": revisions}
 
 
-@router.post("/{project_id}/plan/run")
+@router.post("/{project_id}/plan/run", dependencies=billable)
 async def rerun_plan(project_id: str, session: Session = Depends(get_session),
                      user: CurrentUser = Depends(get_current_user)) -> Run:
     project = _get(session, project_id, user)
@@ -253,7 +256,7 @@ async def rerun_plan(project_id: str, session: Session = Depends(get_session),
     return pipeline.start_plan(project_id)
 
 
-@router.post("/{project_id}/plan/revise")
+@router.post("/{project_id}/plan/revise", dependencies=billable)
 async def revise_plan(project_id: str, body: PlanRevise, session: Session = Depends(get_session),
                       user: CurrentUser = Depends(get_current_user)) -> dict:
     _get(session, project_id, user)
@@ -289,7 +292,7 @@ def edit_plan(project_id: str, body: PlanEdit, session: Session = Depends(get_se
     return run
 
 
-@router.post("/{project_id}/plan/approve")
+@router.post("/{project_id}/plan/approve", dependencies=billable)
 async def approve_plan(project_id: str, session: Session = Depends(get_session),
                        user: CurrentUser = Depends(get_current_user)) -> Project:
     _get(session, project_id, user)
@@ -317,7 +320,7 @@ def get_blueprint(project_id: str, session: Session = Depends(get_session),
     return {"run": run, "project": project}
 
 
-@router.post("/{project_id}/blueprint/run")
+@router.post("/{project_id}/blueprint/run", dependencies=billable)
 async def rerun_blueprint(project_id: str, session: Session = Depends(get_session),
                           user: CurrentUser = Depends(get_current_user)) -> Run:
     project = _get(session, project_id, user)
@@ -328,7 +331,7 @@ async def rerun_blueprint(project_id: str, session: Session = Depends(get_sessio
     return pipeline.start_blueprint(project_id)
 
 
-@router.post("/{project_id}/blueprint/revise")
+@router.post("/{project_id}/blueprint/revise", dependencies=billable)
 async def revise_blueprint(project_id: str, body: BlueprintRevise, session: Session = Depends(get_session),
                            user: CurrentUser = Depends(get_current_user)) -> dict:
     _get(session, project_id, user)
@@ -407,7 +410,7 @@ def get_execution(project_id: str, session: Session = Depends(get_session),
     }
 
 
-@router.post("/{project_id}/execution/start")
+@router.post("/{project_id}/execution/start", dependencies=billable)
 async def start_execution(project_id: str, body: ExecutionStart, session: Session = Depends(get_session),
                           user: CurrentUser = Depends(get_current_user)) -> Run:
     project = _get(session, project_id, user)
@@ -430,7 +433,7 @@ def pause_execution(project_id: str, session: Session = Depends(get_session),
     return {"paused": ctl.reason}
 
 
-@router.post("/{project_id}/execution/resume")
+@router.post("/{project_id}/execution/resume", dependencies=billable)
 async def resume_execution(project_id: str, body: ExecutionStart, session: Session = Depends(get_session),
                            user: CurrentUser = Depends(get_current_user)) -> dict:
     project = _get(session, project_id, user)
@@ -503,7 +506,7 @@ def get_report(project_id: str, session: Session = Depends(get_session),
     return {"run": run, "project": project}
 
 
-@router.post("/{project_id}/report/run")
+@router.post("/{project_id}/report/run", dependencies=billable)
 async def run_report(project_id: str, session: Session = Depends(get_session),
                      user: CurrentUser = Depends(get_current_user)) -> Run:
     project = _get(session, project_id, user)
@@ -537,7 +540,7 @@ class ChangeRequest(BaseModel):
     feedback: str
 
 
-@router.post("/{project_id}/execution/changes/{task_id}")
+@router.post("/{project_id}/execution/changes/{task_id}", dependencies=billable)
 async def request_task_changes(project_id: str, task_id: str, body: ChangeRequest,
                                session: Session = Depends(get_session),
                                user: CurrentUser = Depends(get_current_user)) -> dict:
@@ -621,7 +624,7 @@ def get_graph(project_id: str, session: Session = Depends(get_session),
     return project_graph(project_id)
 
 
-@router.post("/{project_id}/messages")
+@router.post("/{project_id}/messages", dependencies=billable)
 def post_turn(project_id: str, body: TurnCreate, session: Session = Depends(get_session),
               user: CurrentUser = Depends(get_current_user)):
     project = _get(session, project_id, user)
