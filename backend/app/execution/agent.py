@@ -1,14 +1,15 @@
-"""Agent runtime: a Responses API tool-use loop with step and cost limits.
+"""Agent runtime: a Claude tool-use loop with step and cost limits.
 
-Conversation state is kept server-side via `previous_response_id`, so each step
-only sends new tool outputs (cheaper than resending the transcript).
+The transcript is kept here for one run and resent each step with a prompt-cache
+breakpoint at its end, so the repeated prefix is billed at the cached rate.
 """
 
 import json
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 
-from ..llm import client, record_usage
+from .. import llm
+from ..llm import MAX_TOKENS, THINKING, record_usage
 from .tools import TOOLS, ToolContext, specs
 
 TOOL_OUTPUT_LIMIT = 16_000
@@ -52,44 +53,43 @@ async def _emit(on_event: Event | None, event: dict) -> None:
             await out
 
 
+def _cached(transcript: list[dict]) -> list[dict]:
+    """The transcript with a prompt-cache breakpoint on its final block."""
+    last = transcript[-1]
+    blocks = [*last["content"][:-1], {**last["content"][-1], "cache_control": {"type": "ephemeral"}}]
+    return [*transcript[:-1], {**last, "content": blocks}]
+
+
 async def run_agent(spec: AgentSpec, task: str, ctx: ToolContext, on_event: Event | None = None) -> AgentResult:
     tool_names = [n for n in spec.tools if n in TOOLS]
     if "report_result" not in tool_names:
         tool_names.append("report_result")
     cost = 0.0
-    previous: str | None = None
-    pending: list[dict] = [{"role": "user", "content": task}]
+    transcript: list[dict] = [{"role": "user", "content": [{"type": "text", "text": task}]}]
 
     for step in range(1, spec.max_steps + 1):
-        response = await client.responses.create(
+        response = await llm.client.messages.create(
             model=spec.model,
-            instructions=spec.instructions,
-            input=pending,
+            max_tokens=MAX_TOKENS,
+            system=spec.instructions,
+            messages=_cached(transcript),
             tools=specs(tool_names),
-            previous_response_id=previous,
-            reasoning={"effort": spec.reasoning_effort},
-            truncation="auto",  # long coding/training sessions drop the oldest context instead of failing
+            thinking=THINKING,
+            output_config={"effort": spec.reasoning_effort},
         )
         cost += record_usage(spec.model, response)
-        previous = response.id
-        pending = []
+        # Full content, so thinking blocks go back with their tool calls.
+        transcript.append({"role": "assistant", "content": response.content})
+        pending: list[dict] = []
 
-        for item in response.output:
-            if item.type == "web_search_call":
-                query = getattr(getattr(item, "action", None), "query", None)
-                await _emit(on_event, {"type": "tool", "step": step, "tool": "web_search", "args": query or "", "cost": cost})
-
-        calls = [o for o in response.output if o.type == "function_call"]
+        calls = [b for b in response.content if b.type == "tool_use"]
         if not calls:
-            text = response.output_text.strip()
+            text = "".join(b.text for b in response.content if b.type == "text").strip()
             await _emit(on_event, {"type": "message", "step": step, "text": _short(text, 600), "cost": cost})
             return AgentResult("partial", text or "Agent stopped without reporting a result.", steps=step, cost=cost)
 
         for call in calls:
-            try:
-                args = json.loads(call.arguments or "{}")
-            except json.JSONDecodeError:
-                args = {}
+            args = call.input if isinstance(call.input, dict) else {}
             tool = TOOLS.get(call.name)
             try:
                 if tool is None or tool.handler is None:
@@ -99,11 +99,16 @@ async def run_agent(spec: AgentSpec, task: str, ctx: ToolContext, on_event: Even
                 output = f"Tool error: {type(exc).__name__}: {exc}"
             if len(output) > TOOL_OUTPUT_LIMIT:
                 output = output[:TOOL_OUTPUT_LIMIT] + "\n… [truncated]"
-            await _emit(on_event, {
-                "type": "tool", "step": step, "tool": call.name, "args": _short(args), "result": _short(output, 500),
-                "cost": cost,
-            })
-            pending.append({"type": "function_call_output", "call_id": call.call_id, "output": output})
+            if call.name == "web_search":  # the event the hosted search produced
+                await _emit(on_event, {"type": "tool", "step": step, "tool": "web_search",
+                                       "args": str(args.get("query") or ""), "cost": cost})
+            else:
+                await _emit(on_event, {
+                    "type": "tool", "step": step, "tool": call.name, "args": _short(args),
+                    "result": _short(output, 500), "cost": cost,
+                })
+            pending.append({"type": "tool_result", "tool_use_id": call.id, "content": output})
+        transcript.append({"role": "user", "content": pending})
 
         if ctx.credential_request is not None:
             c = ctx.credential_request

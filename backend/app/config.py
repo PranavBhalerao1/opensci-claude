@@ -1,15 +1,28 @@
 from pathlib import Path
 
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 ROOT_DIR = Path(__file__).resolve().parents[2]
 BACKEND_DIR = ROOT_DIR / "backend"
 
+SONNET_4_6 = "us.anthropic.claude-sonnet-4-6"  # Bedrock US cross-region inference profile
+
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=ROOT_DIR / ".env", extra="ignore")
 
-    openai_api_key: str
+    # Claude on Amazon Bedrock. Passed to the client explicitly: values from .env are not
+    # exported to os.environ, so the AWS default credential chain would not see them.
+    # Unset keys fall back to that chain (profile, instance role).
+    aws_region: str | None = None
+    aws_access_key_id: str | None = None
+    aws_secret_access_key: str | None = None
+    aws_session_token: str | None = None
+    bedrock_model_id: str = SONNET_4_6
+    # Backs the agents' web_search tool.
+    tavily_api_key: str | None = None
+
     semantic_scholar_api_key: str | None = None
     # OpenAlex works keyless on a small free daily budget; a key raises it.
     openalex_api_key: str | None = None
@@ -23,16 +36,16 @@ class Settings(BaseSettings):
     # Model tiers. The flagship is reserved for heavy reasoning / agentic work (gap
     # finding, planning, blueprint). Everything else uses the fast, cheap tiers:
     # standard for clarify/extraction/chat, bulk for high-volume screening.
-    model_reasoning: str = "gpt-6-astra"
-    model_standard: str = "gpt-6-sol"
-    model_bulk: str = "gpt-6-luna"
+    # Empty tiers use BEDROCK_MODEL_ID.
+    model_reasoning: str = ""
+    model_standard: str = ""
+    model_bulk: str = ""
 
     # USD per 1M tokens: (input, cached input, output). Used for cost tracking and
-    # budget enforcement; web searches are billed per call.
+    # budget enforcement; web searches are billed per call. Bedrock regional (us.)
+    # inference profiles cost 10% more than Anthropic's list price ($3 / $0.30 / $15).
     model_prices: dict[str, tuple[float, float, float]] = {
-        "gpt-6-astra": (10.0, 1.0, 50.0),
-        "gpt-6-sol": (2.0, 0.2, 10.0),
-        "gpt-6-luna": (0.10, 0.01, 0.50),
+        SONNET_4_6: (3.30, 0.33, 16.50),
     }
     web_search_price: float = 0.01
 
@@ -42,6 +55,13 @@ class Settings(BaseSettings):
 
     database_url: str = f"sqlite:///{BACKEND_DIR / 'data' / 'openscientist.db'}"
     cors_origins: list[str] = ["http://localhost:3000"]
+
+    @model_validator(mode="after")
+    def _default_tiers(self) -> "Settings":
+        for tier in ("model_reasoning", "model_standard", "model_bulk"):
+            if not getattr(self, tier):
+                setattr(self, tier, self.bedrock_model_id)
+        return self
 
 
 settings = Settings()

@@ -33,7 +33,7 @@ MAMBA_ROOT = f"{HOME}/.mamba"
 MICROMAMBA = f"{HOME}/.local/bin/micromamba"
 SYNC = f"{HOME}/.sync"  # scratch files for workspace transfers
 MICROMAMBA_URL = "https://micro.mamba.pm/api/micromamba/linux-64/latest"
-SANDBOX_TIMEOUT = 3600  # idle lifetime in seconds; extended on every use
+SANDBOX_TIMEOUT = 86400  # idle lifetime in seconds; extended on every use
 KEEPALIVE_EVERY = 300
 # Never synced in either direction: environments, caches, scratch temp files.
 SKIP = {".venv", ".conda", ".home", ".tmp", "__pycache__", ".pytest_cache", ".sandbox.sb"}

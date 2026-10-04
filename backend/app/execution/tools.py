@@ -1,8 +1,8 @@
 """Tool registry: what agents can do, with JSON schemas for function calling.
 
 Each tool declares the runtime capabilities it needs; the Blueprint Agent only
-assigns tools the current sandbox can provide. `web_search` is OpenAI's hosted
-tool; everything else runs here.
+assigns tools the current sandbox can provide. Everything runs here; `web_search`
+is backed by Tavily.
 """
 
 import asyncio
@@ -19,6 +19,7 @@ from urllib.parse import urlparse
 
 import httpx
 
+from ..sources import tavily
 from ..sources.common import norm_title
 from . import catalog
 from .sandbox import MIN_FREE_BYTES, Sandbox
@@ -48,18 +49,11 @@ class Tool:
     description: str
     parameters: dict
     requires: tuple[str, ...]
-    handler: Callable[[ToolContext, dict], Awaitable[str]] | None  # None for hosted tools
+    handler: Callable[[ToolContext, dict], Awaitable[str]] | None
 
     def spec(self) -> dict:
-        if self.handler is None:
-            return {"type": self.name}
-        return {
-            "type": "function",
-            "name": self.name,
-            "description": self.description,
-            "parameters": self.parameters,
-            "strict": False,
-        }
+        """Claude tool definition (Messages API)."""
+        return {"name": self.name, "description": self.description, "input_schema": self.parameters}
 
 
 def _obj(props: dict, required: list[str]) -> dict:
@@ -363,6 +357,10 @@ async def _search_papers(ctx: ToolContext, a: dict) -> str:
     return json.dumps(rows, ensure_ascii=False)
 
 
+async def _web_search(ctx: ToolContext, a: dict) -> str:
+    return json.dumps(await tavily.search(ctx.http, a["query"]), ensure_ascii=False)
+
+
 async def _lookup_resources(ctx: ToolContext, a: dict) -> str:
     found = catalog.search(a["query"], int(a.get("limit", 6)))
     return json.dumps(found, ensure_ascii=False) if found else "No catalog match; try web_search."
@@ -472,7 +470,8 @@ TOOLS: dict[str, Tool] = {
                  "pip_packages": {"type": "array", "items": {"type": "string"},
                                   "description": "Packages for the GPU image, e.g. ['torch', 'numpy', 'pandas']"},
              }, ["jobs", "pip_packages"]), ("cuda_gpu",), _run_gpu_jobs),
-        Tool("web_search", "Search the web (hosted).", {}, ("internet",), None),
+        Tool("web_search", "Search the web (hosted).", _obj({"query": {"type": "string"}}, ["query"]),
+             ("internet",), _web_search),
         Tool("report_result", "Finish the task: summarise what was done and list the artifacts produced.",
              _obj({
                  "status": {"type": "string", "enum": ["success", "partial", "failed"]},

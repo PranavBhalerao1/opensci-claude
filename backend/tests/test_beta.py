@@ -154,8 +154,9 @@ def test_usage_is_attributed_and_survives_project_deletion():
     token = llm.current_project.set(pid)
     try:
         response = SimpleNamespace(
-            usage=SimpleNamespace(input_tokens=100_000, output_tokens=10_000, input_tokens_details=None), output=[])
-        cost = llm.record_usage("gpt-6-sol", response)
+            usage=SimpleNamespace(input_tokens=100_000, output_tokens=10_000, cache_read_input_tokens=0,
+                                  cache_creation_input_tokens=0), content=[])
+        cost = llm.record_usage(llm.settings.model_standard, response)
     finally:
         llm.current_project.reset(token)
     with Session(engine) as s:

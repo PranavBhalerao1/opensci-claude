@@ -192,11 +192,22 @@ def test_bib_keys_unique_and_escaped():
 # ── Execution ──────────────────────────────────────────────────────────────
 
 
-def test_escalation():
+def test_escalation(monkeypatch):
+    # Escalation logic over three distinct tiers (the defaults may all name one model).
+    for tier, name in (("reasoning", "gpt-6-astra"), ("standard", "gpt-6-sol"), ("bulk", "gpt-6-luna")):
+        monkeypatch.setattr(orchestrator.settings, f"model_{tier}", name)
     assert orchestrator.escalated_model("bulk", "minimal", 1) == ("gpt-6-luna", False)
     assert orchestrator.escalated_model("bulk", "minimal", 2) == ("gpt-6-sol", True)
     assert orchestrator.escalated_model("standard", "default", 2) == ("gpt-6-astra", True)
     assert orchestrator.escalated_model("reasoning", "economy", 1)[0] == "gpt-6-sol"
+
+
+def test_escalation_with_one_model_for_every_tier():
+    # Default config: every tier is the same Bedrock model, so a retry keeps that model
+    # and is not flagged as escalated (no stronger model exists to move to).
+    model = orchestrator.settings.bedrock_model_id
+    assert orchestrator.escalated_model("bulk", "minimal", 2) == (model, False)
+    assert orchestrator.escalated_model("standard", "default", 2) == (model, False)
 
 
 def test_csv_previews_give_exact_facts(tmp_path):

@@ -75,8 +75,9 @@ async def _scenario(sb, pid: str) -> None:
 
     t0 = time.monotonic()
     sb.secrets = {"MY_SERVICE_KEY": "abc123"}
-    out = await tool("run_shell", command="echo key=$MY_SERVICE_KEY; echo openai=${OPENAI_API_KEY:-none}")
-    assert "key=abc123" in out and "openai=none" in out, out
+    out = await tool("run_shell", command="echo key=$MY_SERVICE_KEY; echo aws=${AWS_SECRET_ACCESS_KEY:-none}; "
+                                          "echo tavily=${TAVILY_API_KEY:-none}")
+    assert "key=abc123" in out and "aws=none" in out and "tavily=none" in out, out
     _step("project credentials exposed, host secrets not", t0)
 
     t0 = time.monotonic()
