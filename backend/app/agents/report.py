@@ -223,6 +223,7 @@ async def run(project_id: str, h: RunHandle) -> dict:
     g = _gather(project_id)
     sandbox = sandbox_for(project_id)
     root = sandbox.root
+    await sandbox.pull()
     refs, bib = _references(project_id)
     (root / REPORT_DIR).mkdir(parents=True, exist_ok=True)
     (root / REPORT_DIR / "references.bib").write_text(bib or "% No literature references available\n")
@@ -288,6 +289,7 @@ async def run(project_id: str, h: RunHandle) -> dict:
 
     # 3 · Audit
     h.phase("auditing", "Checking citations and claims against the evidence")
+    await sandbox.pull()
     tex_path = root / REPORT_DIR / "paper.tex"
     tex = tex_path.read_text(errors="replace") if tex_path.exists() else ""
     cited = set(re.findall(r"\\cite[pt]?\*?(?:\[[^\]]*\])*\{([^}]*)\}", tex))

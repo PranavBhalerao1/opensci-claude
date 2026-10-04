@@ -5,7 +5,7 @@ with `install_packages`; this catalog tells them (and the Blueprint Agent) what
 exists, how to call it, and what it requires. It is data, so covering a new
 field means adding entries, not code.
 
-`requires` lists runtime capabilities (see sandbox.LocalSandbox.capabilities);
+`requires` lists runtime capabilities (see e2b_sandbox.E2BSandbox.capabilities);
 anything unmet is flagged by the Blueprint Agent instead of failing mid-run.
 """
 

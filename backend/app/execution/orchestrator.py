@@ -321,6 +321,7 @@ def _subagent_runner(spec: AgentSpec, ctx: ToolContext, state_id: str, budget: f
             res = await run_agent(child, task, child_ctx,
                                   on_event=lambda e: _append_event(state_id, {**e, "sub": name}))
             cost_box[0] += res.cost
+            await ctx.sandbox.pull()
             missing = [o for o in sub["outputs"] if not ctx.sandbox.path(o).exists()]
             return {"name": name, "status": res.status, "summary": res.summary, "artifacts": res.artifacts,
                     "metrics": res.metrics, "missing_outputs": missing, "cost": round(res.cost, 4)}
@@ -379,6 +380,7 @@ async def _execute(project_id: str, mp: dict, task: dict, state_id: str, policy:
         )
         return
 
+    await sandbox.pull()  # checks and the verifier read the host copy of the workspace
     missing = [o["path"] for o in task["outputs"] if not sandbox.path(o["path"]).exists()]
     report = {"status": res.status, "summary": res.summary, "metrics": res.metrics, "issues": res.issues}
     # Verify whenever every output exists — an agent cut off by its budget or step limit

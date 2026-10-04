@@ -12,7 +12,8 @@ from app.agents.plan import ResearchPlan, graph_errors, parse_plan
 from app.agents.report import _bib_key, _bibtex
 from app.db import Paper
 from app.execution import orchestrator
-from app.execution.sandbox import _CONDA_PKG, _PKG, LocalSandbox
+from app.execution.e2b_sandbox import E2BSandbox
+from app.execution.sandbox import _CONDA_PKG, _PKG
 from app.execution.tools import TOOLS, ToolContext, public_url
 from app.graph import _norm
 
@@ -134,7 +135,7 @@ def test_conda_spec(spec, ok):
 
 
 def test_sandbox_path_guard(tmp_path):
-    sb = LocalSandbox("_t")
+    sb = E2BSandbox("_t")
     sb.root = tmp_path
     assert sb.path("data/x.csv") == tmp_path / "data" / "x.csv"
     for bad in ("../../.env", "../x", "data/../../y"):
@@ -143,7 +144,7 @@ def test_sandbox_path_guard(tmp_path):
 
 
 def test_edit_file_requires_unique_match(tmp_path):
-    sb = LocalSandbox("_t")
+    sb = E2BSandbox("_t")
     sb.root = tmp_path
     (tmp_path / "m.py").write_text("a = 1\na = 1\nb = 2\n")
     ctx = ToolContext("_t", sb, None)
@@ -187,7 +188,7 @@ def test_escalation():
 
 
 def test_csv_previews_give_exact_facts(tmp_path):
-    sb = LocalSandbox("_t")
+    sb = E2BSandbox("_t")
     sb.root = tmp_path
     (tmp_path / "d.csv").write_text("a,b\n" + "\n".join(f"{i},{i * 2}" for i in range(365)) + "\n")
     text = orchestrator._previews(sb, [{"path": "d.csv"}, {"path": "missing.csv"}])
@@ -357,7 +358,7 @@ def test_gpu_budget_refusal(tmp_path, monkeypatch):
     monkeypatch.setattr(mr, "configured", lambda: True)
     monkeypatch.setattr(mr, "gpu_budget", lambda pid: 1.0)
     monkeypatch.setattr(mr, "gpu_spent", lambda pid: 0.9)
-    sb = LocalSandbox("_t")
+    sb = E2BSandbox("_t")
     sb.root = tmp_path
     ctx = ToolContext("_t", sb, None)
     out = asyncio.run(TOOLS["run_gpu_jobs"].handler(ctx, {
@@ -481,10 +482,68 @@ def test_create_project_ignores_client_supplied_user_id():
 
 
 def test_gpu_tool_granted_for_gpu_tasks():
-    sb = LocalSandbox("_t")
+    sb = E2BSandbox("_t")
     sb.capabilities = set(sb.BASE_CAPABILITIES) | {"cuda_gpu"}
     task = {"tools": ["run_python"], "compute": {"kind": "apple_gpu"}}
     agent = {"tools": ["run_python", "run_shell"]}
     assert "run_gpu_jobs" in orchestrator._task_tools(task, agent, sb)
     task["compute"]["kind"] = "cpu"
     assert "run_gpu_jobs" not in orchestrator._task_tools(task, agent, sb)
+
+
+# ── E2B sandbox (offline parts) ────────────────────────────────────────────
+
+
+def test_sandbox_for_is_always_e2b_and_fails_clearly_without_it(monkeypatch, tmp_path):
+    from app.execution import e2b_sandbox, sandbox as sandbox_mod
+
+    monkeypatch.setattr(sandbox_mod, "_sandboxes", {})
+    sb = sandbox_mod.sandbox_for("_e")
+    assert isinstance(sb, E2BSandbox)  # constructed without any network call
+    sb.root = tmp_path
+    monkeypatch.setattr(e2b_sandbox.settings, "e2b_api_key", None)
+    with pytest.raises(RuntimeError, match="E2B is not configured"):
+        asyncio.run(sb.ensure())
+    ctx = ToolContext("_e", sb, None)
+    for name, args in [("run_python", {"code": "print(1)"}), ("run_shell", {"command": "echo 1"}),
+                       ("install_packages", {"packages": ["numpy"]}), ("start_process", {"name": "p", "command": "x"})]:
+        with pytest.raises(RuntimeError, match="E2B is not configured"):  # never a local fallback
+            asyncio.run(TOOLS[name].handler(ctx, args))
+
+
+def test_e2b_paths_and_capabilities(tmp_path, monkeypatch):
+    from app.execution import modal_runner
+    sb = E2BSandbox("_t")
+    sb.root = tmp_path
+    assert sb._remote(str(sb.path(".scratch/cell_001.py"))) == "/home/user/workspace/.scratch/cell_001.py"
+    assert sb._remote(str(tmp_path)) == "/home/user/workspace"
+    assert sb._remote("-q") == "-q" and str(sb.python) == "/home/user/.venv/bin/python"
+    monkeypatch.setattr(modal_runner, "configured", lambda: False)
+    assert "apple_gpu" not in sb.capabilities and "cuda_gpu" not in sb.capabilities
+    assert {"python", "shell", "conda", "background"} <= sb.capabilities
+    monkeypatch.setattr(modal_runner, "configured", lambda: True)
+    assert "cuda_gpu" in sb.capabilities  # explicit CUDA work → Modal
+
+
+def test_e2b_sync_skips_environments(tmp_path):
+    from app.execution.e2b_sandbox import _parse_listing
+
+    sb = E2BSandbox("_t")
+    sb.root = tmp_path
+    for rel in (".venv/bin/python", ".conda/x", "pkg/__pycache__/m.pyc", ".tmp/t", ".scratch/cell_001.py",
+                ".logs/train.log", "data/x.csv", "context/brief.json"):
+        (tmp_path / rel).parent.mkdir(parents=True, exist_ok=True)
+        (tmp_path / rel).write_text("x")
+    assert sorted(sb._scan_host()) == [".logs/train.log", ".scratch/cell_001.py", "context/brief.json", "data/x.csv"]
+    listing = "./data/x.csv\t12\t1700000000.5\n./.venv/lib/a.py\t3\t1.0\n./a\tb.txt\t4\t2.0\nnoise\n"
+    assert _parse_listing(listing) == {"data/x.csv": (12, "1700000000.5"), "a\tb.txt": (4, "2.0")}
+
+
+def test_e2b_pull_and_status_offline(tmp_path):
+    sb = E2BSandbox("_t")
+    sb.root = tmp_path
+    asyncio.run(sb.pull())  # no sandbox yet, no background processes: nothing to do
+    ctx = ToolContext("_t", sb, None)
+    out = asyncio.run(TOOLS["check_process"].handler(ctx, {"name": "train"}))
+    assert out.startswith("No process named train")
+    assert asyncio.run(TOOLS["stop_process"].handler(ctx, {"name": "train"})) == "train is not running"
