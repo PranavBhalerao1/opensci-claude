@@ -268,3 +268,70 @@ def test_e2b_end_to_end():
         asyncio.run(main())
     finally:
         shutil.rmtree(sb.root, ignore_errors=True)
+
+
+async def _unreachable_scenario(sb, pid: str) -> None:
+    """A network outage, simulated at the E2B client boundary of a real sandbox: the sandbox, its
+    files and its processes are kept, and work continues in it once it can be reached again."""
+    import httpx
+
+    from app.execution.sandbox import SandboxUnreachable
+    from app.execution.tools import TOOLS, ToolContext
+
+    ctx = ToolContext(pid, sb, None, owner="T1")
+
+    async def tool(tool_name: str, **args) -> str:
+        return await TOOLS[tool_name].handler(ctx, args)
+
+    t0 = time.monotonic()
+    await sb.ensure()
+    out = await tool("run_shell", command="echo before-outage > marker.txt")
+    assert "exit_code: 0" in out, out
+    assert (await tool("start_process", name="job", command="sleep 600")).startswith("Started job")
+    remote = sb._sbx
+    _step("sandbox created; marker written; background job started", t0)
+
+    t0 = time.monotonic()
+
+    async def offline(*args, **kw):
+        raise httpx.ConnectError("[Errno 11001] getaddrinfo failed")
+
+    run, sb._sbx.commands.run, sb._sbx.is_running = sb._sbx.commands.run, offline, offline
+    try:
+        assert await sb._alive() is None
+        with pytest.raises(SandboxUnreachable):
+            await tool("run_shell", command="cat marker.txt")
+        with pytest.raises(SandboxUnreachable):
+            await sb.fence("T1", [])
+    finally:
+        sb._sbx.commands.run = run
+        del sb._sbx.is_running
+    assert sb._sbx is remote and sb.procs["job"] == "running"
+    _step("outage: unreachable, not declared dead, not recreated", t0)
+
+    t0 = time.monotonic()
+    assert await sb._alive() is True
+    out = await tool("run_shell", command="cat marker.txt; pgrep -f 'sleep 600' >/dev/null && echo job-alive")
+    assert "before-outage" in out and "job-alive" in out, out
+    assert sb._sbx is remote
+    assert await sb.reap("T1") and sb.procs["job"] == "stopped"
+    _step("back online: same sandbox, same files, job still running until reaped", t0)
+
+
+def test_e2b_unreachable_keeps_sandbox():
+    from app.execution.e2b_sandbox import E2BSandbox
+
+    pid = f"e2bnet-{uuid.uuid4().hex[:8]}"
+    sb = E2BSandbox(pid)
+    print(f"\nE2B template {settings.e2b_template}, project {pid}")
+
+    async def main() -> None:
+        try:
+            await _unreachable_scenario(sb, pid)
+        finally:
+            await sb.close()
+
+    try:
+        asyncio.run(main())
+    finally:
+        shutil.rmtree(sb.root, ignore_errors=True)

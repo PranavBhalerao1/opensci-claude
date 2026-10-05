@@ -50,6 +50,11 @@ def _clip(text: str, limit: int = OUTPUT_LIMIT) -> str:
     return f"{text[:head]}\n… [{len(text) - limit} chars omitted] …\n{text[-(limit - head):]}"
 
 
+class SandboxUnreachable(RuntimeError):
+    """The sandbox could not be reached (network down, timeout, provider unavailable). That is no
+    evidence it is gone: its handle, processes and files are kept, and the work is retried later."""
+
+
 @dataclass
 class Fence:
     """Where a task attempt starts (see Sandbox.fence)."""
@@ -87,14 +92,16 @@ class Sandbox:
 
     async def reap(self, task_id: str | None) -> bool:
         """Stop every process the task's attempts started (every task's if None) and bring back what
-        they wrote. True only if none is left running."""
+        they wrote. True only if none is left running. Raises SandboxUnreachable if the sandbox
+        cannot be reached at all."""
         return True
 
     async def fence(self, task_id: str, paths: list[str]) -> Fence:
         """Start a task attempt: stop what its earlier attempts left running, then record its outputs'
         files. A file still unchanged later was not written by this attempt (see stale). If the old
         processes cannot be confirmed stopped, the fence is not clean and nothing this attempt
-        produces can be told apart from theirs."""
+        produces can be told apart from theirs. If the sandbox cannot be reached, SandboxUnreachable
+        is raised and the attempt does not start."""
         clean = await self.reap(task_id)
         return Fence(clean, {p: self.files(p) for p in paths})
 

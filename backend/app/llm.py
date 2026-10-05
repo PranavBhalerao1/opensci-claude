@@ -23,6 +23,11 @@ client = AsyncAnthropicBedrock(
     timeout=900.0,
 )
 
+# Network and provider failures: raised only once the SDK's own HTTP retries are spent, and
+# never with a usable response, so nothing was recorded. Not the caller's fault.
+TRANSIENT_ERRORS = (anthropic.APIConnectionError, anthropic.RateLimitError, anthropic.ServiceUnavailableError,
+                    anthropic.OverloadedError, anthropic.InternalServerError)
+
 MAX_TOKENS = 32_000  # per response, thinking included
 CHAT_MAX_TOKENS = 16_000
 # Effort ("low"/"medium") steers how much the model thinks, as reasoning effort did.

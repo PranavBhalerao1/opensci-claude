@@ -9,6 +9,7 @@ TaskState table, so a restarted server resumes where it left off.
 """
 
 import asyncio
+import contextlib
 import inspect
 import json
 import re
@@ -23,12 +24,16 @@ from .. import beta
 from ..config import settings
 from ..db import Project, Run, Secret, TaskState, Usage, engine
 from ..jobs import RunHandle
-from ..llm import parse
+from ..llm import TRANSIENT_ERRORS, parse
 from . import catalog
 from .agent import AgentSpec, run_agent
-from .sandbox import sandbox_for
+from .sandbox import SandboxUnreachable, sandbox_for
 from .tools import TOOLS, ToolContext
 
+# Network and provider failures, not the task's: they do not use up an attempt; the run waits.
+INFRASTRUCTURE = (SandboxUnreachable, *TRANSIENT_ERRORS)
+NETWORK_PAUSE = "network: "
+NETWORK_RETRY = (30, 60, 120, 240, 480)  # seconds before each automatic resume; then wait for the user
 MAX_PARALLEL = 4
 MAX_AGENT_STEPS = 80
 MAX_EVENTS = 150
@@ -352,6 +357,15 @@ def _requeue_on_credit_limit(state_id: str, me: TaskState, step: int, cost: floa
     _update(state_id, status="pending", attempts=me.attempts, cost=me.cost + cost, finished_at=_now())
 
 
+def _requeue_on_infrastructure(state_id: str, me: TaskState, exc: Exception, cost: float) -> None:
+    """A network or provider failure: not the task's. Re-queue it as it was before this attempt
+    (attempt count, feedback), so no retry is used up; the scheduler waits for the connection."""
+    _append_event(state_id, {"type": "message", "step": 0, "cost": cost,
+                             "text": f"Interrupted by a network or service failure (not counted as an attempt): "
+                                     f"{type(exc).__name__}: {exc}"[:600]})
+    _update(state_id, status="pending", attempts=me.attempts, cost=me.cost + cost, finished_at=_now())
+
+
 async def _execute(project_id: str, mp: dict, task: dict, state_id: str, policy: str, http: httpx.AsyncClient) -> None:
     with Session(engine) as s:
         states = {st.task_id: st for st in s.exec(select(TaskState).where(TaskState.blueprint_run_id == s.get(TaskState, state_id).blueprint_run_id))}
@@ -364,7 +378,11 @@ async def _execute(project_id: str, mp: dict, task: dict, state_id: str, policy:
     outputs = [o["path"] for o in task["outputs"]]
     # Attempt boundary: stop whatever earlier attempts of this task left running, then record its
     # outputs. Only output files this attempt writes from here on can be accepted as its result.
-    fence = await sandbox.fence(task["id"], outputs)
+    try:
+        fence = await sandbox.fence(task["id"], outputs)
+    except SandboxUnreachable as exc:  # nothing can be confirmed stopped, so nothing runs
+        _requeue_on_infrastructure(state_id, me, exc, 0.0)
+        raise
     if not fence.clean:
         # Fail closed: anything written from now on could be theirs. Not run, so no retry is used up.
         problem = ("Processes started by an earlier attempt of this task could not be confirmed stopped, so "
@@ -403,11 +421,15 @@ async def _execute(project_id: str, mp: dict, task: dict, state_id: str, policy:
                    "produces them. Copying or touching an old file is not regeneration.")
     try:
         res = await run_agent(spec, prompt, ctx, on_event=lambda e: _append_event(state_id, e))
+    except INFRASTRUCTURE as exc:
+        _requeue_on_infrastructure(state_id, me, exc, sub_cost[0])
+        raise
     finally:
         # No process outlives the attempt that started it, whatever the outcome (this also brings
         # back what they wrote before they stopped). The next attempt's fence re-checks.
         ended.append(True)
-        await sandbox.reap(task["id"])
+        with contextlib.suppress(SandboxUnreachable):  # unreachable now: the next fence fails closed
+            await sandbox.reap(task["id"])
 
     if res.status == "needs_credential":
         c = res.credential
@@ -438,6 +460,9 @@ async def _execute(project_id: str, mp: dict, task: dict, state_id: str, policy:
     except beta.BetaLimitReached:  # the verifier's model call was refused for lack of credit
         _requeue_on_credit_limit(state_id, me, res.steps, res.cost + sub_cost[0])
         return
+    except INFRASTRUCTURE as exc:
+        _requeue_on_infrastructure(state_id, me, exc, res.cost + sub_cost[0])
+        raise
     passed = verifiable and bool(checks or not task["acceptance_checks"]) and all(c["passed"] for c in checks)
     if passed and res.status == "step_limit":
         res.issues.append(f"Agent stopped ({res.status}) before reporting; outputs verified by the platform.")
@@ -526,6 +551,7 @@ async def run(project_id: str, h: RunHandle) -> dict:
     ctl = Control()
     _controls[project_id] = ctl
     running: dict[str, asyncio.Task] = {}
+    network_waits = 0  # automatic resumes since the last task that finished normally
 
     h.phase("preparing", "Setting up the workspace environment")
     sandbox = sandbox_for(project_id)
@@ -588,7 +614,16 @@ async def run(project_id: str, h: RunHandle) -> dict:
                 if not ctl.go.is_set():
                     if not running:
                         h.phase(f"paused:{ctl.reason}")
-                        await ctl.go.wait()
+                        if ctl.reason.startswith(NETWORK_PAUSE) and network_waits < len(NETWORK_RETRY):
+                            # Try again by itself. Still offline, a try stops at the fence or the first
+                            # model request, which is not billed and uses up no attempt.
+                            with contextlib.suppress(TimeoutError):
+                                await asyncio.wait_for(ctl.go.wait(), NETWORK_RETRY[network_waits])
+                            network_waits += 1
+                            if not ctl.go.is_set() and (ctl.reason or "").startswith(NETWORK_PAUSE):
+                                ctl.resume()
+                        else:
+                            await ctl.go.wait()
                         h.phase("running")
                         continue
                     ready = []  # let running tasks finish; start nothing new
@@ -606,9 +641,17 @@ async def run(project_id: str, h: RunHandle) -> dict:
                 done, _ = await asyncio.wait(running.values(), timeout=5, return_when=asyncio.FIRST_COMPLETED)
                 for tid in [t for t, fut in running.items() if fut in done]:
                     fut = running.pop(tid)
+                    if isinstance(fut.exception(), INFRASTRUCTURE):
+                        # The connection failed, not the task: _execute re-queued it unchanged. Wait.
+                        if ctl.go.is_set():
+                            exc = fut.exception()
+                            ctl.pause(f"{NETWORK_PAUSE}{type(exc).__name__}: {exc}"[:300])
+                        continue
                     if fut.exception():
                         _update(states[tid].id, status="failed", note=f"Runtime error: {fut.exception()}", finished_at=_now())
-                    elif tid in checkpoints:
+                        continue
+                    network_waits = 0
+                    if tid in checkpoints:
                         with Session(engine) as s:
                             if s.get(TaskState, states[tid].id).status == "done":
                                 ctl.pause(f"checkpoint:{tid}: {checkpoints[tid]}")

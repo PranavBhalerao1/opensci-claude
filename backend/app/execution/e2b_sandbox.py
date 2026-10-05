@@ -23,7 +23,8 @@ from pathlib import Path, PurePosixPath
 
 from ..config import settings
 from .sandbox import (
-    _CONDA_CHANNELS, _CONDA_PKG, _NAME, _PKG, BASE_PACKAGES, PYTHON_VERSION, WORKSPACES, ExecResult, Sandbox, _clip,
+    _CONDA_CHANNELS, _CONDA_PKG, _NAME, _PKG, BASE_PACKAGES, PYTHON_VERSION, WORKSPACES, ExecResult, Sandbox,
+    SandboxUnreachable, _clip,
 )
 
 log = logging.getLogger(__name__)
@@ -212,20 +213,31 @@ class E2BSandbox(Sandbox):
                 await sbx.kill()
                 raise
 
-    async def _alive(self) -> bool:
-        try:
-            return self._sbx is not None and await self._sbx.is_running()
-        except Exception:
+    async def _alive(self) -> bool | None:
+        """False only when E2B reports the sandbox gone (killed, expired); None when E2B could not
+        be asked (network down, timeout, outage), which is no evidence either way. Same rule as
+        the SDK's own health probe (e2b.envd.api.acheck_sandbox_health)."""
+        if self._sbx is None:
             return False
+        try:
+            return await self._sbx.is_running()
+        except Exception as exc:
+            log.warning("E2B sandbox for %s could not be reached: %s: %s", self.project_id, type(exc).__name__, exc)
+            return None
 
     async def _retrying(self, fn):
-        """Run fn against the sandbox; if the sandbox died (expired, killed), recreate it once."""
+        """Run fn against the sandbox; if the sandbox died (expired, killed), recreate it once.
+        If it cannot be reached, keep it (and everything running in it) and raise SandboxUnreachable."""
         await self.ensure()
         try:
             return await fn()
-        except Exception:
-            if await self._alive():
+        except Exception as exc:
+            alive = await self._alive()
+            if alive:
                 raise
+            if alive is None:
+                raise SandboxUnreachable(f"E2B sandbox for {self.project_id} could not be reached: "
+                                         f"{type(exc).__name__}: {exc}") from exc
             log.warning("E2B sandbox for %s is gone; recreating it from the host workspace", self.project_id)
             self._sbx = None
             self.procs = {n: "done" for n in self.procs}
@@ -481,7 +493,7 @@ class E2BSandbox(Sandbox):
                 f"kill -{signal} -- -\"$(cat .logs/{name}.pid 2>/dev/null)\" 2>/dev/null; true")
 
     async def stop(self, name: str) -> str:
-        if self.procs.get(name) != "running" or not await self._alive():
+        if self.procs.get(name) != "running" or await self._alive() is False:
             return f"{name} is not running"
         res = await self._sh(self._kill_cmd(name, "TERM"), 30)
         return f"{name} is not running" if res.stdout.strip() == "done" else f"Sent SIGTERM to {name}"
@@ -509,6 +521,8 @@ class E2BSandbox(Sandbox):
 
         try:
             return await self._retrying(go)  # a dead sandbox is recreated: its processes died with it
+        except SandboxUnreachable:  # cannot tell yet; the caller decides (the fence does not start the attempt)
+            raise
         except Exception as exc:  # unknown, so not clean
             log.warning("Stopping the processes of %s in %s failed: %s", task_id or "all tasks", self.project_id, exc)
             return False
