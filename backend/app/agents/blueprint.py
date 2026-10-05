@@ -422,7 +422,7 @@ def approve(project_id: str) -> Project:
            "warnings": run.result["warnings"], "budget": run.result["budget"]}
     out = EXPORT_DIR / project_id
     out.mkdir(parents=True, exist_ok=True)
-    (out / "master_plan.json").write_text(json.dumps(doc, indent=2, ensure_ascii=False))
+    (out / "master_plan.json").write_text(json.dumps(doc, indent=2, ensure_ascii=False), encoding="utf-8")
     with Session(engine) as s:
         project = s.get(Project, project_id)
         project.blueprint = {"run_id": run.id, "approved_at": datetime.now(timezone.utc).isoformat()}

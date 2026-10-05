@@ -465,9 +465,9 @@ class E2BSandbox(Sandbox):
                 await self._pull()
         log_file = self.root / ".logs" / f"{name}.log"
         exit_file = self.root / ".logs" / f"{name}.exit"
-        lines = log_file.read_text(errors="replace").splitlines() if log_file.exists() else []
+        lines = log_file.read_text(encoding="utf-8", errors="replace").splitlines() if log_file.exists() else []
         if exit_file.exists():
-            state = f"exited with code {exit_file.read_text().strip()}"
+            state = f"exited with code {exit_file.read_text(encoding='utf-8').strip()}"
         elif self.procs[name] == "stopped":
             state = "stopped (the task attempt that started it ended)"
         elif self.procs[name] == "done":

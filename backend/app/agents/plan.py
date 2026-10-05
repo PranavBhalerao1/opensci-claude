@@ -383,8 +383,8 @@ def approve(project_id: str) -> Project:
     context = build_context(project_id)
     out = EXPORT_DIR / project_id
     out.mkdir(parents=True, exist_ok=True)
-    (out / "vague_research_plan.json").write_text(json.dumps(plan, indent=2, ensure_ascii=False))
-    (out / "context.json").write_text(json.dumps(context, indent=2, ensure_ascii=False, default=str))
+    (out / "vague_research_plan.json").write_text(json.dumps(plan, indent=2, ensure_ascii=False), encoding="utf-8")
+    (out / "context.json").write_text(json.dumps(context, indent=2, ensure_ascii=False, default=str), encoding="utf-8")
     with Session(engine) as s:
         project = s.get(Project, project_id)
         project.plan = {**plan, "run_id": prev.id, "approved_at": datetime.now(timezone.utc).isoformat()}

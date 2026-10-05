@@ -195,7 +195,7 @@ def _file_digest(root: Path, files: list[dict]) -> str:
               if f["suffix"] in TEXT_SUFFIXES and f["size"] < 200_000 and not f["path"].startswith(REPORT_DIR + "/")]
     out = []
     for f in chosen[:MAX_CONTEXT_FILES]:
-        text = (root / f["path"]).read_text(errors="replace")
+        text = (root / f["path"]).read_text(encoding="utf-8", errors="replace")
         if f["suffix"] in (".csv", ".tsv"):
             lines = text.splitlines()
             text = "\n".join(lines[:25]) + (f"\n… ({len(lines) - 1} data rows total)" if len(lines) > 25 else "")
@@ -226,7 +226,7 @@ async def run(project_id: str, h: RunHandle) -> dict:
     await sandbox.pull()
     refs, bib = _references(project_id)
     (root / REPORT_DIR).mkdir(parents=True, exist_ok=True)
-    (root / REPORT_DIR / "references.bib").write_text(bib or "% No literature references available\n")
+    (root / REPORT_DIR / "references.bib").write_text(bib or "% No literature references available\n", encoding="utf-8")
     files = _inventory(root)
 
     # 1 · Consolidate
@@ -263,7 +263,7 @@ async def run(project_id: str, h: RunHandle) -> dict:
     scaffold.figures = [f for f in scaffold.figures if f.path in existing]
     for sec in scaffold.outline:
         sec.citations = [c for c in sec.citations if c in refs]
-    (root / REPORT_DIR / "scaffold.json").write_text(scaffold.model_dump_json(indent=2))
+    (root / REPORT_DIR / "scaffold.json").write_text(scaffold.model_dump_json(indent=2), encoding="utf-8")
     h.counts(findings=len(scaffold.findings), figures=len(scaffold.figures))
     h.note(f"Hypothesis: {scaffold.hypothesis_verdict.replace('_', ' ')} · {len(scaffold.findings)} findings")
 
@@ -292,7 +292,7 @@ async def run(project_id: str, h: RunHandle) -> dict:
     h.phase("auditing", "Checking citations and claims against the evidence")
     await sandbox.pull()
     tex_path = root / REPORT_DIR / "paper.tex"
-    tex = tex_path.read_text(errors="replace") if tex_path.exists() else ""
+    tex = tex_path.read_text(encoding="utf-8", errors="replace") if tex_path.exists() else ""
     cited = set(re.findall(r"\\cite[pt]?\*?(?:\[[^\]]*\])*\{([^}]*)\}", tex))
     cited_keys = {k.strip() for group in cited for k in group.split(",") if k.strip()}
     unknown_citations = sorted(cited_keys - set(refs))

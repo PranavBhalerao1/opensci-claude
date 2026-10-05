@@ -114,7 +114,7 @@ def _running_seconds(time_file: Path) -> float | None:
     """Seconds between the in-container start and end stamps, if both were written."""
     if not time_file.exists():
         return None
-    stamps = dict(line.split()[:2] for line in time_file.read_text().splitlines() if line.startswith("__OS_"))
+    stamps = dict(line.split()[:2] for line in time_file.read_text(encoding="utf-8").splitlines() if line.startswith("__OS_"))
     try:
         return float(stamps["__OS_END__"]) - float(stamps["__OS_START__"])
     except (KeyError, ValueError):
@@ -160,7 +160,7 @@ def run_jobs(project_id: str, root: Path, jobs: list[dict], gpu: str, timeout_s:
     changed = _download(vol, root, manifest, since, keep)
     for r in results:
         path = root / r["log"]
-        r["log_tail"] = "\n".join(path.read_text(errors="replace").splitlines()[-25:]) if path.exists() else ""
+        r["log_tail"] = "\n".join(path.read_text(encoding="utf-8", errors="replace").splitlines()[-25:]) if path.exists() else ""
         r["wall_seconds"] = r["seconds"]  # includes queueing for a GPU
         run = _running_seconds(root / f"{r['log']}.time")
         if run is not None:

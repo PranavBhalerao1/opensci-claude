@@ -242,7 +242,7 @@ def _previews(sandbox, outputs: list[dict]) -> str:
             continue
         size = p.stat().st_size
         if p.suffix.lower() in (".csv", ".tsv") and size:
-            rows = p.read_text(errors="replace").splitlines()
+            rows = p.read_text(encoding="utf-8", errors="replace").splitlines()
             head, body = rows[0], rows[1:]
             sample = body[:12] + (["…"] + body[-5:] if len(body) > 17 else body[12:])
             blocks.append(
@@ -250,7 +250,7 @@ def _previews(sandbox, outputs: list[dict]) -> str:
                 f"columns: {head}\nFirst and last rows:\n{head}\n" + "\n".join(sample)
             )
         elif p.suffix.lower() in TEXT_SUFFIXES and size:
-            text = p.read_text(errors="replace")
+            text = p.read_text(encoding="utf-8", errors="replace")
             lines = text.count("\n")
             if len(text) > PREVIEW_CHARS:
                 head, tail = PREVIEW_CHARS * 2 // 3, PREVIEW_CHARS // 3
@@ -473,16 +473,16 @@ def _write_context(project_id: str, sandbox) -> None:
     ctx = build_context(project_id)
     out = sandbox.path("context")
     out.mkdir(parents=True, exist_ok=True)
-    (out / "brief.json").write_text(json.dumps(ctx["brief"], indent=2, ensure_ascii=False))
-    (out / "chosen_gap.json").write_text(json.dumps(ctx["gaps"]["chosen"], indent=2, ensure_ascii=False))
+    (out / "brief.json").write_text(json.dumps(ctx["brief"], indent=2, ensure_ascii=False), encoding="utf-8")
+    (out / "chosen_gap.json").write_text(json.dumps(ctx["gaps"]["chosen"], indent=2, ensure_ascii=False), encoding="utf-8")
     papers = [{k: p[k] for k in ("title", "year", "venue", "authors", "doi", "url", "notes")}
               for p in ctx["literature"]["papers"]]
     (out / "literature.json").write_text(json.dumps(
-        {"overview": ctx["literature"]["overview"], "papers": papers}, indent=2, ensure_ascii=False, default=str))
+        {"overview": ctx["literature"]["overview"], "papers": papers}, indent=2, ensure_ascii=False, default=str), encoding="utf-8")
     with Session(engine) as s:
         plan = s.get(Project, project_id).plan
     if plan:
-        (out / "plan.json").write_text(json.dumps(plan, indent=2, ensure_ascii=False, default=str))
+        (out / "plan.json").write_text(json.dumps(plan, indent=2, ensure_ascii=False, default=str), encoding="utf-8")
 
 
 def prepare_states(project_id: str, bp_run_id: str, mp: dict) -> None:
@@ -658,7 +658,8 @@ def _record_amendment(project_id: str, task_id: str, text: str) -> None:
     out.mkdir(parents=True, exist_ok=True)
     (out / "AMENDMENTS.md").write_text(
         "# Reviewer-approved protocol amendments\n\nThese override the plan and blueprint wherever they conflict.\n\n"
-        + project_amendments(project_id) + "\n"
+        + project_amendments(project_id) + "\n",
+        encoding="utf-8",
     )
 
 

@@ -31,7 +31,7 @@ router = APIRouter(prefix="/api/projects", tags=["projects"])
 # under their beta spending cap; checked before the route changes any state.
 billable = [Depends(beta.require_allowance)]
 
-SYSTEM_PROMPT = (Path(__file__).resolve().parents[1] / "prompts" / "system.md").read_text()
+SYSTEM_PROMPT = (Path(__file__).resolve().parents[1] / "prompts" / "system.md").read_text(encoding="utf-8")
 
 
 class ProjectCreate(BaseModel):

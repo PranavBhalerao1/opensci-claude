@@ -110,8 +110,17 @@ def start(
         if done_ok and then:
             try:
                 await then(project_id)
-            except Exception:
+            except Exception as exc:
                 log.exception("follow-up after %s run failed", kind)
+                # The run itself succeeded (status stays "done" so its result remains usable),
+                # but record why the next stage never started instead of stalling silently.
+                msg = f"Next stage failed to start: {type(exc).__name__}: {exc}"
+
+                def follow_up_failed(r: Run) -> None:
+                    r.error = msg
+                    r.log = [*r.log, {"t": _now().isoformat(), "text": msg}]
+
+                handle._update(follow_up_failed)
 
     _tasks[key] = asyncio.create_task(wrapper())
     return run

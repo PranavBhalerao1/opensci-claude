@@ -7,3 +7,4 @@ backend/data/
 node_modules/
 .next/
 .DS_Store
+.worktrees/

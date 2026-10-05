@@ -72,7 +72,7 @@ async def _run_python(ctx: ToolContext, a: dict) -> str:
     ctx.cell += 1
     path = ctx.sandbox.path(f".scratch/cell_{ctx.scratch}_{ctx.cell:03d}.py")
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(a["code"])
+    path.write_text(a["code"], encoding="utf-8")
     timeout = min(int(a.get("timeout_seconds", 300)), 3600)
     res = await ctx.sandbox.run([str(ctx.sandbox.python), str(path)], timeout, owner=ctx.owner)
     return res.render()
@@ -86,7 +86,7 @@ async def _run_shell(ctx: ToolContext, a: dict) -> str:
 async def _write_file(ctx: ToolContext, a: dict) -> str:
     p = ctx.sandbox.path(a["path"])
     p.parent.mkdir(parents=True, exist_ok=True)
-    p.write_text(a["content"])
+    p.write_text(a["content"], encoding="utf-8")
     return f"Wrote {len(a['content'])} chars to {a['path']}"
 
 
@@ -95,7 +95,7 @@ async def _read_file(ctx: ToolContext, a: dict) -> str:
     p = ctx.sandbox.path(a["path"])
     if not p.is_file():
         return f"No such file: {a['path']}"
-    text = p.read_text(errors="replace")
+    text = p.read_text(encoding="utf-8", errors="replace")
     limit = min(int(a.get("max_chars", 8000)), 40_000)
     return text[:limit] + (f"\n… [{len(text) - limit} more chars]" if len(text) > limit else "")
 
@@ -123,11 +123,11 @@ async def _edit_file(ctx: ToolContext, a: dict) -> str:
     p = ctx.sandbox.path(a["path"])
     if not p.is_file():
         return f"No such file: {a['path']}"
-    text = p.read_text()
+    text = p.read_text(encoding="utf-8")
     count = text.count(a["old"])
     if count != 1:
         return f"'old' must match exactly once; it matched {count} times. Include more surrounding context."
-    p.write_text(text.replace(a["old"], a["new"], 1))
+    p.write_text(text.replace(a["old"], a["new"], 1), encoding="utf-8")
     return f"Edited {a['path']}"
 
 
@@ -214,14 +214,14 @@ async def _post_note(ctx: ToolContext, a: dict) -> str:
     p = _notes_path(ctx)
     p.parent.mkdir(parents=True, exist_ok=True)
     stamp = datetime.now(timezone.utc).strftime("%H:%M")
-    with p.open("a") as f:
+    with p.open("a", encoding="utf-8") as f:
         f.write(f"\n- [{stamp}] **{ctx.agent_name}**: {a['text'].strip()}\n")
     return "Posted to team/NOTES.md"
 
 
 async def _read_notes(ctx: ToolContext, a: dict) -> str:
     p = _notes_path(ctx)
-    return p.read_text()[-12000:] if p.exists() else "No team notes yet."
+    return p.read_text(encoding="utf-8")[-12000:] if p.exists() else "No team notes yet."
 
 
 async def _request_credential(ctx: ToolContext, a: dict) -> str:
