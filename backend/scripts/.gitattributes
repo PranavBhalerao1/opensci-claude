@@ -1,0 +1,2 @@
+# Run from WSL out of a Windows checkout (core.autocrlf=true): bash needs LF line endings.
+*.sh text eol=lf
