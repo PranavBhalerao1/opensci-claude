@@ -12,6 +12,8 @@ Credentials (ADC). Code: `backend/app/execution/colab_runner.py`.
 | Functionally validated on short jobs (Phase 0: protocol, transfers, T4/L4 CUDA jobs, artifact sync) | **Yes** (2026-10-08) |
 | Live suite (`tests/test_colab_integration.py`, core and long tiers) through the runner | **Yes** (2026-10-08). Includes failures, timeouts, lost runtime, cancellation, crash + reaper, and a reference experiment that reproduced Modal's result |
 | `run_gpu_jobs` tool handler + workspace/usage routes, isolated, no LLM calls; fresh-process auth | **Yes** (2026-10-08, 34/34 checks; 0.16 CU) |
+| Ported into the Bedrock (Claude Sonnet 4.6) version: offline suites on Windows and WSL, no original test changed outcome | **Yes** (2026-10-08) |
+| Same isolated handler test (`backend/scripts/colab_gpu_tool_check.sh`) on the Bedrock version | Not yet |
 | End-to-end, agent-driven research run through the backend and UI | Not yet |
 | Unattended authentication over ≥ 8 days (hourly canary since 2026-10-07 21:22) | **Not yet verified** |
 | Long GPU jobs | **45 min validated on T4**; 150 min on a CPU runtime. Jobs up to the tool's 3 h limit are not yet validated on GPU |
@@ -24,7 +26,9 @@ Until these are done, do not treat unattended long-term operation as verified.
 The CLI supports Linux and macOS only. On Windows, run the backend in WSL2.
 
 1. Install the backend environment (`uv sync` in `backend/`). It includes the
-   pinned CLI on non-Windows systems.
+   pinned CLI on non-Windows systems. From a Windows checkout in WSL2, use a
+   separate environment so the Windows `backend/.venv` is untouched: prefix
+   every `uv` command with `UV_PROJECT_ENVIRONMENT=~/.venvs/opensci-bedrock`.
 2. Log in with ADC and approve **every** consent checkbox. In WSL2, add
    `--no-launch-browser` and open the printed URL in your Windows browser:
    ```
@@ -36,7 +40,9 @@ The CLI supports Linux and macOS only. On Windows, run the backend in WSL2.
    mv ~/.config/gcloud/application_default_credentials.json ~/.openscientist/colab/credentials.json
    chmod 600 ~/.openscientist/colab/credentials.json
    ```
-4. Set the following in `.env`:
+4. Set the following in the environment the backend runs in. Environment
+   variables override `.env`; keep them out of the repo's `.env` while a
+   Windows-run backend shares that file, since Colab cannot run there:
    ```
    GPU_PROVIDER=colab
    COLAB_CREDENTIALS_FILE=/home/you/.openscientist/colab/credentials.json
@@ -117,10 +123,14 @@ The startup check only warns about Colab sessions OpenScientist does not own
   VM-side scripts for real. From a Windows checkout, run it in WSL2 with a separate
   environment:
   ```
-  cd /mnt/c/…/backend && UV_PROJECT_ENVIRONMENT=~/.venvs/opensci-backend uv run pytest tests/test_colab_runner.py
+  cd /mnt/c/…/backend && UV_PROJECT_ENVIRONMENT=~/.venvs/opensci-bedrock uv run pytest tests/test_colab_runner.py
   ```
 - Live tests use compute units and need explicit approval for each tier, Linux or
-  macOS, and `COLAB_INTEGRATION=1`.
+  macOS, and `COLAB_INTEGRATION=1`. Run only `tests/test_colab_integration.py`
+  with it: the rest of the suite pins the Modal path.
+- Isolated check of the real `run_gpu_jobs` handler, workspace and usage routes
+  and a fresh backend start (no LLM calls, temp database, under 1 CU):
+  `bash backend/scripts/colab_gpu_tool_check.sh`.
 
 ## Future hosting (documented, not implemented)
 
