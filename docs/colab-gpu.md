@@ -13,7 +13,7 @@ Credentials (ADC). Code: `backend/app/execution/colab_runner.py`.
 | Live suite (`tests/test_colab_integration.py`, core and long tiers) through the runner | **Yes** (2026-10-08). Includes failures, timeouts, lost runtime, cancellation, crash + reaper, and a reference experiment that reproduced Modal's result |
 | `run_gpu_jobs` tool handler + workspace/usage routes, isolated, no LLM calls; fresh-process auth | **Yes** (2026-10-08, 34/34 checks; 0.16 CU) |
 | Ported into the Bedrock (Claude Sonnet 4.6) version: offline suites on Windows and WSL, no original test changed outcome | **Yes** (2026-10-08) |
-| Same isolated handler test (`backend/scripts/colab_gpu_tool_check.sh`) on the Bedrock version | Not yet |
+| Same isolated handler test (`backend/scripts/colab_gpu_tool_check.sh`) on the Bedrock version | **Yes** (2026-10-08, 34/34 checks; 0.10 CU metered) |
 | End-to-end, agent-driven research run through the backend and UI | Not yet |
 | Unattended authentication over ≥ 8 days (hourly canary since 2026-10-07 21:22) | **Not yet verified** |
 | Long GPU jobs | **45 min validated on T4**; 150 min on a CPU runtime. Jobs up to the tool's 3 h limit are not yet validated on GPU |
