@@ -1,5 +1,7 @@
 .env
 .env.local
+application_default_credentials*.json
+colab-credentials*.json
 __pycache__/
 *.pyc
 .venv/

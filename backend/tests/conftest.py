@@ -12,6 +12,9 @@ os.environ["DATABASE_URL"] = f"sqlite:///{_tmp_db}"
 # Offline: no E2B sandbox can be created unless the real integration test is requested.
 if os.environ.get("E2B_INTEGRATION") != "1":
     os.environ["E2B_API_KEY"] = ""
+# Same for Colab: the suite runs on the Modal path (no network) whatever the repo's .env selects.
+if os.environ.get("COLAB_INTEGRATION") != "1":
+    os.environ["GPU_PROVIDER"] = "modal"
 # Offline: no Bedrock or Tavily call can authenticate unless the live test is requested
 # (the repo's .env holds real keys, and pydantic-settings would read them).
 if os.environ.get("BEDROCK_INTEGRATION") != "1":

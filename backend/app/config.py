@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Literal
 
 from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -52,6 +53,13 @@ class Settings(BaseSettings):
     # Agent code always runs in E2B cloud sandboxes; explicit CUDA GPU jobs go to Modal.
     e2b_api_key: str | None = None
     e2b_template: str = "openscientist-cpu"
+
+    # GPU provider while Colab replaces Modal: "colab" runs run_gpu_jobs on Google Colab through the
+    # `colab` CLI (Linux/macOS; see docs/colab-gpu.md). colab_credentials_file is the ADC
+    # authorized-user JSON from `gcloud auth application-default login`; keep it outside the repo.
+    gpu_provider: Literal["modal", "colab"] = "modal"
+    colab_credentials_file: str | None = None
+    colab_max_sessions: int = 1
 
     database_url: str = f"sqlite:///{BACKEND_DIR / 'data' / 'openscientist.db'}"
     cors_origins: list[str] = ["http://localhost:3000"]

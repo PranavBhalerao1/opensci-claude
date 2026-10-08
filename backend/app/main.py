@@ -15,6 +15,10 @@ from .routes import projects
 async def lifespan(_: FastAPI):
     init_db()
     mark_interrupted()
+    if settings.gpu_provider == "colab":
+        from .execution import colab_runner
+
+        colab_runner.start_reaper()  # stop Colab GPU sessions a previous process left running
     yield
 
 

@@ -123,10 +123,10 @@ class E2BSandbox(Sandbox):
 
     @property
     def capabilities(self) -> set[str]:  # type: ignore[override]
-        """No local GPU: CUDA work goes to Modal (run_gpu_jobs) when it is configured."""
-        from .modal_runner import configured
+        """No local GPU: CUDA work goes to the cloud GPU runner (run_gpu_jobs) when it is configured."""
+        from .sandbox import gpu_runner
 
-        return set(self.BASE_CAPABILITIES) | ({"cuda_gpu"} if configured() else set())
+        return set(self.BASE_CAPABILITIES) | ({"cuda_gpu"} if gpu_runner().configured() else set())
 
     @capabilities.setter
     def capabilities(self, value: set[str]) -> None:

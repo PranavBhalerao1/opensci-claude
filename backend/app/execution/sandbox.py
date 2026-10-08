@@ -140,3 +140,15 @@ def sandbox_for(project_id: str) -> Sandbox:
 
         _sandboxes[project_id] = E2BSandbox(project_id)
     return _sandboxes[project_id]
+
+
+def gpu_runner():
+    """The module behind run_gpu_jobs: modal_runner or colab_runner (settings.gpu_provider).
+    Temporary, while Colab replaces Modal."""
+    from ..config import settings
+
+    if settings.gpu_provider == "colab":
+        from . import colab_runner as runner
+    else:
+        from . import modal_runner as runner
+    return runner
