@@ -210,6 +210,15 @@ def test_escalation_with_one_model_for_every_tier():
     assert orchestrator.escalated_model("standard", "default", 2) == (model, False)
 
 
+def test_effort_escalation_raises_one_level_per_failed_attempt_capped_at_high():
+    # A task starting at LOW can retry at MEDIUM and then HIGH.
+    assert [orchestrator.escalated_effort("low", n) for n in (1, 2, 3, 4)] == ["low", "medium", "high", "high"]
+    # A task starting at MEDIUM can escalate to HIGH (and stays there).
+    assert [orchestrator.escalated_effort("medium", n) for n in (1, 2, 3)] == ["medium", "high", "high"]
+    # Already at HIGH: no further escalation is possible.
+    assert [orchestrator.escalated_effort("high", n) for n in (1, 2, 3)] == ["high", "high", "high"]
+
+
 def test_csv_previews_give_exact_facts(tmp_path):
     sb = E2BSandbox("_t")
     sb.root = tmp_path

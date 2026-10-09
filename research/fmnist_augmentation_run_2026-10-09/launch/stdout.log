@@ -1,0 +1,17 @@
+INFO:     Started server process [359]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+2026-10-09 13:57:22,238 INFO launcher: blueprint retry started: run 629eb62da8a3
+2026-10-09 13:57:24,659 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 13:57:26,178 INFO httpx: HTTP Request: POST https://api.tavily.com/search "HTTP/1.1 200 OK"
+2026-10-09 13:57:28,351 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 13:57:30,373 INFO httpx: HTTP Request: POST https://api.tavily.com/search "HTTP/1.1 200 OK"
+2026-10-09 13:57:40,632 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 13:57:41,788 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 400 Bad Request"
+2026-10-09 13:57:41,792 INFO openscientist.llm: parse: MasterPlan's schema is too complex for constrained decoding; falling back to freeform JSON with adaptive thinking preserved
+2026-10-09 14:03:40,048 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 14:03:40,425 WARNING openscientist.llm: parse: MasterPlan freeform output invalid (attempt 1/3): the response was truncated even at the 32000-token ceiling
+2026-10-09 14:08:50,957 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 14:08:52,026 INFO httpx: HTTP Request: HEAD https://github.com/zalandoresearch/fashion-mnist "HTTP/1.1 200 OK"
+2026-10-09 14:08:55,416 INFO httpx: HTTP Request: POST https://api.e2b.app/v2/sandboxes "HTTP/1.1 201 Created"

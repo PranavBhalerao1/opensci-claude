@@ -73,7 +73,9 @@ async def _run_python(ctx: ToolContext, a: dict) -> str:
     ctx.cell += 1
     path = ctx.sandbox.path(f".scratch/cell_{ctx.scratch}_{ctx.cell:03d}.py")
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(a["code"], encoding="utf-8")
+    # newline="": this file is pushed verbatim to the Linux sandbox; writing it in the host's
+    # default text mode would translate "\n" to "\r\n" on Windows before it ever gets there.
+    path.write_text(a["code"], encoding="utf-8", newline="")
     timeout = min(int(a.get("timeout_seconds", 300)), 3600)
     res = await ctx.sandbox.run([str(ctx.sandbox.python), str(path)], timeout, owner=ctx.owner)
     return res.render()
@@ -87,7 +89,10 @@ async def _run_shell(ctx: ToolContext, a: dict) -> str:
 async def _write_file(ctx: ToolContext, a: dict) -> str:
     p = ctx.sandbox.path(a["path"])
     p.parent.mkdir(parents=True, exist_ok=True)
-    p.write_text(a["content"], encoding="utf-8")
+    # newline="": the content is written byte-for-byte (no "\n" -> "\r\n" translation), so a
+    # shell script or Python file created on a Windows host still has the LF line endings the
+    # Linux sandbox it is pushed to needs (a CRLF shebang line fails with "bad interpreter").
+    p.write_text(a["content"], encoding="utf-8", newline="")
     return f"Wrote {len(a['content'])} chars to {a['path']}"
 
 
@@ -124,11 +129,16 @@ async def _edit_file(ctx: ToolContext, a: dict) -> str:
     p = ctx.sandbox.path(a["path"])
     if not p.is_file():
         return f"No such file: {a['path']}"
-    text = p.read_text(encoding="utf-8")
+    # newline="" on both sides: read back and write out exactly the bytes on disk (decoded),
+    # with no line-ending translation in either direction, so an edit never changes the line
+    # endings of the parts of the file it does not touch. (Path.read_text has no `newline`
+    # parameter until Python 3.13, hence the explicit open().)
+    with p.open("r", encoding="utf-8", newline="") as f:
+        text = f.read()
     count = text.count(a["old"])
     if count != 1:
         return f"'old' must match exactly once; it matched {count} times. Include more surrounding context."
-    p.write_text(text.replace(a["old"], a["new"], 1), encoding="utf-8")
+    p.write_text(text.replace(a["old"], a["new"], 1), encoding="utf-8", newline="")
     return f"Edited {a['path']}"
 
 
@@ -215,7 +225,7 @@ async def _post_note(ctx: ToolContext, a: dict) -> str:
     p = _notes_path(ctx)
     p.parent.mkdir(parents=True, exist_ok=True)
     stamp = datetime.now(timezone.utc).strftime("%H:%M")
-    with p.open("a", encoding="utf-8") as f:
+    with p.open("a", encoding="utf-8", newline="") as f:
         f.write(f"\n- [{stamp}] **{ctx.agent_name}**: {a['text'].strip()}\n")
     return "Posted to team/NOTES.md"
 

@@ -221,7 +221,8 @@ async def revise_for_repair(prev: dict, instruction: str, h: RunHandle) -> tuple
         instructions=REVISE_INSTRUCTIONS + REPAIR_REVISE_GUARD,
         messages=[{"role": "user", "content": f"Instruction: {instruction}\n\nCurrent plan:\n" + json.dumps(prev)}],
         schema=ResearchPlan,
-        reasoning_effort="medium",
+        # High: this regenerates the research plan, same quality bar as drafting one.
+        reasoning_effort="high",
     )
     plan = await _finalise(plan, h, settings.model_reasoning, [])
     data = plan.model_dump()
@@ -401,7 +402,8 @@ async def run(project_id: str, h: RunHandle) -> dict:
         instructions=PLAN_INSTRUCTIONS,
         messages=[{"role": "user", "content": context}],
         schema=ResearchPlan,
-        reasoning_effort="medium",
+        # High: the research plan sets the experimental design for the whole study.
+        reasoning_effort="high",
     )
     h.phase("validating", "Checking the task graph")
     plan = await _finalise(plan, h, settings.model_reasoning, [{"role": "user", "content": context}])

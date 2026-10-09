@@ -136,7 +136,7 @@ def env(tmp_path, monkeypatch):
         pass
 
     e = Env()
-    e.sb, e.fake, e.prompts, e.scripts, e.verdicts = sb, fake, [], [], []
+    e.sb, e.fake, e.prompts, e.scripts, e.verdicts, e.specs = sb, fake, [], [], [], []
     e.task = _task()
     e.mp = {"title": "t", "summary": "s", "datasets": [], "tasks": [e.task], "agents": [
         {"id": "A1", "name": "Runner", "model_tier": "standard", "tools": AGENT_TOOLS, "instructions": "i"}]}
@@ -156,6 +156,7 @@ def env(tmp_path, monkeypatch):
 
     async def run_agent(spec, prompt, ctx, on_event=None):
         e.prompts.append(prompt)
+        e.specs.append(spec)
         return await e.scripts.pop(0)(ctx)
 
     async def verify(task, sandbox, policy, report=None, amendments=None, *rest, **kw):
@@ -347,6 +348,25 @@ def test_retry_runs_again_after_a_failed_attempt(env):
     asyncio.run(scenario())
     assert (env.state().status, env.state().attempts) == ("done", 2)
     assert "PREVIOUS ATTEMPT FAILED" in env.prompts[1]
+
+
+def test_execution_effort_escalates_on_repeated_retries(env):
+    """Model tiers all resolve to the same Sonnet 4.6 model now, so effort is the lever a
+    retry actually has: a standard-tier task starts at MEDIUM and escalates to HIGH."""
+    env.task["retries"] = 2
+
+    async def fail(ctx):
+        return AgentResult("failed", "try again")
+
+    async def scenario():
+        env.scripts[:] = [fail, fail, fail]
+        await env.attempt()
+        await env.attempt()
+        await env.attempt()
+
+    asyncio.run(scenario())
+    assert [s.reasoning_effort for s in env.specs] == ["medium", "high", "high"]
+    assert env.state().status == "failed" and env.state().attempts == 3
 
 
 def test_reaping_one_task_leaves_other_tasks_alone(env):

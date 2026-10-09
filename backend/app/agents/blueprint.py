@@ -317,7 +317,7 @@ async def run(project_id: str, h: RunHandle) -> dict:
         messages=[{"role": "user", "content": f"Research question: {plan['research_question']}\n\nDatasets:\n"
                    + json.dumps(plan["datasets"], ensure_ascii=False)}],
         schema=Resolution,
-        reasoning_effort="low",
+        reasoning_effort="medium",
         tools=[{"type": "web_search"}],
     )
     found = sum(1 for d in resolution.datasets if d.url)
@@ -339,7 +339,9 @@ async def run(project_id: str, h: RunHandle) -> dict:
         instructions=COMPILE_INSTRUCTIONS,
         messages=[{"role": "user", "content": context}],
         schema=MasterPlan,
-        reasoning_effort="medium",
+        # High: compiling the execution blueprint is one of the most demanding reasoning
+        # steps in the pipeline (team design, task graph, acceptance checks, budget).
+        reasoning_effort="high",
     )
 
     # 3 · Validate, with one repair pass
@@ -477,7 +479,9 @@ async def draft_delta(project_id: str, instruction: str, h: RunHandle) -> tuple[
     h.phase("amending", "Amending the blueprint")
     delta = await parse(model=settings.model_reasoning, instructions=DELTA_INSTRUCTIONS,
                         messages=[{"role": "user", "content": context}], schema=BlueprintDelta,
-                        reasoning_effort="medium")
+                        # High: a blueprint amendment is the same kind of design work as compiling
+                        # the blueprint in the first place.
+                        reasoning_effort="high")
     new = apply_delta(mp, delta)
     errors, warnings = validate(MasterPlan.model_validate(new), capabilities, budget)
     if errors:

@@ -1,5 +1,6 @@
 """Deterministic manuscript and workspace integrity checks (app/integrity.py), offline."""
 
+import json
 import os
 import time
 from datetime import datetime, timedelta, timezone
@@ -220,3 +221,51 @@ def test_missing_manuscript_is_fatal(project):
     (root / "paper" / "paper.tex").unlink()
     out = ig.check(pid, root)
     assert not out["passed"] and out["hard_failures"][0]["title"] == "Manuscript missing"
+
+
+# ── Protocol-file tamper guard (narrow experimental-integrity guardrail) ───
+
+
+def test_protocol_file_tamper_is_a_soft_fact_never_a_hard_gate(project):
+    (pid, *_), root = project
+    plan = {"success_criteria": ["p < 0.05"]}
+    with Session(engine) as s:
+        p = s.get(Project, pid)
+        p.plan = plan
+        s.add(p)
+        s.commit()
+    # Matches what was approved: no fact raised.
+    _touch(root / "context" / "plan.json", json.dumps(plan))
+    out = ig.check(pid, root)
+    assert out["passed"]
+    assert not any("plan.json" in f for f in out["facts"])
+
+    # An agent (or a bug) silently weakens the pre-registered success criterion in its own
+    # workspace copy. This must never be treated as though the original plan were followed —
+    # but it also must not become a new way to block an otherwise sound study.
+    _touch(root / "context" / "plan.json", json.dumps({"success_criteria": ["p < 1.0"]}))
+    out = ig.check(pid, root)
+    assert out["passed"]  # soft: it never blocks review by itself
+    assert any("context/plan.json" in f and "no longer matches the approved plan" in f for f in out["facts"])
+
+
+def test_protocol_file_tamper_flags_unparseable_json(project):
+    (pid, *_), root = project
+    with Session(engine) as s:
+        p = s.get(Project, pid)
+        p.brief = {"core_question": "x"}
+        s.add(p)
+        s.commit()
+    _touch(root / "context" / "brief.json", "not valid json")
+    facts = " ".join(ig.check(pid, root)["facts"])
+    assert "context/brief.json" in facts and "could not be parsed" in facts
+
+
+def test_protocol_file_tamper_ignores_files_that_were_never_written(project):
+    (pid, *_), root = project
+    with Session(engine) as s:
+        p = s.get(Project, pid)
+        p.plan = {"a": 1}
+        s.add(p)
+        s.commit()
+    assert ig.protocol_file_tamper(root, pid) == []  # context/plan.json does not exist yet

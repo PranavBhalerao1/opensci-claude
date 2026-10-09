@@ -1,0 +1,21 @@
+5fd3cfed53d4368f6ef3de3fc9e959f1cb3da608
+ M backend/app/agents/blueprint.py
+ M backend/app/agents/gaps.py
+ M backend/app/agents/judge.py
+ M backend/app/agents/plan.py
+ M backend/app/agents/report.py
+ M backend/app/execution/agent.py
+ M backend/app/execution/orchestrator.py
+ M backend/app/execution/tools.py
+ M backend/app/integrity.py
+ M backend/app/llm.py
+ M backend/app/refine.py
+ M backend/tests/test_attempts.py
+ M backend/tests/test_core.py
+ M backend/tests/test_encoding.py
+ M backend/tests/test_integrity.py
+ M backend/tests/test_llm.py
+ M backend/tests/test_refinement.py
+?? backend/tests/test_report.py
+?? changes.txt
+?? research/fmnist_augmentation_run_2026-10-09/

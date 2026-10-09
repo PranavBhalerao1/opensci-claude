@@ -81,6 +81,18 @@ async def run_agent(spec: AgentSpec, task: str, ctx: ToolContext, on_event: Even
             output_config={"effort": spec.reasoning_effort},
         )
         cost += record_usage(spec.model, response)
+        if response.stop_reason == "max_tokens":
+            # The step was cut off at the model's full output budget: its last content block
+            # (thinking, text or a tool call) may be incomplete. Never execute a tool call or
+            # append a turn built from a truncated response — stop cleanly instead, so earlier
+            # steps' work and side effects are preserved and nothing runs on partial input.
+            text = "".join(b.text for b in response.content if b.type == "text").strip()
+            return AgentResult(
+                "failed", text or "The model's response was truncated and could not be completed safely.",
+                issues=["Response truncated at the maximum output budget; stopped rather than risk an "
+                        "incomplete tool call."],
+                steps=step, cost=cost,
+            )
         # Full content, so thinking blocks go back with their tool calls.
         transcript.append({"role": "assistant", "content": response.content})
         pending: list[dict] = []

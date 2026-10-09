@@ -625,10 +625,13 @@ async def judge_call(bundle: Bundle, h: RunHandle | None = None) -> JudgeReport:
         if errors:
             tail += ("\n\nYOUR PREVIOUS OUTPUT WAS INVALID. Fix these problems:\n- " + "\n- ".join(errors))
         try:
+            # max_tokens is pinned to the ceiling regardless of effort: dropping effort after a
+            # truncation is meant to free up room for the JSON by thinking less, not to also
+            # shrink the total budget available for it.
             report = await _parse(model=settings.model_judge, instructions=JUDGE_SYSTEM, schema=JudgeReport,
                                   messages=[{"role": "user", "content": [*bundle.request_blocks(),
                                                                          {"type": "text", "text": tail}]}],
-                                  reasoning_effort=effort)
+                                  reasoning_effort=effort, max_tokens=llm.MAX_TOKENS)
         except TRANSIENT_ERRORS as exc:
             raise ReviewFailed(f"Bedrock unavailable: {type(exc).__name__}: {exc}") from exc
         except RuntimeError as exc:  # invalid, refused, truncated or empty structured output
@@ -661,7 +664,7 @@ async def verify_call(bundle: Bundle, claims: list[dict], root: Path) -> Verific
     tail = VERIFY_INSTRUCTIONS + "\n\nCLAIMED ISSUES:\n" + listing + ("\n\n" + "\n\n".join(requested) if requested else "")
     return await _parse(model=settings.model_judge, instructions=JUDGE_SYSTEM, schema=VerificationReport,
                         messages=[{"role": "user", "content": [*bundle.request_blocks(), {"type": "text", "text": tail}]}],
-                        reasoning_effort="high")
+                        reasoning_effort="high", max_tokens=llm.MAX_TOKENS)
 
 
 # ── Review ─────────────────────────────────────────────────────────────────

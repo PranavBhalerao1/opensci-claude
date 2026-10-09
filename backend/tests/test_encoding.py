@@ -8,6 +8,7 @@ import asyncio
 import io
 import json
 import pathlib
+from types import SimpleNamespace as NS
 
 import pytest
 from sqlmodel import Session, select
@@ -108,10 +109,56 @@ def test_agent_file_tools_round_trip_unicode(tmp_path, cp1252_default):
     call("write_file", path="results/summary.md", content=f"Δ = 0.3 {UNI}\n")
     assert UNI in call("read_file", path="results/summary.md")
     assert call("edit_file", path="results/summary.md", old="Δ = 0.3", new="Δ ≥ 0.4").startswith("Edited")
-    assert (tmp_path / "results/summary.md").read_bytes().decode("utf-8").replace("\r\n", "\n") == f"Δ ≥ 0.4 {UNI}\n"
+    # Byte-exact: on Windows, writing in the platform's default text mode would have turned
+    # these "\n"s into "\r\n", corrupting any file pushed on to the Linux E2B sandbox.
+    raw = (tmp_path / "results/summary.md").read_bytes()
+    assert b"\r" not in raw
+    assert raw.decode("utf-8") == f"Δ ≥ 0.4 {UNI}\n"
     call("post_note", text=f"ρ {UNI}")
     assert "Agent α" in call("read_notes") and f"ρ {UNI}" in call("read_notes")
-    (tmp_path / "team/NOTES.md").read_bytes().decode("utf-8")
+    notes_raw = (tmp_path / "team/NOTES.md").read_bytes()
+    assert b"\r" not in notes_raw
+    notes_raw.decode("utf-8")
+
+
+def test_write_file_always_uses_lf_line_endings(tmp_path):
+    sb = E2BSandbox("_t")
+    sb.root = tmp_path
+    ctx = ToolContext("_t", sb, None, agent_name="Agent")
+    content = "#!/bin/bash\necho one\necho two\n"
+    asyncio.run(TOOLS["write_file"].handler(ctx, {"path": "run.sh", "content": content}))
+    raw = (tmp_path / "run.sh").read_bytes()
+    assert b"\r" not in raw
+    assert raw.decode("utf-8") == content
+
+
+def test_edit_file_preserves_the_existing_line_endings_it_does_not_touch(tmp_path):
+    """edit_file must not silently rewrite a file's line endings: only the matched snippet
+    changes, whatever convention the rest of the file already uses."""
+    sb = E2BSandbox("_t")
+    sb.root = tmp_path
+    (tmp_path / "data.csv").write_bytes(b"a,b\r\n1,2\r\n")
+    ctx = ToolContext("_t", sb, None, agent_name="Agent")
+    out = asyncio.run(TOOLS["edit_file"].handler(ctx, {"path": "data.csv", "old": "1,2", "new": "1,3"}))
+    assert out.startswith("Edited")
+    assert (tmp_path / "data.csv").read_bytes() == b"a,b\r\n1,3\r\n"
+
+
+def test_run_python_writes_an_lf_only_scratch_file(tmp_path):
+    sb = E2BSandbox("_t")
+    sb.root = tmp_path
+
+    async def fake_run(argv, timeout, owner=None):
+        return NS(render=lambda: "ok")
+
+    sb.run = fake_run
+    ctx = ToolContext("_t", sb, None, agent_name="Agent")
+    code = "print('a')\nprint('b')\n"
+    asyncio.run(TOOLS["run_python"].handler(ctx, {"code": code}))
+    (cell,) = (tmp_path / ".scratch").glob("cell_*.py")
+    raw = cell.read_bytes()
+    assert b"\r" not in raw
+    assert raw.decode("utf-8") == code
 
 
 def test_output_previews_read_utf8(tmp_path, cp1252_default):

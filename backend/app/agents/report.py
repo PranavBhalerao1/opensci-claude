@@ -205,6 +205,8 @@ def _file_digest(root: Path, files: list[dict]) -> str:
 
 
 def _gather(project_id: str) -> dict:
+    from .. import refine  # local: refine.py imports pipeline, which imports this module
+
     with Session(engine) as s:
         project = s.get(Project, project_id)
         bp = s.get(Run, project.blueprint["run_id"]).result["master_plan"]
@@ -215,7 +217,10 @@ def _gather(project_id: str) -> dict:
         brief, plan, gap, review = project.brief, project.plan, project.chosen_gap, project.review or {}
     return {"brief": brief, "plan": plan, "gap": gap, "blueprint": bp, "states": states,
             "overview": lit.result["overview"] if lit else None, "policy": cfg.get("model_policy", "default"),
-            "refinement": bool((cfg.get("refinement") or {}).get("enabled")) or bool(review),
+            # Whether the independent-review loop will take over verifying THIS report once this
+            # job returns (refine.after_report's own decision, mirrored here with no side effects).
+            # A merely stale or disabled review state must not suppress this stage's own audit.
+            "refinement": refine.will_review(project_id),
             "directives": _directives(review)}
 
 
@@ -241,7 +246,8 @@ async def run(project_id: str, h: RunHandle) -> dict:
     await sandbox.pull()
     refs, bib = _references(project_id)
     (root / REPORT_DIR).mkdir(parents=True, exist_ok=True)
-    (root / REPORT_DIR / "references.bib").write_text(bib or "% No literature references available\n", encoding="utf-8")
+    (root / REPORT_DIR / "references.bib").write_text(bib or "% No literature references available\n",
+                                                       encoding="utf-8", newline="")
     files = _inventory(root)
 
     # 1 · Consolidate
@@ -274,13 +280,16 @@ async def run(project_id: str, h: RunHandle) -> dict:
         instructions=CONSOLIDATE_INSTRUCTIONS,
         messages=[{"role": "user", "content": context}],
         schema=Scaffold,
-        reasoning_effort="medium",
+        # High: consolidation decides what the study actually found and how honestly to
+        # state it (hypothesis verdict, findings, deviations) — the synthesis step research
+        # quality depends on most.
+        reasoning_effort="high",
     )
     existing = {f["path"] for f in files}
     scaffold.figures = [f for f in scaffold.figures if f.path in existing]
     for sec in scaffold.outline:
         sec.citations = [c for c in sec.citations if c in refs]
-    (root / REPORT_DIR / "scaffold.json").write_text(scaffold.model_dump_json(indent=2), encoding="utf-8")
+    (root / REPORT_DIR / "scaffold.json").write_text(scaffold.model_dump_json(indent=2), encoding="utf-8", newline="")
     h.counts(findings=len(scaffold.findings), figures=len(scaffold.figures))
     h.note(f"Hypothesis: {scaffold.hypothesis_verdict.replace('_', ' ')} · {len(scaffold.findings)} findings")
 
@@ -314,7 +323,8 @@ async def run(project_id: str, h: RunHandle) -> dict:
     if guard["hard"]:
         h.note(f"Research files changed while the paper was written: {', '.join(guard['hard'][:5])}")
 
-    # 3 · Audit (with scientific review on, the independent judge replaces the claims audit)
+    # 3 · Audit (skipped only when the independent review loop will check this exact report;
+    # a stale or never-started review must not leave the current paper unchecked)
     h.phase("auditing", "Checking citations and claims against the evidence")
     tex_path = root / REPORT_DIR / "paper.tex"
     tex = tex_path.read_text(encoding="utf-8", errors="replace") if tex_path.exists() else ""
@@ -329,7 +339,8 @@ async def run(project_id: str, h: RunHandle) -> dict:
             messages=[{"role": "user", "content": f"EVIDENCE (findings):\n{json.dumps([f.model_dump() for f in scaffold.findings], ensure_ascii=False)}"
                        f"\n\nFILE CONTENTS:\n{_file_digest(root, files)[:30000]}\n\nPAPER:\n{tex[:40000]}"}],
             schema=Audit,
-            reasoning_effort="low",
+            # High: when this runs, it is the ONLY scientific claims check this paper gets.
+            reasoning_effort="high",
         )
     pdf = (root / REPORT_DIR / "paper.pdf").exists()
     h.note("Report complete" if pdf else "Paper written but PDF was not produced")

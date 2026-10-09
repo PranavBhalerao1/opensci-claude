@@ -84,7 +84,7 @@ class Provider:
         return NS(id=f"msg_{len(self.script)}", content=content, stop_reason=stop_reason, usage=self._usage(usage))
 
     # Scripting
-    def agent_turn(self, calls=(), text: str = "", searches=(), usage=(1000, 0, 100)) -> None:
+    def agent_turn(self, calls=(), text: str = "", searches=(), usage=(1000, 0, 100), stop: str | None = None) -> None:
         n = len(self.script)
         content = [NS(type="thinking", thinking="Planning.", signature=f"sig_{n}")]
         content += [NS(type="tool_use", id=f"toolu_{n}_s{i}", name="web_search", input={"query": q})
@@ -93,7 +93,7 @@ class Provider:
         if text:
             content.append(NS(type="text", text=text))
         tool_use = any(b.type == "tool_use" for b in content)
-        self.script.append(self._message(content, "tool_use" if tool_use else "end_turn", usage))
+        self.script.append(self._message(content, stop or ("tool_use" if tool_use else "end_turn"), usage))
 
     def parse_result(self, parsed, usage=(1000, 0, 100), searches=()) -> None:
         if searches:
@@ -267,6 +267,17 @@ def test_agent_truncates_long_tool_output(provider, test_tools):
     (_, sent), = provider.tool_results(1)
     assert sent == "x" * 16_000 + "\n… [truncated]"
     assert events[0]["result"] == sent[:500] + "…"
+
+
+def test_agent_truncated_response_is_never_executed(provider, test_tools):
+    """A response cut off at the output budget may hold an incomplete tool call; the agent
+    loop must stop cleanly rather than execute or append it."""
+    provider.agent_turn(calls=[("echo", {"text": "a"})], stop="max_tokens")
+    result, events, _ = asyncio.run(_agent(_spec()))
+    assert result.status == "failed"
+    assert "truncated" in result.issues[0]
+    assert events == []  # no tool call was ever run
+    assert len(provider.requests) == 1  # already at the full output budget: nothing left to retry into
 
 
 def test_agent_without_tool_calls_returns_partial(provider, test_tools):
@@ -721,16 +732,30 @@ def _final(text: str, stop: str = "end_turn") -> NS:
               usage=NS(input_tokens=10, cache_read_input_tokens=0, cache_creation_input_tokens=0, output_tokens=5))
 
 
-@pytest.mark.parametrize("text, stop, match", [
-    ('{"results": [{"check": "a"', "max_tokens", r"no structured output \(stop reason: max_tokens\)"),
-    ("", "end_turn", "no structured output"),
-    ('{"results": "nope"}', "end_turn", "invalid structured output"),
+@pytest.mark.parametrize("text, stop, match, effort", [
+    # High effort already requests the full token ceiling, so there is no larger budget left
+    # to retry into: a single truncated response is terminal.
+    ('{"results": [{"check": "a"', "max_tokens", r"no structured output \(stop reason: max_tokens\)", "high"),
+    ("", "end_turn", "no structured output", "medium"),
+    ('{"results": "nope"}', "end_turn", "invalid structured output", "medium"),
 ])
-def test_parse_rejects_truncated_empty_or_invalid_output(provider, text, stop, match):
+def test_parse_rejects_truncated_empty_or_invalid_output(provider, text, stop, match, effort):
     provider.script.append(_final(text, stop))
     with pytest.raises(RuntimeError, match=match):
         asyncio.run(llm.parse(model=settings.model_standard, instructions="x",
-                              messages=[{"role": "user", "content": "y"}], schema=Verdict))
+                              messages=[{"role": "user", "content": "y"}], schema=Verdict,
+                              reasoning_effort=effort))
+
+
+def test_parse_retries_a_truncated_response_at_the_full_token_ceiling(provider):
+    provider.script.append(_final('{"results": [{"check": "a"', "max_tokens"))
+    provider.parse_result(_verdict())
+    out = asyncio.run(llm.parse(model=settings.model_standard, instructions="x",
+                                messages=[{"role": "user", "content": "y"}], schema=Verdict,
+                                reasoning_effort="medium"))
+    assert out == _verdict()
+    assert [r["max_tokens"] for r in provider.requests] == [16_000, llm.MAX_TOKENS]
+    assert all(r["thinking"] == {"type": "adaptive"} for r in provider.requests)
 
 
 def test_parse_search_loop_searches_first_and_must_answer_last(provider, monkeypatch, run_id):
@@ -777,42 +802,58 @@ def _ask(schema=Verdict):
                                  messages=[{"role": "user", "content": "y"}], schema=schema))
 
 
-def test_oversized_grammar_retries_without_thinking_and_remembers(provider, monkeypatch):
+def test_oversized_grammar_falls_back_to_freeform_json_with_thinking_preserved(provider, monkeypatch):
+    """The critical regression: a schema too complex for Bedrock's constrained-decoding grammar
+    (MasterPlan, ResearchPlan in practice) must never be worked around by disabling thinking."""
     monkeypatch.setattr(llm, "_GRAMMAR_FALLBACK", {})
     provider.script.append(_bad_request(TOO_LARGE))
     provider.parse_result(_verdict())
-    provider.parse_result(_verdict())
-    assert _ask() == _verdict() and _ask() == _verdict()
+    out = _ask()
+    assert out == _verdict()
+    assert llm._GRAMMAR_FALLBACK[Verdict] == "freeform"
     thinking = [r["thinking"] for r in provider.requests]
-    assert thinking == [{"type": "adaptive"}, {"type": "disabled"}, {"type": "disabled"}]
-    # Still enforced by the API on every attempt.
-    assert all(r["output_config"]["format"]["type"] == "json_schema" for r in provider.requests)
+    assert thinking == [{"type": "adaptive"}, {"type": "adaptive"}]  # never disabled to dodge the grammar limit
+    assert provider.requests[0]["output_config"]["format"]["type"] == "json_schema"
+    assert "format" not in provider.requests[1]["output_config"]  # freeform: no server-side schema enforcement
+    assert "results" in provider.requests[1]["system"]  # the schema is instead described in the prompt
 
 
-def test_grammar_still_too_large_uses_the_schema_as_a_forced_tool(provider, monkeypatch, run_id):
-    monkeypatch.setattr(llm, "_GRAMMAR_FALLBACK", {})
-    provider.script += [_bad_request(TOO_LARGE), _bad_request(TOO_LARGE)]
-    tool_answer = NS(id="m", content=[NS(type="tool_use", id="t1", name="Verdict", input=_verdict().model_dump())],
-                     stop_reason="tool_use", usage=NS(input_tokens=50, cache_read_input_tokens=0,
-                                                      cache_creation_input_tokens=0, output_tokens=20))
-    provider.script += [tool_answer, tool_answer]
-    assert _ask() == _verdict() and _ask() == _verdict()
-    assert len(provider.requests) == 4  # the second call goes straight to the tool form
-    req = provider.requests[2]
-    assert req["tool_choice"] == {"type": "tool", "name": "Verdict"} and req["thinking"] == {"type": "disabled"}
-    assert req["tools"] == [{"name": "Verdict", "description": "Return the Verdict.",
-                             "input_schema": anthropic.transform_schema(Verdict)}]
-    assert "format" not in req["output_config"] and req["output_config"]["effort"] == "medium"
-    assert len(_usage_rows(run_id)) == 2  # rejected requests are not billed rows
+def test_freeform_fallback_is_remembered_and_skips_the_grammar_attempt(provider, monkeypatch):
+    monkeypatch.setattr(llm, "_GRAMMAR_FALLBACK", {Verdict: "freeform"})
+    provider.parse_result(_verdict())
+    assert _ask() == _verdict()
+    assert len(provider.requests) == 1  # no schema-constrained attempt is even tried
+    assert provider.requests[0]["thinking"] == {"type": "adaptive"}
+    assert "format" not in provider.requests[0]["output_config"]
 
 
-def test_forced_tool_output_is_still_validated(provider, monkeypatch):
-    monkeypatch.setattr(llm, "_GRAMMAR_FALLBACK", {Verdict: "tool"})
-    provider.script.append(NS(id="m", content=[NS(type="tool_use", id="t1", name="Verdict", input={"results": "x"})],
-                              stop_reason="tool_use", usage=NS(input_tokens=1, cache_read_input_tokens=0,
-                                                               cache_creation_input_tokens=0, output_tokens=1)))
-    with pytest.raises(RuntimeError, match="invalid structured output"):
+def test_freeform_fallback_tolerates_a_markdown_fence(provider, monkeypatch):
+    monkeypatch.setattr(llm, "_GRAMMAR_FALLBACK", {Verdict: "freeform"})
+    provider.script.append(_final(f"```json\n{_verdict().model_dump_json()}\n```"))
+    assert _ask() == _verdict()
+
+
+def test_freeform_fallback_repairs_invalid_json_with_the_validation_error(provider, monkeypatch):
+    monkeypatch.setattr(llm, "_GRAMMAR_FALLBACK", {Verdict: "freeform"})
+    provider.script.append(_final('{"results": "nope"}'))
+    provider.parse_result(_verdict())
+    assert _ask() == _verdict()
+    assert len(provider.requests) == 2
+    repair = provider.requests[1]["messages"]
+    assert repair[-2] == {"role": "assistant", "content": '{"results": "nope"}'}
+    assert repair[-1]["role"] == "user" and "invalid structured output" in repair[-1]["content"]
+    assert provider.requests[1]["thinking"] == {"type": "adaptive"}  # preserved through the repair round too
+
+
+def test_freeform_fallback_raises_after_exhausting_repair_attempts(provider, monkeypatch):
+    """Never silently returns a malformed object: once every repair attempt fails, parse() raises."""
+    monkeypatch.setattr(llm, "_GRAMMAR_FALLBACK", {Verdict: "freeform"})
+    for _ in range(llm.REPAIR_ATTEMPTS + 1):
+        provider.script.append(_final('{"results": "still nope"}'))
+    with pytest.raises(RuntimeError, match=f"after {llm.REPAIR_ATTEMPTS + 1} attempts"):
         _ask()
+    assert len(provider.requests) == llm.REPAIR_ATTEMPTS + 1
+    assert all(r["thinking"] == {"type": "adaptive"} for r in provider.requests)
 
 
 def test_other_bad_requests_are_not_swallowed(provider, monkeypatch):

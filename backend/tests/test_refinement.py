@@ -57,7 +57,8 @@ class ScriptedLLM:
         self.queues[schema.__name__].extend(items)
         return self
 
-    async def parse(self, *, model, instructions, messages, schema, reasoning_effort="medium", tools=None):
+    async def parse(self, *, model, instructions, messages, schema, reasoning_effort="medium", tools=None,
+                    max_tokens=None):
         self.calls.append((schema.__name__, messages))
         queue = self.queues[schema.__name__]
         if not queue:
@@ -420,6 +421,20 @@ def test_bedrock_failures(env, failures, status):
         assert "Bedrock unavailable" in st["attention"]
 
 
+def test_permanent_bedrock_error_fails_the_review_instead_of_sticking_at_reviewing(env):
+    """A non-transient Bedrock error (e.g. a 4xx) from the judge call must end the review with
+    an explicit, resumable status rather than leaving Project.review.status stuck at
+    "reviewing" forever with its background job silently dead."""
+    study, llm_, lab = env()
+    bad_request = anthropic.BadRequestError(
+        "bad request", response=httpx2.Response(400, request=REQUEST), body={"message": "bad request"})
+    llm_.add(JudgeReport, bad_request)
+    st = loop(study.pid)
+    assert st["status"] == "review_failed"
+    assert "Bedrock error" in st["attention"] and "BadRequestError" in st["attention"]
+    assert not jobs.is_running(study.pid, "review")
+
+
 def test_failed_repair_task_needs_attention_then_resumes(env):
     study, llm_, lab = env()
     llm_.add(JudgeReport, blocking(stats_issue()), accept())
@@ -728,6 +743,19 @@ F = {"id": "R1-02", "severity": "FATAL", "blocking": True}
 ])
 def test_decide_table(st, mistakes, spent, decision):
     assert refine.decide(st, mistakes, spent)[0] == decision
+
+
+def test_repair_context_shows_the_round_about_to_run_not_one_ahead(tmp_path, monkeypatch):
+    """By the time repair_context runs, this review's own "repair" decision is already
+    appended to st["iterations"] (_review_job records it before dispatching to repair), so
+    `rounds` already counts the round about to happen — the message must not add another 1."""
+    study = make_study(tmp_path, monkeypatch)
+    st = _st(max_rounds=3, session_first_iteration=1, started_at=datetime.now(timezone.utc).isoformat(),
+             iterations=[{"n": 1, "decision": "repair"}], preregistration={}, directives={})
+    mistakes = {"iteration": 1, "verdict": "major_revision", "summary": "s", "issues": []}
+    context = refine.repair_context(study.pid, st, mistakes)
+    assert "repair round 1 of 3" in context
+    study.cleanup()
 
 
 def test_issue_tracking_matches_resolves_and_labels():

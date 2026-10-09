@@ -217,8 +217,10 @@ async def run(project_id: str, h: RunHandle, feedback: str | None = None) -> dic
         instructions=PROPOSE_INSTRUCTIONS,
         messages=[{"role": "user", "content": context}],
         schema=GapProposals,
-        # Medium: the novelty check afterwards catches weak gaps; high doubled cost and time.
-        reasoning_effort="medium",
+        # High: finding a genuinely novel, feasible gap is one of the most consequential
+        # reasoning steps in the pipeline. The novelty check afterwards still catches weak
+        # gaps, but it cannot invent a better one — that has to come from this step.
+        reasoning_effort="high",
     )
     gaps = proposals.gaps[:6]
     h.counts(proposed=len(gaps), checked=0)

@@ -10,6 +10,7 @@ The PDF is built in the E2B sandbox and the tex is often written on this host, s
 times from the two clocks are compared with a tolerance.
 """
 
+import json
 import re
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -235,6 +236,43 @@ def _under(path: str, prefixes: set[str]) -> bool:
     return any(path == q.rstrip("/") or path.startswith(q.rstrip("/") + "/") for q in prefixes)
 
 
+# Workspace copies of the pre-registered plan/brief/gap, written once for agents to read
+# (execution/orchestrator.py's _write_context) and refreshed every time an execution run
+# starts. Nothing downstream re-reads them for verification — report.py and judge.py both
+# use the authoritative database rows — but a mismatch is still a legitimate-vs-illegitimate
+# signal: an agent (or buggy tool code) silently editing its own copy of the pre-registered
+# protocol, e.g. to make an impossible success criterion look already satisfied, is exactly
+# the kind of change that must never pass unnoticed.
+PROTOCOL_FILES = (("context/plan.json", "plan"), ("context/brief.json", "brief"),
+                  ("context/chosen_gap.json", "chosen_gap"))
+
+
+def protocol_file_tamper(root: Path, project_id: str) -> list[str]:
+    """Workspace copies of the pre-registered plan/brief/gap that no longer match what the
+    project actually has approved. Soft (non-blocking): it is evidence for the judge, not a
+    verdict by itself, since downstream verification never trusts these files anyway."""
+    with Session(engine) as s:
+        project = s.get(Project, project_id)
+    if project is None:
+        return []
+    authoritative = {"plan": project.plan, "brief": project.brief, "chosen_gap": project.chosen_gap}
+    out = []
+    for rel, field_name in PROTOCOL_FILES:
+        want = authoritative[field_name]
+        p = root / rel
+        if not want or not p.is_file():
+            continue
+        try:
+            on_disk = json.loads(p.read_text(encoding="utf-8", errors="replace"))
+        except (OSError, json.JSONDecodeError):
+            out.append(f"{rel} could not be parsed as JSON; it may have been altered since it was written.")
+            continue
+        if json.dumps(on_disk, sort_keys=True, default=str) != json.dumps(want, sort_keys=True, default=str):
+            out.append(f"{rel} in the workspace no longer matches the approved {field_name}; it, or the "
+                       "experimental protocol it describes, may have been edited after it was written.")
+    return out
+
+
 def code_files(root: Path, limit: int = 3000) -> dict[str, Path]:
     out: dict[str, Path] = {}
     for p in sorted(root.rglob("*")):
@@ -454,6 +492,7 @@ def check(project_id: str, root: Path | None = None) -> dict:
     unfinished = [f"{st.task_id} [{st.status}]" for st in states if st.status in UNFINISHED]
     if unfinished:
         facts.append("Blueprint tasks not completed: " + ", ".join(unfinished))
+    facts.extend(protocol_file_tamper(root, project_id))
     dangling = sorted(k for k in info.refs if k not in info.labels)
     if dangling:
         facts.append("\\ref targets with no matching \\label: " + ", ".join(dangling[:20]))

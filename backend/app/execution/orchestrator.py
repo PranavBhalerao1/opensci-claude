@@ -138,6 +138,15 @@ def model_for(tier: str, policy: str) -> str:
 
 
 ESCALATE = {"bulk": "standard", "standard": "reasoning", "reasoning": "reasoning"}
+EFFORT_LEVELS = ("low", "medium", "high")
+
+
+def escalated_effort(base: str, attempt: int) -> str:
+    """First attempt: the stage's base effort. Each attempt after a failure raises effort one
+    level (low -> medium -> high), capped at high: since every model tier now resolves to the
+    same Sonnet 4.6 model, effort is the only lever a retry has left to actually try harder."""
+    idx = EFFORT_LEVELS.index(base) if base in EFFORT_LEVELS else 1
+    return EFFORT_LEVELS[min(idx + max(0, attempt - 1), len(EFFORT_LEVELS) - 1)]
 
 
 def escalated_model(tier: str, policy: str, attempt: int) -> tuple[str, bool]:
@@ -302,7 +311,9 @@ async def _verify(task: dict, sandbox, policy: str, report: dict | None = None,
         messages=[{"role": "user", "content": "Acceptance checks:\n" + "\n".join(f"- {c}" for c in task["acceptance_checks"])
                    + "\n\n" + evidence}],
         schema=Verdict,
-        reasoning_effort="low",
+        # High: this is the acceptance-check gate between every task attempt and "done" —
+        # a core scientific-integrity check, not a routine administrative one.
+        reasoning_effort="high",
     )
     return [r.model_dump() for r in verdict.results]
 
@@ -399,6 +410,7 @@ async def _execute(project_id: str, mp: dict, task: dict, state_id: str, policy:
     if escalated:
         _append_event(state_id, {"type": "message", "step": 0, "text": f"Retrying with a stronger model ({model})",
                                  "cost": 0.0})
+    base_effort = "low" if agent["model_tier"] == "bulk" or policy == "minimal" else "medium"
     spec = AgentSpec(
         name=f"{agent['name']} ({task['id']})",
         instructions=COMMON_INSTRUCTIONS.format(
@@ -407,7 +419,7 @@ async def _execute(project_id: str, mp: dict, task: dict, state_id: str, policy:
         model=model,
         tools=_task_tools(task, agent, sandbox),
         max_steps=MAX_AGENT_STEPS,
-        reasoning_effort="medium" if escalated else ("low" if agent["model_tier"] == "bulk" or policy == "minimal" else "medium"),
+        reasoning_effort=escalated_effort(base_effort, me.attempts + 1),
     )
     ended: list[bool] = []
     ctx = ToolContext(project_id, sandbox, http, agent_name=agent["name"], owner=task["id"], live=lambda: not ended)
@@ -498,16 +510,21 @@ def _write_context(project_id: str, sandbox) -> None:
     ctx = build_context(project_id)
     out = sandbox.path("context")
     out.mkdir(parents=True, exist_ok=True)
-    (out / "brief.json").write_text(json.dumps(ctx["brief"], indent=2, ensure_ascii=False), encoding="utf-8")
-    (out / "chosen_gap.json").write_text(json.dumps(ctx["gaps"]["chosen"], indent=2, ensure_ascii=False), encoding="utf-8")
+    # newline="": these files are pushed verbatim to the Linux E2B sandbox, so writing them
+    # with the host's default text-mode translation (CRLF on Windows) would corrupt them.
+    (out / "brief.json").write_text(json.dumps(ctx["brief"], indent=2, ensure_ascii=False), encoding="utf-8", newline="")
+    (out / "chosen_gap.json").write_text(json.dumps(ctx["gaps"]["chosen"], indent=2, ensure_ascii=False),
+                                         encoding="utf-8", newline="")
     papers = [{k: p[k] for k in ("title", "year", "venue", "authors", "doi", "url", "notes")}
               for p in ctx["literature"]["papers"]]
     (out / "literature.json").write_text(json.dumps(
-        {"overview": ctx["literature"]["overview"], "papers": papers}, indent=2, ensure_ascii=False, default=str), encoding="utf-8")
+        {"overview": ctx["literature"]["overview"], "papers": papers}, indent=2, ensure_ascii=False, default=str),
+        encoding="utf-8", newline="")
     with Session(engine) as s:
         plan = s.get(Project, project_id).plan
     if plan:
-        (out / "plan.json").write_text(json.dumps(plan, indent=2, ensure_ascii=False, default=str), encoding="utf-8")
+        (out / "plan.json").write_text(json.dumps(plan, indent=2, ensure_ascii=False, default=str),
+                                       encoding="utf-8", newline="")
 
 
 def prepare_states(project_id: str, bp_run_id: str, mp: dict) -> None:
@@ -704,7 +721,7 @@ def _record_amendment(project_id: str, task_id: str, text: str) -> None:
     (out / "AMENDMENTS.md").write_text(
         "# Reviewer-approved protocol amendments\n\nThese override the plan and blueprint wherever they conflict.\n\n"
         + project_amendments(project_id) + "\n",
-        encoding="utf-8",
+        encoding="utf-8", newline="",
     )
 
 

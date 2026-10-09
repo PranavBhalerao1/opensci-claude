@@ -23,6 +23,7 @@ import logging
 import re
 from datetime import datetime, timezone
 
+import anthropic
 from pydantic import ValidationError
 from sqlalchemy import func
 from sqlmodel import Session, select
@@ -184,6 +185,21 @@ def begin_session(project_id: str) -> dict:
 # ── Pipeline hooks ─────────────────────────────────────────────────────────
 
 
+def will_review(project_id: str) -> bool:
+    """Whether after_report(project_id) will hand this report to the independent-review loop,
+    without after_report's side effects. report.py uses this to decide whether IT needs to run
+    its own fallback claims audit: a report the review loop is about to check should not also
+    pay for a duplicate one, but a report whose review is finished, disabled or never started
+    must never go unchecked. Keep this in sync with after_report's branches below."""
+    st = state(project_id)
+    status = st.get("status")
+    if status in FINAL:
+        return False
+    if status in ACTIVE or status == "review_failed":
+        return True
+    return enabled(project_id)
+
+
 def after_report(project_id: str) -> bool:
     """Called when a report finishes. Returns True if refinement took over."""
     st = state(project_id)
@@ -275,6 +291,13 @@ async def _review_job(project_id: str, h: RunHandle) -> dict:
         mistakes = {**_failed(project_id, n, beta.LIMIT_MESSAGE), "budget_limit": True}
     except TRANSIENT_ERRORS as exc:
         mistakes = _failed(project_id, n, f"Bedrock unavailable: {type(exc).__name__}: {exc}")
+    except anthropic.APIError as exc:
+        # Any other Bedrock/API error (e.g. a permanent 4xx) that judge.review() did not already
+        # turn into ReviewFailed: treat it the same way rather than letting it crash the job.
+        # An uncaught exception here would only mark the Run as errored, leaving
+        # Project.review.status stuck at "reviewing" forever for anything that reads it
+        # directly (e.g. the guard that blocks other project actions during an active review).
+        mistakes = _failed(project_id, n, f"Bedrock error: {type(exc).__name__}: {exc}")
     tracks = st.get("tracks", {})
     if mistakes.get("valid") and mistakes.get("judged"):
         last = next((it for it in reversed(st.get("iterations", [])) if it.get("changed")), None)
@@ -542,6 +565,9 @@ def repair_context(project_id: str, st: dict, mistakes: dict) -> str:
         f"{t['objective']} (depends on {', '.join(t['depends_on']) or 'nothing'}; outputs "
         f"{', '.join(o['path'] for o in t['outputs'])})" for t in mp["tasks"])
     directives = "\n".join(f"- {k}: {d['text']}" for k, d in st.get("directives", {}).items()) or "(none)"
+    # This review's own record (decision "repair"/"repair_gates") is already appended to
+    # st["iterations"] by the time this runs, so `rounds` already counts the round about to
+    # happen — it is that round's number, not a count of rounds still to come before it.
     rounds = sum(1 for it in st.get("iterations", []) if it["n"] >= st.get("session_first_iteration", 1)
                  and it.get("decision") in REPAIRS)
     remaining = max(0.0, st["max_usd"] - spent(project_id, st["started_at"]))
@@ -557,7 +583,7 @@ def repair_context(project_id: str, st: dict, mistakes: dict) -> str:
         + ("\n".join(issue_text(i) for i in concerns) or "(none)")
         + f"\n\nISSUE HISTORY:\n" + ("\n".join(history) or "(first review)")
         + f"\n\nCURRENT MANUSCRIPT DIRECTIVES (withdraw any that no longer apply):\n{directives}\n\n"
-        f"LIMITS: repair round {rounds + 1} of {st['max_rounds']}; about ${remaining:.2f} of the refinement budget left."
+        f"LIMITS: repair round {rounds} of {st['max_rounds']}; about ${remaining:.2f} of the refinement budget left."
     )
 
 
@@ -693,7 +719,10 @@ async def _repair_job(project_id: str, h: RunHandle) -> dict:
             _save(out / "blueprint_delta.json", delta)
     except beta.BetaLimitReached:
         return {"outcome": "budget_exhausted", "reason": beta.LIMIT_MESSAGE}
-    except (RuntimeError, *TRANSIENT_ERRORS) as exc:
+    except (RuntimeError, anthropic.APIError) as exc:
+        # anthropic.APIError covers TRANSIENT_ERRORS and permanent (e.g. 4xx) failures alike:
+        # either way the repair cannot proceed, and "attention" (resumable) must be set here so
+        # the status is not left stuck at "repairing" for anything that reads it directly.
         return {"outcome": "attention", "error": f"Repair planning failed: {type(exc).__name__}: {exc}"[:1500]}
 
     if delta:  # task changes must name tasks of the amended blueprint

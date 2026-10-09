@@ -1,0 +1,1139 @@
+diff --git a/backend/app/agents/blueprint.py b/backend/app/agents/blueprint.py
+index e615c3c..a7ff37c 100644
+--- a/backend/app/agents/blueprint.py
++++ b/backend/app/agents/blueprint.py
+@@ -317,7 +317,7 @@ async def run(project_id: str, h: RunHandle) -> dict:
+         messages=[{"role": "user", "content": f"Research question: {plan['research_question']}\n\nDatasets:\n"
+                    + json.dumps(plan["datasets"], ensure_ascii=False)}],
+         schema=Resolution,
+-        reasoning_effort="low",
++        reasoning_effort="medium",
+         tools=[{"type": "web_search"}],
+     )
+     found = sum(1 for d in resolution.datasets if d.url)
+@@ -339,7 +339,9 @@ async def run(project_id: str, h: RunHandle) -> dict:
+         instructions=COMPILE_INSTRUCTIONS,
+         messages=[{"role": "user", "content": context}],
+         schema=MasterPlan,
+-        reasoning_effort="medium",
++        # High: compiling the execution blueprint is one of the most demanding reasoning
++        # steps in the pipeline (team design, task graph, acceptance checks, budget).
++        reasoning_effort="high",
+     )
+ 
+     # 3 · Validate, with one repair pass
+@@ -477,7 +479,9 @@ async def draft_delta(project_id: str, instruction: str, h: RunHandle) -> tuple[
+     h.phase("amending", "Amending the blueprint")
+     delta = await parse(model=settings.model_reasoning, instructions=DELTA_INSTRUCTIONS,
+                         messages=[{"role": "user", "content": context}], schema=BlueprintDelta,
+-                        reasoning_effort="medium")
++                        # High: a blueprint amendment is the same kind of design work as compiling
++                        # the blueprint in the first place.
++                        reasoning_effort="high")
+     new = apply_delta(mp, delta)
+     errors, warnings = validate(MasterPlan.model_validate(new), capabilities, budget)
+     if errors:
+diff --git a/backend/app/agents/gaps.py b/backend/app/agents/gaps.py
+index 1e22dc3..81ccddd 100644
+--- a/backend/app/agents/gaps.py
++++ b/backend/app/agents/gaps.py
+@@ -217,8 +217,10 @@ async def run(project_id: str, h: RunHandle, feedback: str | None = None) -> dic
+         instructions=PROPOSE_INSTRUCTIONS,
+         messages=[{"role": "user", "content": context}],
+         schema=GapProposals,
+-        # Medium: the novelty check afterwards catches weak gaps; high doubled cost and time.
+-        reasoning_effort="medium",
++        # High: finding a genuinely novel, feasible gap is one of the most consequential
++        # reasoning steps in the pipeline. The novelty check afterwards still catches weak
++        # gaps, but it cannot invent a better one — that has to come from this step.
++        reasoning_effort="high",
+     )
+     gaps = proposals.gaps[:6]
+     h.counts(proposed=len(gaps), checked=0)
+diff --git a/backend/app/agents/judge.py b/backend/app/agents/judge.py
+index 883231d..d135f7e 100644
+--- a/backend/app/agents/judge.py
++++ b/backend/app/agents/judge.py
+@@ -625,10 +625,13 @@ async def judge_call(bundle: Bundle, h: RunHandle | None = None) -> JudgeReport:
+         if errors:
+             tail += ("\n\nYOUR PREVIOUS OUTPUT WAS INVALID. Fix these problems:\n- " + "\n- ".join(errors))
+         try:
++            # max_tokens is pinned to the ceiling regardless of effort: dropping effort after a
++            # truncation is meant to free up room for the JSON by thinking less, not to also
++            # shrink the total budget available for it.
+             report = await _parse(model=settings.model_judge, instructions=JUDGE_SYSTEM, schema=JudgeReport,
+                                   messages=[{"role": "user", "content": [*bundle.request_blocks(),
+                                                                          {"type": "text", "text": tail}]}],
+-                                  reasoning_effort=effort)
++                                  reasoning_effort=effort, max_tokens=llm.MAX_TOKENS)
+         except TRANSIENT_ERRORS as exc:
+             raise ReviewFailed(f"Bedrock unavailable: {type(exc).__name__}: {exc}") from exc
+         except RuntimeError as exc:  # invalid, refused, truncated or empty structured output
+@@ -661,7 +664,7 @@ async def verify_call(bundle: Bundle, claims: list[dict], root: Path) -> Verific
+     tail = VERIFY_INSTRUCTIONS + "\n\nCLAIMED ISSUES:\n" + listing + ("\n\n" + "\n\n".join(requested) if requested else "")
+     return await _parse(model=settings.model_judge, instructions=JUDGE_SYSTEM, schema=VerificationReport,
+                         messages=[{"role": "user", "content": [*bundle.request_blocks(), {"type": "text", "text": tail}]}],
+-                        reasoning_effort="high")
++                        reasoning_effort="high", max_tokens=llm.MAX_TOKENS)
+ 
+ 
+ # ── Review ─────────────────────────────────────────────────────────────────
+diff --git a/backend/app/agents/plan.py b/backend/app/agents/plan.py
+index e1b52de..6d871e8 100644
+--- a/backend/app/agents/plan.py
++++ b/backend/app/agents/plan.py
+@@ -221,7 +221,8 @@ async def revise_for_repair(prev: dict, instruction: str, h: RunHandle) -> tuple
+         instructions=REVISE_INSTRUCTIONS + REPAIR_REVISE_GUARD,
+         messages=[{"role": "user", "content": f"Instruction: {instruction}\n\nCurrent plan:\n" + json.dumps(prev)}],
+         schema=ResearchPlan,
+-        reasoning_effort="medium",
++        # High: this regenerates the research plan, same quality bar as drafting one.
++        reasoning_effort="high",
+     )
+     plan = await _finalise(plan, h, settings.model_reasoning, [])
+     data = plan.model_dump()
+@@ -401,7 +402,8 @@ async def run(project_id: str, h: RunHandle) -> dict:
+         instructions=PLAN_INSTRUCTIONS,
+         messages=[{"role": "user", "content": context}],
+         schema=ResearchPlan,
+-        reasoning_effort="medium",
++        # High: the research plan sets the experimental design for the whole study.
++        reasoning_effort="high",
+     )
+     h.phase("validating", "Checking the task graph")
+     plan = await _finalise(plan, h, settings.model_reasoning, [{"role": "user", "content": context}])
+diff --git a/backend/app/agents/report.py b/backend/app/agents/report.py
+index 56f31f7..ad8859f 100644
+--- a/backend/app/agents/report.py
++++ b/backend/app/agents/report.py
+@@ -205,6 +205,8 @@ def _file_digest(root: Path, files: list[dict]) -> str:
+ 
+ 
+ def _gather(project_id: str) -> dict:
++    from .. import refine  # local: refine.py imports pipeline, which imports this module
++
+     with Session(engine) as s:
+         project = s.get(Project, project_id)
+         bp = s.get(Run, project.blueprint["run_id"]).result["master_plan"]
+@@ -215,7 +217,10 @@ def _gather(project_id: str) -> dict:
+         brief, plan, gap, review = project.brief, project.plan, project.chosen_gap, project.review or {}
+     return {"brief": brief, "plan": plan, "gap": gap, "blueprint": bp, "states": states,
+             "overview": lit.result["overview"] if lit else None, "policy": cfg.get("model_policy", "default"),
+-            "refinement": bool((cfg.get("refinement") or {}).get("enabled")) or bool(review),
++            # Whether the independent-review loop will take over verifying THIS report once this
++            # job returns (refine.after_report's own decision, mirrored here with no side effects).
++            # A merely stale or disabled review state must not suppress this stage's own audit.
++            "refinement": refine.will_review(project_id),
+             "directives": _directives(review)}
+ 
+ 
+@@ -241,7 +246,8 @@ async def run(project_id: str, h: RunHandle) -> dict:
+     await sandbox.pull()
+     refs, bib = _references(project_id)
+     (root / REPORT_DIR).mkdir(parents=True, exist_ok=True)
+-    (root / REPORT_DIR / "references.bib").write_text(bib or "% No literature references available\n", encoding="utf-8")
++    (root / REPORT_DIR / "references.bib").write_text(bib or "% No literature references available\n",
++                                                       encoding="utf-8", newline="")
+     files = _inventory(root)
+ 
+     # 1 · Consolidate
+@@ -274,13 +280,16 @@ async def run(project_id: str, h: RunHandle) -> dict:
+         instructions=CONSOLIDATE_INSTRUCTIONS,
+         messages=[{"role": "user", "content": context}],
+         schema=Scaffold,
+-        reasoning_effort="medium",
++        # High: consolidation decides what the study actually found and how honestly to
++        # state it (hypothesis verdict, findings, deviations) — the synthesis step research
++        # quality depends on most.
++        reasoning_effort="high",
+     )
+     existing = {f["path"] for f in files}
+     scaffold.figures = [f for f in scaffold.figures if f.path in existing]
+     for sec in scaffold.outline:
+         sec.citations = [c for c in sec.citations if c in refs]
+-    (root / REPORT_DIR / "scaffold.json").write_text(scaffold.model_dump_json(indent=2), encoding="utf-8")
++    (root / REPORT_DIR / "scaffold.json").write_text(scaffold.model_dump_json(indent=2), encoding="utf-8", newline="")
+     h.counts(findings=len(scaffold.findings), figures=len(scaffold.figures))
+     h.note(f"Hypothesis: {scaffold.hypothesis_verdict.replace('_', ' ')} · {len(scaffold.findings)} findings")
+ 
+@@ -314,7 +323,8 @@ async def run(project_id: str, h: RunHandle) -> dict:
+     if guard["hard"]:
+         h.note(f"Research files changed while the paper was written: {', '.join(guard['hard'][:5])}")
+ 
+-    # 3 · Audit (with scientific review on, the independent judge replaces the claims audit)
++    # 3 · Audit (skipped only when the independent review loop will check this exact report;
++    # a stale or never-started review must not leave the current paper unchecked)
+     h.phase("auditing", "Checking citations and claims against the evidence")
+     tex_path = root / REPORT_DIR / "paper.tex"
+     tex = tex_path.read_text(encoding="utf-8", errors="replace") if tex_path.exists() else ""
+@@ -329,7 +339,8 @@ async def run(project_id: str, h: RunHandle) -> dict:
+             messages=[{"role": "user", "content": f"EVIDENCE (findings):\n{json.dumps([f.model_dump() for f in scaffold.findings], ensure_ascii=False)}"
+                        f"\n\nFILE CONTENTS:\n{_file_digest(root, files)[:30000]}\n\nPAPER:\n{tex[:40000]}"}],
+             schema=Audit,
+-            reasoning_effort="low",
++            # High: when this runs, it is the ONLY scientific claims check this paper gets.
++            reasoning_effort="high",
+         )
+     pdf = (root / REPORT_DIR / "paper.pdf").exists()
+     h.note("Report complete" if pdf else "Paper written but PDF was not produced")
+diff --git a/backend/app/execution/agent.py b/backend/app/execution/agent.py
+index 338ac09..0970dab 100644
+--- a/backend/app/execution/agent.py
++++ b/backend/app/execution/agent.py
+@@ -81,6 +81,18 @@ async def run_agent(spec: AgentSpec, task: str, ctx: ToolContext, on_event: Even
+             output_config={"effort": spec.reasoning_effort},
+         )
+         cost += record_usage(spec.model, response)
++        if response.stop_reason == "max_tokens":
++            # The step was cut off at the model's full output budget: its last content block
++            # (thinking, text or a tool call) may be incomplete. Never execute a tool call or
++            # append a turn built from a truncated response — stop cleanly instead, so earlier
++            # steps' work and side effects are preserved and nothing runs on partial input.
++            text = "".join(b.text for b in response.content if b.type == "text").strip()
++            return AgentResult(
++                "failed", text or "The model's response was truncated and could not be completed safely.",
++                issues=["Response truncated at the maximum output budget; stopped rather than risk an "
++                        "incomplete tool call."],
++                steps=step, cost=cost,
++            )
+         # Full content, so thinking blocks go back with their tool calls.
+         transcript.append({"role": "assistant", "content": response.content})
+         pending: list[dict] = []
+diff --git a/backend/app/execution/orchestrator.py b/backend/app/execution/orchestrator.py
+index 74c3436..daef529 100644
+--- a/backend/app/execution/orchestrator.py
++++ b/backend/app/execution/orchestrator.py
+@@ -138,6 +138,15 @@ def model_for(tier: str, policy: str) -> str:
+ 
+ 
+ ESCALATE = {"bulk": "standard", "standard": "reasoning", "reasoning": "reasoning"}
++EFFORT_LEVELS = ("low", "medium", "high")
++
++
++def escalated_effort(base: str, attempt: int) -> str:
++    """First attempt: the stage's base effort. Each attempt after a failure raises effort one
++    level (low -> medium -> high), capped at high: since every model tier now resolves to the
++    same Sonnet 4.6 model, effort is the only lever a retry has left to actually try harder."""
++    idx = EFFORT_LEVELS.index(base) if base in EFFORT_LEVELS else 1
++    return EFFORT_LEVELS[min(idx + max(0, attempt - 1), len(EFFORT_LEVELS) - 1)]
+ 
+ 
+ def escalated_model(tier: str, policy: str, attempt: int) -> tuple[str, bool]:
+@@ -302,7 +311,9 @@ async def _verify(task: dict, sandbox, policy: str, report: dict | None = None,
+         messages=[{"role": "user", "content": "Acceptance checks:\n" + "\n".join(f"- {c}" for c in task["acceptance_checks"])
+                    + "\n\n" + evidence}],
+         schema=Verdict,
+-        reasoning_effort="low",
++        # High: this is the acceptance-check gate between every task attempt and "done" —
++        # a core scientific-integrity check, not a routine administrative one.
++        reasoning_effort="high",
+     )
+     return [r.model_dump() for r in verdict.results]
+ 
+@@ -399,6 +410,7 @@ async def _execute(project_id: str, mp: dict, task: dict, state_id: str, policy:
+     if escalated:
+         _append_event(state_id, {"type": "message", "step": 0, "text": f"Retrying with a stronger model ({model})",
+                                  "cost": 0.0})
++    base_effort = "low" if agent["model_tier"] == "bulk" or policy == "minimal" else "medium"
+     spec = AgentSpec(
+         name=f"{agent['name']} ({task['id']})",
+         instructions=COMMON_INSTRUCTIONS.format(
+@@ -407,7 +419,7 @@ async def _execute(project_id: str, mp: dict, task: dict, state_id: str, policy:
+         model=model,
+         tools=_task_tools(task, agent, sandbox),
+         max_steps=MAX_AGENT_STEPS,
+-        reasoning_effort="medium" if escalated else ("low" if agent["model_tier"] == "bulk" or policy == "minimal" else "medium"),
++        reasoning_effort=escalated_effort(base_effort, me.attempts + 1),
+     )
+     ended: list[bool] = []
+     ctx = ToolContext(project_id, sandbox, http, agent_name=agent["name"], owner=task["id"], live=lambda: not ended)
+@@ -498,16 +510,21 @@ def _write_context(project_id: str, sandbox) -> None:
+     ctx = build_context(project_id)
+     out = sandbox.path("context")
+     out.mkdir(parents=True, exist_ok=True)
+-    (out / "brief.json").write_text(json.dumps(ctx["brief"], indent=2, ensure_ascii=False), encoding="utf-8")
+-    (out / "chosen_gap.json").write_text(json.dumps(ctx["gaps"]["chosen"], indent=2, ensure_ascii=False), encoding="utf-8")
++    # newline="": these files are pushed verbatim to the Linux E2B sandbox, so writing them
++    # with the host's default text-mode translation (CRLF on Windows) would corrupt them.
++    (out / "brief.json").write_text(json.dumps(ctx["brief"], indent=2, ensure_ascii=False), encoding="utf-8", newline="")
++    (out / "chosen_gap.json").write_text(json.dumps(ctx["gaps"]["chosen"], indent=2, ensure_ascii=False),
++                                         encoding="utf-8", newline="")
+     papers = [{k: p[k] for k in ("title", "year", "venue", "authors", "doi", "url", "notes")}
+               for p in ctx["literature"]["papers"]]
+     (out / "literature.json").write_text(json.dumps(
+-        {"overview": ctx["literature"]["overview"], "papers": papers}, indent=2, ensure_ascii=False, default=str), encoding="utf-8")
++        {"overview": ctx["literature"]["overview"], "papers": papers}, indent=2, ensure_ascii=False, default=str),
++        encoding="utf-8", newline="")
+     with Session(engine) as s:
+         plan = s.get(Project, project_id).plan
+     if plan:
+-        (out / "plan.json").write_text(json.dumps(plan, indent=2, ensure_ascii=False, default=str), encoding="utf-8")
++        (out / "plan.json").write_text(json.dumps(plan, indent=2, ensure_ascii=False, default=str),
++                                       encoding="utf-8", newline="")
+ 
+ 
+ def prepare_states(project_id: str, bp_run_id: str, mp: dict) -> None:
+@@ -704,7 +721,7 @@ def _record_amendment(project_id: str, task_id: str, text: str) -> None:
+     (out / "AMENDMENTS.md").write_text(
+         "# Reviewer-approved protocol amendments\n\nThese override the plan and blueprint wherever they conflict.\n\n"
+         + project_amendments(project_id) + "\n",
+-        encoding="utf-8",
++        encoding="utf-8", newline="",
+     )
+ 
+ 
+diff --git a/backend/app/execution/tools.py b/backend/app/execution/tools.py
+index 6f89515..7d8a52f 100644
+--- a/backend/app/execution/tools.py
++++ b/backend/app/execution/tools.py
+@@ -73,7 +73,9 @@ async def _run_python(ctx: ToolContext, a: dict) -> str:
+     ctx.cell += 1
+     path = ctx.sandbox.path(f".scratch/cell_{ctx.scratch}_{ctx.cell:03d}.py")
+     path.parent.mkdir(parents=True, exist_ok=True)
+-    path.write_text(a["code"], encoding="utf-8")
++    # newline="": this file is pushed verbatim to the Linux sandbox; writing it in the host's
++    # default text mode would translate "\n" to "\r\n" on Windows before it ever gets there.
++    path.write_text(a["code"], encoding="utf-8", newline="")
+     timeout = min(int(a.get("timeout_seconds", 300)), 3600)
+     res = await ctx.sandbox.run([str(ctx.sandbox.python), str(path)], timeout, owner=ctx.owner)
+     return res.render()
+@@ -87,7 +89,10 @@ async def _run_shell(ctx: ToolContext, a: dict) -> str:
+ async def _write_file(ctx: ToolContext, a: dict) -> str:
+     p = ctx.sandbox.path(a["path"])
+     p.parent.mkdir(parents=True, exist_ok=True)
+-    p.write_text(a["content"], encoding="utf-8")
++    # newline="": the content is written byte-for-byte (no "\n" -> "\r\n" translation), so a
++    # shell script or Python file created on a Windows host still has the LF line endings the
++    # Linux sandbox it is pushed to needs (a CRLF shebang line fails with "bad interpreter").
++    p.write_text(a["content"], encoding="utf-8", newline="")
+     return f"Wrote {len(a['content'])} chars to {a['path']}"
+ 
+ 
+@@ -124,11 +129,16 @@ async def _edit_file(ctx: ToolContext, a: dict) -> str:
+     p = ctx.sandbox.path(a["path"])
+     if not p.is_file():
+         return f"No such file: {a['path']}"
+-    text = p.read_text(encoding="utf-8")
++    # newline="" on both sides: read back and write out exactly the bytes on disk (decoded),
++    # with no line-ending translation in either direction, so an edit never changes the line
++    # endings of the parts of the file it does not touch. (Path.read_text has no `newline`
++    # parameter until Python 3.13, hence the explicit open().)
++    with p.open("r", encoding="utf-8", newline="") as f:
++        text = f.read()
+     count = text.count(a["old"])
+     if count != 1:
+         return f"'old' must match exactly once; it matched {count} times. Include more surrounding context."
+-    p.write_text(text.replace(a["old"], a["new"], 1), encoding="utf-8")
++    p.write_text(text.replace(a["old"], a["new"], 1), encoding="utf-8", newline="")
+     return f"Edited {a['path']}"
+ 
+ 
+@@ -215,7 +225,7 @@ async def _post_note(ctx: ToolContext, a: dict) -> str:
+     p = _notes_path(ctx)
+     p.parent.mkdir(parents=True, exist_ok=True)
+     stamp = datetime.now(timezone.utc).strftime("%H:%M")
+-    with p.open("a", encoding="utf-8") as f:
++    with p.open("a", encoding="utf-8", newline="") as f:
+         f.write(f"\n- [{stamp}] **{ctx.agent_name}**: {a['text'].strip()}\n")
+     return "Posted to team/NOTES.md"
+ 
+diff --git a/backend/app/integrity.py b/backend/app/integrity.py
+index cda6845..a5e44e4 100644
+--- a/backend/app/integrity.py
++++ b/backend/app/integrity.py
+@@ -10,6 +10,7 @@ The PDF is built in the E2B sandbox and the tex is often written on this host, s
+ times from the two clocks are compared with a tolerance.
+ """
+ 
++import json
+ import re
+ from dataclasses import dataclass, field
+ from datetime import datetime, timezone
+@@ -235,6 +236,43 @@ def _under(path: str, prefixes: set[str]) -> bool:
+     return any(path == q.rstrip("/") or path.startswith(q.rstrip("/") + "/") for q in prefixes)
+ 
+ 
++# Workspace copies of the pre-registered plan/brief/gap, written once for agents to read
++# (execution/orchestrator.py's _write_context) and refreshed every time an execution run
++# starts. Nothing downstream re-reads them for verification — report.py and judge.py both
++# use the authoritative database rows — but a mismatch is still a legitimate-vs-illegitimate
++# signal: an agent (or buggy tool code) silently editing its own copy of the pre-registered
++# protocol, e.g. to make an impossible success criterion look already satisfied, is exactly
++# the kind of change that must never pass unnoticed.
++PROTOCOL_FILES = (("context/plan.json", "plan"), ("context/brief.json", "brief"),
++                  ("context/chosen_gap.json", "chosen_gap"))
++
++
++def protocol_file_tamper(root: Path, project_id: str) -> list[str]:
++    """Workspace copies of the pre-registered plan/brief/gap that no longer match what the
++    project actually has approved. Soft (non-blocking): it is evidence for the judge, not a
++    verdict by itself, since downstream verification never trusts these files anyway."""
++    with Session(engine) as s:
++        project = s.get(Project, project_id)
++    if project is None:
++        return []
++    authoritative = {"plan": project.plan, "brief": project.brief, "chosen_gap": project.chosen_gap}
++    out = []
++    for rel, field_name in PROTOCOL_FILES:
++        want = authoritative[field_name]
++        p = root / rel
++        if not want or not p.is_file():
++            continue
++        try:
++            on_disk = json.loads(p.read_text(encoding="utf-8", errors="replace"))
++        except (OSError, json.JSONDecodeError):
++            out.append(f"{rel} could not be parsed as JSON; it may have been altered since it was written.")
++            continue
++        if json.dumps(on_disk, sort_keys=True, default=str) != json.dumps(want, sort_keys=True, default=str):
++            out.append(f"{rel} in the workspace no longer matches the approved {field_name}; it, or the "
++                       "experimental protocol it describes, may have been edited after it was written.")
++    return out
++
++
+ def code_files(root: Path, limit: int = 3000) -> dict[str, Path]:
+     out: dict[str, Path] = {}
+     for p in sorted(root.rglob("*")):
+@@ -454,6 +492,7 @@ def check(project_id: str, root: Path | None = None) -> dict:
+     unfinished = [f"{st.task_id} [{st.status}]" for st in states if st.status in UNFINISHED]
+     if unfinished:
+         facts.append("Blueprint tasks not completed: " + ", ".join(unfinished))
++    facts.extend(protocol_file_tamper(root, project_id))
+     dangling = sorted(k for k in info.refs if k not in info.labels)
+     if dangling:
+         facts.append("\\ref targets with no matching \\label: " + ", ".join(dangling[:20]))
+diff --git a/backend/app/llm.py b/backend/app/llm.py
+index 290556f..ec3042e 100644
+--- a/backend/app/llm.py
++++ b/backend/app/llm.py
+@@ -1,4 +1,6 @@
+ import json
++import logging
++import re
+ from collections.abc import AsyncIterator
+ from contextvars import ContextVar
+ 
+@@ -13,6 +15,8 @@ from .config import SONNET_4_6, settings
+ from .db import Usage, engine
+ from .sources import tavily
+ 
++log = logging.getLogger("openscientist.llm")
++
+ # Claude on Amazon Bedrock (InvokeModel). An explicit timeout lets long non-streaming
+ # calls run; without one the SDK refuses large max_tokens unless the call streams.
+ client = AsyncAnthropicBedrock(
+@@ -28,11 +32,20 @@ client = AsyncAnthropicBedrock(
+ TRANSIENT_ERRORS = (anthropic.APIConnectionError, anthropic.RateLimitError, anthropic.ServiceUnavailableError,
+                     anthropic.OverloadedError, anthropic.InternalServerError)
+ 
+-MAX_TOKENS = 32_000  # per response, thinking included
++MAX_TOKENS = 32_000  # hard per-response ceiling (thinking included) — the limit this Bedrock
++                      # deployment supports for one Messages call
+ CHAT_MAX_TOKENS = 16_000
+-# Effort ("low"/"medium") steers how much the model thinks, as reasoning effort did.
++# Default structured-output / agent-step budget by reasoning effort, used whenever a caller
++# does not request a specific max_tokens. "high" gets the full ceiling: the heaviest schemas
++# (MasterPlan, ResearchPlan, the scientific judge) run at high effort and need room for both
++# adaptive thinking and a large JSON object. Routine calls default lower to avoid requesting
++# the model's maximum everywhere; parse() still retries once at the full ceiling if a smaller
++# budget truncates the response, so under-sizing a tier here is self-healing, not a hard cap.
++EFFORT_TOKENS = {"low": 8_000, "medium": 16_000, "high": MAX_TOKENS}
++# Effort ("low"/"medium"/"high") steers how much the model thinks, as reasoning effort did.
+ THINKING = {"type": "adaptive"}
+ SEARCH_ROUNDS = 8  # web_search rounds allowed inside one structured-output call
++REPAIR_ATTEMPTS = 2  # bounded JSON-repair retries for the freeform structured-output fallback
+ 
+ # Attribution for cost tracking; set by jobs and request handlers.
+ current_project: ContextVar[str | None] = ContextVar("current_project", default=None)
+@@ -78,6 +91,10 @@ def _messages(messages: list[dict]) -> list[dict]:
+     return [m for m in messages if m.get("content")]  # the API rejects empty turns
+ 
+ 
++def _output_budget(reasoning_effort: str, max_tokens: int | None) -> int:
++    return max_tokens if max_tokens is not None else EFFORT_TOKENS.get(reasoning_effort, EFFORT_TOKENS["medium"])
++
++
+ async def stream_text(
+     *,
+     model: str,
+@@ -133,10 +150,20 @@ def _parsed[T: BaseModel](response, schema: type[T]) -> T:
+     return _validated(schema, text)
+ 
+ 
+-# Constrained decoding compiles each schema into a grammar with a size limit, and
+-# thinking adds to it. Schemas over the limit fall back (remembered per schema) to
+-# "no_thinking" (still enforced by the API) or, if still too large, to "tool": the
+-# schema as a forced tool's input schema, validated here by Pydantic.
++_FENCE_RE = re.compile(r"^```(?:json)?\s*\n?(.*?)\n?```$", re.DOTALL)
++
++
++def _strip_fence(text: str) -> str:
++    """The model was told to answer with bare JSON, but may still wrap it in a markdown
++    code fence; tolerate that rather than failing a validation attempt over formatting."""
++    stripped = text.strip()
++    m = _FENCE_RE.match(stripped)
++    return m.group(1).strip() if m else stripped
++
++
++# Constrained decoding compiles each schema into a grammar with a size limit, and thinking
++# adds to it. A schema over the limit is remembered here and, for every later call, skips
++# straight to the freeform fallback below (never to a thinking-disabled mode: see _freeform).
+ _GRAMMAR_FALLBACK: dict[type[BaseModel], str] = {}
+ 
+ 
+@@ -144,34 +171,73 @@ def _grammar_too_large(exc: anthropic.BadRequestError) -> bool:
+     return "grammar is too large" in str(exc)
+ 
+ 
+-async def _structured[T: BaseModel](model: str, instructions: str, msgs: list[dict], schema: type[T],
+-                                    reasoning_effort: str, thinking: dict) -> T:
++async def _attempt(model: str, instructions: str, msgs: list[dict], max_tokens: int, reasoning_effort: str,
++                   output_config_extra: dict):
+     response = await client.messages.create(
+-        model=model, max_tokens=MAX_TOKENS, system=instructions, messages=msgs, thinking=thinking,
+-        output_config={"effort": reasoning_effort, "format": {"type": "json_schema", "schema": transform_schema(schema)}},
++        model=model, max_tokens=max_tokens, system=instructions, messages=msgs, thinking=THINKING,
++        output_config={"effort": reasoning_effort, **output_config_extra},
+     )
+     record_usage(model, response)
++    return response
++
++
++async def _schema_constrained[T: BaseModel](model: str, instructions: str, msgs: list[dict], schema: type[T],
++                                            reasoning_effort: str, max_tokens: int) -> T:
++    """One schema-constrained attempt: adaptive thinking, the schema enforced server-side by
++    Bedrock's constrained decoding. Raises anthropic.BadRequestError if the compiled grammar is
++    too large; the caller falls back to _freeform, which keeps thinking on."""
++    fmt = {"format": {"type": "json_schema", "schema": transform_schema(schema)}}
++    response = await _attempt(model, instructions, msgs, max_tokens, reasoning_effort, fmt)
++    if response.stop_reason == "max_tokens" and max_tokens < MAX_TOKENS:
++        log.info("parse: %s truncated at %d tokens; retrying once at the %d-token ceiling",
++                 schema.__name__, max_tokens, MAX_TOKENS)
++        response = await _attempt(model, instructions, msgs, MAX_TOKENS, reasoning_effort, fmt)
+     return _parsed(response, schema)
+ 
+ 
+-async def _via_tool[T: BaseModel](model: str, instructions: str, msgs: list[dict], schema: type[T],
+-                                  reasoning_effort: str) -> T:
+-    name = schema.__name__
+-    response = await client.messages.create(
+-        model=model, max_tokens=MAX_TOKENS, system=instructions, messages=msgs,
+-        tools=[{"name": name, "description": f"Return the {name}.", "input_schema": transform_schema(schema)}],
+-        tool_choice={"type": "tool", "name": name},  # forced tool use needs thinking off
+-        thinking={"type": "disabled"}, output_config={"effort": reasoning_effort},
+-    )
+-    record_usage(model, response)
+-    block = next((b for b in response.content if b.type == "tool_use" and b.name == name), None)
+-    if block is None or response.stop_reason in ("refusal", "max_tokens"):
+-        raise _no_output(response)
+-    return _validated(schema, block.input)
++async def _freeform[T: BaseModel](model: str, instructions: str, msgs: list[dict], schema: type[T],
++                                  reasoning_effort: str, max_tokens: int) -> T:
++    """Schema too complex for Bedrock's constrained-decoding grammar: ask for plain JSON
++    instead of an API-enforced schema, with adaptive thinking preserved (never disabled to
++    work around the grammar limit). The result is validated with Pydantic exactly as the
++    schema-constrained path is; a bounded number of repair attempts feed back the actual
++    validation error so the model can fix it, and a truncated response gets one retry at the
++    full token ceiling. Never returns an unvalidated or malformed object — it raises instead.
++    """
++    schema_text = json.dumps(transform_schema(schema), indent=1, ensure_ascii=False)
++    sys = (f"{instructions}\n\nRespond with ONLY one JSON object matching this JSON Schema exactly. "
++          f"No prose, no markdown code fences, no explanation — the JSON object alone.\n\n{schema_text}")
++    attempt_msgs = msgs
++    problem = "no attempt was made"
++    for attempt in range(1, REPAIR_ATTEMPTS + 2):
++        response = await _attempt(model, sys, attempt_msgs, max_tokens, reasoning_effort, {})
++        if response.stop_reason == "max_tokens" and max_tokens < MAX_TOKENS:
++            response = await _attempt(model, sys, attempt_msgs, MAX_TOKENS, reasoning_effort, {})
++        text = "".join(b.text for b in response.content if b.type == "text")
++        if response.stop_reason == "refusal" or not text.strip():
++            raise _no_output(response)
++        if response.stop_reason == "max_tokens":
++            problem = f"the response was truncated even at the {MAX_TOKENS}-token ceiling"
++        else:
++            try:
++                return _validated(schema, _strip_fence(text))
++            except RuntimeError as exc:
++                problem = str(exc)
++        log.warning("parse: %s freeform output invalid (attempt %d/%d): %s",
++                   schema.__name__, attempt, REPAIR_ATTEMPTS + 1, problem)
++        if attempt <= REPAIR_ATTEMPTS:
++            attempt_msgs = [
++                *msgs,
++                {"role": "assistant", "content": text or "(empty)"},
++                {"role": "user", "content": f"That was invalid: {problem}\n\nReturn ONLY the corrected JSON "
++                                            "object matching the schema; no prose, no markdown fences."},
++            ]
++    raise RuntimeError(f"Model could not produce valid structured output for {schema.__name__} after "
++                       f"{REPAIR_ATTEMPTS + 1} attempts: {problem}")
+ 
+ 
+ async def _with_search[T: BaseModel](model: str, instructions: str, msgs: list[dict], schema: type[T],
+-                                     reasoning_effort: str) -> T:
++                                     reasoning_effort: str, max_tokens: int) -> T:
+     """Search first, then free choice; the last round must answer. Forced tool use needs
+     thinking off, and thinking cannot be switched on partway through a tool loop."""
+     from .execution.tools import TOOLS  # local import: the execution package imports this module
+@@ -180,7 +246,7 @@ async def _with_search[T: BaseModel](model: str, instructions: str, msgs: list[d
+     for round_ in range(SEARCH_ROUNDS + 1):
+         choice = "any" if round_ == 0 else "auto" if round_ < SEARCH_ROUNDS else "none"
+         response = await client.messages.create(
+-            model=model, max_tokens=MAX_TOKENS, system=instructions, messages=msgs, output_config=output_config,
++            model=model, max_tokens=max_tokens, system=instructions, messages=msgs, output_config=output_config,
+             tools=[TOOLS["web_search"].spec()], tool_choice={"type": choice}, thinking={"type": "disabled"},
+         )
+         record_usage(model, response)
+@@ -199,33 +265,36 @@ async def parse[T: BaseModel](
+     schema: type[T],
+     reasoning_effort: str = "medium",
+     tools: list[dict] | None = None,
++    max_tokens: int | None = None,
+ ) -> T:
+     """One structured-output call; returns the parsed Pydantic object.
+ 
+-    The API enforces the schema (output_config.format) and Pydantic validates the
+-    result. tools=[{"type": "web_search"}] makes the model search the web before it
+-    answers (left to choose, Claude often answered from memory at low effort).
++    The API enforces the schema (output_config.format) and adaptive thinking runs throughout.
++    If the schema is too complex for Bedrock's constrained-decoding grammar, this falls back
++    (remembered per schema) to asking for plain JSON instead — thinking is never disabled to
++    work around that limit. A truncated response gets one retry at the full token ceiling;
++    a freeform response that fails Pydantic validation gets a bounded number of repair
++    attempts with the actual validation error fed back. This never silently returns a
++    malformed or incomplete object: every failure mode raises.
++
++    tools=[{"type": "web_search"}] makes the model search the web before it answers (left to
++    choose, Claude often answered from memory at low effort).
+ 
+-    Raises BetaLimitReached before any request once the project owner's credits are
+-    used up. A call that starts with credit left runs to completion and is recorded.
++    Raises BetaLimitReached before any request once the project owner's credits are used up.
++    A call that starts with credit left runs to completion and is recorded.
+     """
+     check_project_allowance(current_project.get())
+     msgs = _messages(messages)
++    budget = _output_budget(reasoning_effort, max_tokens)
+     if any(t.get("type") == "web_search" for t in tools or []):
+-        return await _with_search(model, instructions, msgs, schema, reasoning_effort)
+-    fallback = _GRAMMAR_FALLBACK.get(schema)
+-    if fallback is None:
+-        try:
+-            return await _structured(model, instructions, msgs, schema, reasoning_effort, THINKING)
+-        except anthropic.BadRequestError as exc:
+-            if not _grammar_too_large(exc):
+-                raise
+-        fallback = _GRAMMAR_FALLBACK[schema] = "no_thinking"
+-    if fallback == "no_thinking":
++        return await _with_search(model, instructions, msgs, schema, reasoning_effort, budget)
++    if _GRAMMAR_FALLBACK.get(schema) != "freeform":
+         try:
+-            return await _structured(model, instructions, msgs, schema, reasoning_effort, {"type": "disabled"})
++            return await _schema_constrained(model, instructions, msgs, schema, reasoning_effort, budget)
+         except anthropic.BadRequestError as exc:
+             if not _grammar_too_large(exc):
+                 raise
+-        _GRAMMAR_FALLBACK[schema] = "tool"
+-    return await _via_tool(model, instructions, msgs, schema, reasoning_effort)
++            _GRAMMAR_FALLBACK[schema] = "freeform"
++            log.info("parse: %s's schema is too complex for constrained decoding; falling back to freeform "
++                     "JSON with adaptive thinking preserved", schema.__name__)
++    return await _freeform(model, instructions, msgs, schema, reasoning_effort, budget)
+diff --git a/backend/app/refine.py b/backend/app/refine.py
+index 662cfd9..54e4070 100644
+--- a/backend/app/refine.py
++++ b/backend/app/refine.py
+@@ -23,6 +23,7 @@ import logging
+ import re
+ from datetime import datetime, timezone
+ 
++import anthropic
+ from pydantic import ValidationError
+ from sqlalchemy import func
+ from sqlmodel import Session, select
+@@ -184,6 +185,21 @@ def begin_session(project_id: str) -> dict:
+ # ── Pipeline hooks ─────────────────────────────────────────────────────────
+ 
+ 
++def will_review(project_id: str) -> bool:
++    """Whether after_report(project_id) will hand this report to the independent-review loop,
++    without after_report's side effects. report.py uses this to decide whether IT needs to run
++    its own fallback claims audit: a report the review loop is about to check should not also
++    pay for a duplicate one, but a report whose review is finished, disabled or never started
++    must never go unchecked. Keep this in sync with after_report's branches below."""
++    st = state(project_id)
++    status = st.get("status")
++    if status in FINAL:
++        return False
++    if status in ACTIVE or status == "review_failed":
++        return True
++    return enabled(project_id)
++
++
+ def after_report(project_id: str) -> bool:
+     """Called when a report finishes. Returns True if refinement took over."""
+     st = state(project_id)
+@@ -275,6 +291,13 @@ async def _review_job(project_id: str, h: RunHandle) -> dict:
+         mistakes = {**_failed(project_id, n, beta.LIMIT_MESSAGE), "budget_limit": True}
+     except TRANSIENT_ERRORS as exc:
+         mistakes = _failed(project_id, n, f"Bedrock unavailable: {type(exc).__name__}: {exc}")
++    except anthropic.APIError as exc:
++        # Any other Bedrock/API error (e.g. a permanent 4xx) that judge.review() did not already
++        # turn into ReviewFailed: treat it the same way rather than letting it crash the job.
++        # An uncaught exception here would only mark the Run as errored, leaving
++        # Project.review.status stuck at "reviewing" forever for anything that reads it
++        # directly (e.g. the guard that blocks other project actions during an active review).
++        mistakes = _failed(project_id, n, f"Bedrock error: {type(exc).__name__}: {exc}")
+     tracks = st.get("tracks", {})
+     if mistakes.get("valid") and mistakes.get("judged"):
+         last = next((it for it in reversed(st.get("iterations", [])) if it.get("changed")), None)
+@@ -542,6 +565,9 @@ def repair_context(project_id: str, st: dict, mistakes: dict) -> str:
+         f"{t['objective']} (depends on {', '.join(t['depends_on']) or 'nothing'}; outputs "
+         f"{', '.join(o['path'] for o in t['outputs'])})" for t in mp["tasks"])
+     directives = "\n".join(f"- {k}: {d['text']}" for k, d in st.get("directives", {}).items()) or "(none)"
++    # This review's own record (decision "repair"/"repair_gates") is already appended to
++    # st["iterations"] by the time this runs, so `rounds` already counts the round about to
++    # happen — it is that round's number, not a count of rounds still to come before it.
+     rounds = sum(1 for it in st.get("iterations", []) if it["n"] >= st.get("session_first_iteration", 1)
+                  and it.get("decision") in REPAIRS)
+     remaining = max(0.0, st["max_usd"] - spent(project_id, st["started_at"]))
+@@ -557,7 +583,7 @@ def repair_context(project_id: str, st: dict, mistakes: dict) -> str:
+         + ("\n".join(issue_text(i) for i in concerns) or "(none)")
+         + f"\n\nISSUE HISTORY:\n" + ("\n".join(history) or "(first review)")
+         + f"\n\nCURRENT MANUSCRIPT DIRECTIVES (withdraw any that no longer apply):\n{directives}\n\n"
+-        f"LIMITS: repair round {rounds + 1} of {st['max_rounds']}; about ${remaining:.2f} of the refinement budget left."
++        f"LIMITS: repair round {rounds} of {st['max_rounds']}; about ${remaining:.2f} of the refinement budget left."
+     )
+ 
+ 
+@@ -693,7 +719,10 @@ async def _repair_job(project_id: str, h: RunHandle) -> dict:
+             _save(out / "blueprint_delta.json", delta)
+     except beta.BetaLimitReached:
+         return {"outcome": "budget_exhausted", "reason": beta.LIMIT_MESSAGE}
+-    except (RuntimeError, *TRANSIENT_ERRORS) as exc:
++    except (RuntimeError, anthropic.APIError) as exc:
++        # anthropic.APIError covers TRANSIENT_ERRORS and permanent (e.g. 4xx) failures alike:
++        # either way the repair cannot proceed, and "attention" (resumable) must be set here so
++        # the status is not left stuck at "repairing" for anything that reads it directly.
+         return {"outcome": "attention", "error": f"Repair planning failed: {type(exc).__name__}: {exc}"[:1500]}
+ 
+     if delta:  # task changes must name tasks of the amended blueprint
+diff --git a/backend/tests/test_attempts.py b/backend/tests/test_attempts.py
+index a904ebc..12f6698 100644
+--- a/backend/tests/test_attempts.py
++++ b/backend/tests/test_attempts.py
+@@ -136,7 +136,7 @@ def env(tmp_path, monkeypatch):
+         pass
+ 
+     e = Env()
+-    e.sb, e.fake, e.prompts, e.scripts, e.verdicts = sb, fake, [], [], []
++    e.sb, e.fake, e.prompts, e.scripts, e.verdicts, e.specs = sb, fake, [], [], [], []
+     e.task = _task()
+     e.mp = {"title": "t", "summary": "s", "datasets": [], "tasks": [e.task], "agents": [
+         {"id": "A1", "name": "Runner", "model_tier": "standard", "tools": AGENT_TOOLS, "instructions": "i"}]}
+@@ -156,6 +156,7 @@ def env(tmp_path, monkeypatch):
+ 
+     async def run_agent(spec, prompt, ctx, on_event=None):
+         e.prompts.append(prompt)
++        e.specs.append(spec)
+         return await e.scripts.pop(0)(ctx)
+ 
+     async def verify(task, sandbox, policy, report=None, amendments=None, *rest, **kw):
+@@ -349,6 +350,25 @@ def test_retry_runs_again_after_a_failed_attempt(env):
+     assert "PREVIOUS ATTEMPT FAILED" in env.prompts[1]
+ 
+ 
++def test_execution_effort_escalates_on_repeated_retries(env):
++    """Model tiers all resolve to the same Sonnet 4.6 model now, so effort is the lever a
++    retry actually has: a standard-tier task starts at MEDIUM and escalates to HIGH."""
++    env.task["retries"] = 2
++
++    async def fail(ctx):
++        return AgentResult("failed", "try again")
++
++    async def scenario():
++        env.scripts[:] = [fail, fail, fail]
++        await env.attempt()
++        await env.attempt()
++        await env.attempt()
++
++    asyncio.run(scenario())
++    assert [s.reasoning_effort for s in env.specs] == ["medium", "high", "high"]
++    assert env.state().status == "failed" and env.state().attempts == 3
++
++
+ def test_reaping_one_task_leaves_other_tasks_alone(env):
+     async def scenario():
+         a = ToolContext(env.pid, env.sb, None, owner="TA")
+diff --git a/backend/tests/test_core.py b/backend/tests/test_core.py
+index d5b3634..4589175 100644
+--- a/backend/tests/test_core.py
++++ b/backend/tests/test_core.py
+@@ -210,6 +210,15 @@ def test_escalation_with_one_model_for_every_tier():
+     assert orchestrator.escalated_model("standard", "default", 2) == (model, False)
+ 
+ 
++def test_effort_escalation_raises_one_level_per_failed_attempt_capped_at_high():
++    # A task starting at LOW can retry at MEDIUM and then HIGH.
++    assert [orchestrator.escalated_effort("low", n) for n in (1, 2, 3, 4)] == ["low", "medium", "high", "high"]
++    # A task starting at MEDIUM can escalate to HIGH (and stays there).
++    assert [orchestrator.escalated_effort("medium", n) for n in (1, 2, 3)] == ["medium", "high", "high"]
++    # Already at HIGH: no further escalation is possible.
++    assert [orchestrator.escalated_effort("high", n) for n in (1, 2, 3)] == ["high", "high", "high"]
++
++
+ def test_csv_previews_give_exact_facts(tmp_path):
+     sb = E2BSandbox("_t")
+     sb.root = tmp_path
+diff --git a/backend/tests/test_encoding.py b/backend/tests/test_encoding.py
+index b54227c..68c6944 100644
+--- a/backend/tests/test_encoding.py
++++ b/backend/tests/test_encoding.py
+@@ -8,6 +8,7 @@ import asyncio
+ import io
+ import json
+ import pathlib
++from types import SimpleNamespace as NS
+ 
+ import pytest
+ from sqlmodel import Session, select
+@@ -108,10 +109,56 @@ def test_agent_file_tools_round_trip_unicode(tmp_path, cp1252_default):
+     call("write_file", path="results/summary.md", content=f"Δ = 0.3 {UNI}\n")
+     assert UNI in call("read_file", path="results/summary.md")
+     assert call("edit_file", path="results/summary.md", old="Δ = 0.3", new="Δ ≥ 0.4").startswith("Edited")
+-    assert (tmp_path / "results/summary.md").read_bytes().decode("utf-8").replace("\r\n", "\n") == f"Δ ≥ 0.4 {UNI}\n"
++    # Byte-exact: on Windows, writing in the platform's default text mode would have turned
++    # these "\n"s into "\r\n", corrupting any file pushed on to the Linux E2B sandbox.
++    raw = (tmp_path / "results/summary.md").read_bytes()
++    assert b"\r" not in raw
++    assert raw.decode("utf-8") == f"Δ ≥ 0.4 {UNI}\n"
+     call("post_note", text=f"ρ {UNI}")
+     assert "Agent α" in call("read_notes") and f"ρ {UNI}" in call("read_notes")
+-    (tmp_path / "team/NOTES.md").read_bytes().decode("utf-8")
++    notes_raw = (tmp_path / "team/NOTES.md").read_bytes()
++    assert b"\r" not in notes_raw
++    notes_raw.decode("utf-8")
++
++
++def test_write_file_always_uses_lf_line_endings(tmp_path):
++    sb = E2BSandbox("_t")
++    sb.root = tmp_path
++    ctx = ToolContext("_t", sb, None, agent_name="Agent")
++    content = "#!/bin/bash\necho one\necho two\n"
++    asyncio.run(TOOLS["write_file"].handler(ctx, {"path": "run.sh", "content": content}))
++    raw = (tmp_path / "run.sh").read_bytes()
++    assert b"\r" not in raw
++    assert raw.decode("utf-8") == content
++
++
++def test_edit_file_preserves_the_existing_line_endings_it_does_not_touch(tmp_path):
++    """edit_file must not silently rewrite a file's line endings: only the matched snippet
++    changes, whatever convention the rest of the file already uses."""
++    sb = E2BSandbox("_t")
++    sb.root = tmp_path
++    (tmp_path / "data.csv").write_bytes(b"a,b\r\n1,2\r\n")
++    ctx = ToolContext("_t", sb, None, agent_name="Agent")
++    out = asyncio.run(TOOLS["edit_file"].handler(ctx, {"path": "data.csv", "old": "1,2", "new": "1,3"}))
++    assert out.startswith("Edited")
++    assert (tmp_path / "data.csv").read_bytes() == b"a,b\r\n1,3\r\n"
++
++
++def test_run_python_writes_an_lf_only_scratch_file(tmp_path):
++    sb = E2BSandbox("_t")
++    sb.root = tmp_path
++
++    async def fake_run(argv, timeout, owner=None):
++        return NS(render=lambda: "ok")
++
++    sb.run = fake_run
++    ctx = ToolContext("_t", sb, None, agent_name="Agent")
++    code = "print('a')\nprint('b')\n"
++    asyncio.run(TOOLS["run_python"].handler(ctx, {"code": code}))
++    (cell,) = (tmp_path / ".scratch").glob("cell_*.py")
++    raw = cell.read_bytes()
++    assert b"\r" not in raw
++    assert raw.decode("utf-8") == code
+ 
+ 
+ def test_output_previews_read_utf8(tmp_path, cp1252_default):
+diff --git a/backend/tests/test_integrity.py b/backend/tests/test_integrity.py
+index c8269bd..6c6b5a4 100644
+--- a/backend/tests/test_integrity.py
++++ b/backend/tests/test_integrity.py
+@@ -1,5 +1,6 @@
+ """Deterministic manuscript and workspace integrity checks (app/integrity.py), offline."""
+ 
++import json
+ import os
+ import time
+ from datetime import datetime, timedelta, timezone
+@@ -220,3 +221,51 @@ def test_missing_manuscript_is_fatal(project):
+     (root / "paper" / "paper.tex").unlink()
+     out = ig.check(pid, root)
+     assert not out["passed"] and out["hard_failures"][0]["title"] == "Manuscript missing"
++
++
++# ── Protocol-file tamper guard (narrow experimental-integrity guardrail) ───
++
++
++def test_protocol_file_tamper_is_a_soft_fact_never_a_hard_gate(project):
++    (pid, *_), root = project
++    plan = {"success_criteria": ["p < 0.05"]}
++    with Session(engine) as s:
++        p = s.get(Project, pid)
++        p.plan = plan
++        s.add(p)
++        s.commit()
++    # Matches what was approved: no fact raised.
++    _touch(root / "context" / "plan.json", json.dumps(plan))
++    out = ig.check(pid, root)
++    assert out["passed"]
++    assert not any("plan.json" in f for f in out["facts"])
++
++    # An agent (or a bug) silently weakens the pre-registered success criterion in its own
++    # workspace copy. This must never be treated as though the original plan were followed —
++    # but it also must not become a new way to block an otherwise sound study.
++    _touch(root / "context" / "plan.json", json.dumps({"success_criteria": ["p < 1.0"]}))
++    out = ig.check(pid, root)
++    assert out["passed"]  # soft: it never blocks review by itself
++    assert any("context/plan.json" in f and "no longer matches the approved plan" in f for f in out["facts"])
++
++
++def test_protocol_file_tamper_flags_unparseable_json(project):
++    (pid, *_), root = project
++    with Session(engine) as s:
++        p = s.get(Project, pid)
++        p.brief = {"core_question": "x"}
++        s.add(p)
++        s.commit()
++    _touch(root / "context" / "brief.json", "not valid json")
++    facts = " ".join(ig.check(pid, root)["facts"])
++    assert "context/brief.json" in facts and "could not be parsed" in facts
++
++
++def test_protocol_file_tamper_ignores_files_that_were_never_written(project):
++    (pid, *_), root = project
++    with Session(engine) as s:
++        p = s.get(Project, pid)
++        p.plan = {"a": 1}
++        s.add(p)
++        s.commit()
++    assert ig.protocol_file_tamper(root, pid) == []  # context/plan.json does not exist yet
+diff --git a/backend/tests/test_llm.py b/backend/tests/test_llm.py
+index 4593311..af2477f 100644
+--- a/backend/tests/test_llm.py
++++ b/backend/tests/test_llm.py
+@@ -84,7 +84,7 @@ class Provider:
+         return NS(id=f"msg_{len(self.script)}", content=content, stop_reason=stop_reason, usage=self._usage(usage))
+ 
+     # Scripting
+-    def agent_turn(self, calls=(), text: str = "", searches=(), usage=(1000, 0, 100)) -> None:
++    def agent_turn(self, calls=(), text: str = "", searches=(), usage=(1000, 0, 100), stop: str | None = None) -> None:
+         n = len(self.script)
+         content = [NS(type="thinking", thinking="Planning.", signature=f"sig_{n}")]
+         content += [NS(type="tool_use", id=f"toolu_{n}_s{i}", name="web_search", input={"query": q})
+@@ -93,7 +93,7 @@ class Provider:
+         if text:
+             content.append(NS(type="text", text=text))
+         tool_use = any(b.type == "tool_use" for b in content)
+-        self.script.append(self._message(content, "tool_use" if tool_use else "end_turn", usage))
++        self.script.append(self._message(content, stop or ("tool_use" if tool_use else "end_turn"), usage))
+ 
+     def parse_result(self, parsed, usage=(1000, 0, 100), searches=()) -> None:
+         if searches:
+@@ -269,6 +269,17 @@ def test_agent_truncates_long_tool_output(provider, test_tools):
+     assert events[0]["result"] == sent[:500] + "…"
+ 
+ 
++def test_agent_truncated_response_is_never_executed(provider, test_tools):
++    """A response cut off at the output budget may hold an incomplete tool call; the agent
++    loop must stop cleanly rather than execute or append it."""
++    provider.agent_turn(calls=[("echo", {"text": "a"})], stop="max_tokens")
++    result, events, _ = asyncio.run(_agent(_spec()))
++    assert result.status == "failed"
++    assert "truncated" in result.issues[0]
++    assert events == []  # no tool call was ever run
++    assert len(provider.requests) == 1  # already at the full output budget: nothing left to retry into
++
++
+ def test_agent_without_tool_calls_returns_partial(provider, test_tools):
+     provider.agent_turn(text="  All done.  ")
+     result, events, _ = asyncio.run(_agent(_spec()))
+@@ -721,16 +732,30 @@ def _final(text: str, stop: str = "end_turn") -> NS:
+               usage=NS(input_tokens=10, cache_read_input_tokens=0, cache_creation_input_tokens=0, output_tokens=5))
+ 
+ 
+-@pytest.mark.parametrize("text, stop, match", [
+-    ('{"results": [{"check": "a"', "max_tokens", r"no structured output \(stop reason: max_tokens\)"),
+-    ("", "end_turn", "no structured output"),
+-    ('{"results": "nope"}', "end_turn", "invalid structured output"),
++@pytest.mark.parametrize("text, stop, match, effort", [
++    # High effort already requests the full token ceiling, so there is no larger budget left
++    # to retry into: a single truncated response is terminal.
++    ('{"results": [{"check": "a"', "max_tokens", r"no structured output \(stop reason: max_tokens\)", "high"),
++    ("", "end_turn", "no structured output", "medium"),
++    ('{"results": "nope"}', "end_turn", "invalid structured output", "medium"),
+ ])
+-def test_parse_rejects_truncated_empty_or_invalid_output(provider, text, stop, match):
++def test_parse_rejects_truncated_empty_or_invalid_output(provider, text, stop, match, effort):
+     provider.script.append(_final(text, stop))
+     with pytest.raises(RuntimeError, match=match):
+         asyncio.run(llm.parse(model=settings.model_standard, instructions="x",
+-                              messages=[{"role": "user", "content": "y"}], schema=Verdict))
++                              messages=[{"role": "user", "content": "y"}], schema=Verdict,
++                              reasoning_effort=effort))
++
++
++def test_parse_retries_a_truncated_response_at_the_full_token_ceiling(provider):
++    provider.script.append(_final('{"results": [{"check": "a"', "max_tokens"))
++    provider.parse_result(_verdict())
++    out = asyncio.run(llm.parse(model=settings.model_standard, instructions="x",
++                                messages=[{"role": "user", "content": "y"}], schema=Verdict,
++                                reasoning_effort="medium"))
++    assert out == _verdict()
++    assert [r["max_tokens"] for r in provider.requests] == [16_000, llm.MAX_TOKENS]
++    assert all(r["thinking"] == {"type": "adaptive"} for r in provider.requests)
+ 
+ 
+ def test_parse_search_loop_searches_first_and_must_answer_last(provider, monkeypatch, run_id):
+@@ -777,42 +802,58 @@ def _ask(schema=Verdict):
+                                  messages=[{"role": "user", "content": "y"}], schema=schema))
+ 
+ 
+-def test_oversized_grammar_retries_without_thinking_and_remembers(provider, monkeypatch):
++def test_oversized_grammar_falls_back_to_freeform_json_with_thinking_preserved(provider, monkeypatch):
++    """The critical regression: a schema too complex for Bedrock's constrained-decoding grammar
++    (MasterPlan, ResearchPlan in practice) must never be worked around by disabling thinking."""
+     monkeypatch.setattr(llm, "_GRAMMAR_FALLBACK", {})
+     provider.script.append(_bad_request(TOO_LARGE))
+     provider.parse_result(_verdict())
+-    provider.parse_result(_verdict())
+-    assert _ask() == _verdict() and _ask() == _verdict()
++    out = _ask()
++    assert out == _verdict()
++    assert llm._GRAMMAR_FALLBACK[Verdict] == "freeform"
+     thinking = [r["thinking"] for r in provider.requests]
+-    assert thinking == [{"type": "adaptive"}, {"type": "disabled"}, {"type": "disabled"}]
+-    # Still enforced by the API on every attempt.
+-    assert all(r["output_config"]["format"]["type"] == "json_schema" for r in provider.requests)
++    assert thinking == [{"type": "adaptive"}, {"type": "adaptive"}]  # never disabled to dodge the grammar limit
++    assert provider.requests[0]["output_config"]["format"]["type"] == "json_schema"
++    assert "format" not in provider.requests[1]["output_config"]  # freeform: no server-side schema enforcement
++    assert "results" in provider.requests[1]["system"]  # the schema is instead described in the prompt
+ 
+ 
+-def test_grammar_still_too_large_uses_the_schema_as_a_forced_tool(provider, monkeypatch, run_id):
+-    monkeypatch.setattr(llm, "_GRAMMAR_FALLBACK", {})
+-    provider.script += [_bad_request(TOO_LARGE), _bad_request(TOO_LARGE)]
+-    tool_answer = NS(id="m", content=[NS(type="tool_use", id="t1", name="Verdict", input=_verdict().model_dump())],
+-                     stop_reason="tool_use", usage=NS(input_tokens=50, cache_read_input_tokens=0,
+-                                                      cache_creation_input_tokens=0, output_tokens=20))
+-    provider.script += [tool_answer, tool_answer]
+-    assert _ask() == _verdict() and _ask() == _verdict()
+-    assert len(provider.requests) == 4  # the second call goes straight to the tool form
+-    req = provider.requests[2]
+-    assert req["tool_choice"] == {"type": "tool", "name": "Verdict"} and req["thinking"] == {"type": "disabled"}
+-    assert req["tools"] == [{"name": "Verdict", "description": "Return the Verdict.",
+-                             "input_schema": anthropic.transform_schema(Verdict)}]
+-    assert "format" not in req["output_config"] and req["output_config"]["effort"] == "medium"
+-    assert len(_usage_rows(run_id)) == 2  # rejected requests are not billed rows
+-
+-
+-def test_forced_tool_output_is_still_validated(provider, monkeypatch):
+-    monkeypatch.setattr(llm, "_GRAMMAR_FALLBACK", {Verdict: "tool"})
+-    provider.script.append(NS(id="m", content=[NS(type="tool_use", id="t1", name="Verdict", input={"results": "x"})],
+-                              stop_reason="tool_use", usage=NS(input_tokens=1, cache_read_input_tokens=0,
+-                                                               cache_creation_input_tokens=0, output_tokens=1)))
+-    with pytest.raises(RuntimeError, match="invalid structured output"):
++def test_freeform_fallback_is_remembered_and_skips_the_grammar_attempt(provider, monkeypatch):
++    monkeypatch.setattr(llm, "_GRAMMAR_FALLBACK", {Verdict: "freeform"})
++    provider.parse_result(_verdict())
++    assert _ask() == _verdict()
++    assert len(provider.requests) == 1  # no schema-constrained attempt is even tried
++    assert provider.requests[0]["thinking"] == {"type": "adaptive"}
++    assert "format" not in provider.requests[0]["output_config"]
++
++
++def test_freeform_fallback_tolerates_a_markdown_fence(provider, monkeypatch):
++    monkeypatch.setattr(llm, "_GRAMMAR_FALLBACK", {Verdict: "freeform"})
++    provider.script.append(_final(f"```json\n{_verdict().model_dump_json()}\n```"))
++    assert _ask() == _verdict()
++
++
++def test_freeform_fallback_repairs_invalid_json_with_the_validation_error(provider, monkeypatch):
++    monkeypatch.setattr(llm, "_GRAMMAR_FALLBACK", {Verdict: "freeform"})
++    provider.script.append(_final('{"results": "nope"}'))
++    provider.parse_result(_verdict())
++    assert _ask() == _verdict()
++    assert len(provider.requests) == 2
++    repair = provider.requests[1]["messages"]
++    assert repair[-2] == {"role": "assistant", "content": '{"results": "nope"}'}
++    assert repair[-1]["role"] == "user" and "invalid structured output" in repair[-1]["content"]
++    assert provider.requests[1]["thinking"] == {"type": "adaptive"}  # preserved through the repair round too
++
++
++def test_freeform_fallback_raises_after_exhausting_repair_attempts(provider, monkeypatch):
++    """Never silently returns a malformed object: once every repair attempt fails, parse() raises."""
++    monkeypatch.setattr(llm, "_GRAMMAR_FALLBACK", {Verdict: "freeform"})
++    for _ in range(llm.REPAIR_ATTEMPTS + 1):
++        provider.script.append(_final('{"results": "still nope"}'))
++    with pytest.raises(RuntimeError, match=f"after {llm.REPAIR_ATTEMPTS + 1} attempts"):
+         _ask()
++    assert len(provider.requests) == llm.REPAIR_ATTEMPTS + 1
++    assert all(r["thinking"] == {"type": "adaptive"} for r in provider.requests)
+ 
+ 
+ def test_other_bad_requests_are_not_swallowed(provider, monkeypatch):
+diff --git a/backend/tests/test_refinement.py b/backend/tests/test_refinement.py
+index 182d835..bec8df7 100644
+--- a/backend/tests/test_refinement.py
++++ b/backend/tests/test_refinement.py
+@@ -57,7 +57,8 @@ class ScriptedLLM:
+         self.queues[schema.__name__].extend(items)
+         return self
+ 
+-    async def parse(self, *, model, instructions, messages, schema, reasoning_effort="medium", tools=None):
++    async def parse(self, *, model, instructions, messages, schema, reasoning_effort="medium", tools=None,
++                    max_tokens=None):
+         self.calls.append((schema.__name__, messages))
+         queue = self.queues[schema.__name__]
+         if not queue:
+@@ -420,6 +421,20 @@ def test_bedrock_failures(env, failures, status):
+         assert "Bedrock unavailable" in st["attention"]
+ 
+ 
++def test_permanent_bedrock_error_fails_the_review_instead_of_sticking_at_reviewing(env):
++    """A non-transient Bedrock error (e.g. a 4xx) from the judge call must end the review with
++    an explicit, resumable status rather than leaving Project.review.status stuck at
++    "reviewing" forever with its background job silently dead."""
++    study, llm_, lab = env()
++    bad_request = anthropic.BadRequestError(
++        "bad request", response=httpx2.Response(400, request=REQUEST), body={"message": "bad request"})
++    llm_.add(JudgeReport, bad_request)
++    st = loop(study.pid)
++    assert st["status"] == "review_failed"
++    assert "Bedrock error" in st["attention"] and "BadRequestError" in st["attention"]
++    assert not jobs.is_running(study.pid, "review")
++
++
+ def test_failed_repair_task_needs_attention_then_resumes(env):
+     study, llm_, lab = env()
+     llm_.add(JudgeReport, blocking(stats_issue()), accept())
+@@ -730,6 +745,19 @@ def test_decide_table(st, mistakes, spent, decision):
+     assert refine.decide(st, mistakes, spent)[0] == decision
+ 
+ 
++def test_repair_context_shows_the_round_about_to_run_not_one_ahead(tmp_path, monkeypatch):
++    """By the time repair_context runs, this review's own "repair" decision is already
++    appended to st["iterations"] (_review_job records it before dispatching to repair), so
++    `rounds` already counts the round about to happen — the message must not add another 1."""
++    study = make_study(tmp_path, monkeypatch)
++    st = _st(max_rounds=3, session_first_iteration=1, started_at=datetime.now(timezone.utc).isoformat(),
++             iterations=[{"n": 1, "decision": "repair"}], preregistration={}, directives={})
++    mistakes = {"iteration": 1, "verdict": "major_revision", "summary": "s", "issues": []}
++    context = refine.repair_context(study.pid, st, mistakes)
++    assert "repair round 1 of 3" in context
++    study.cleanup()
++
++
+ def test_issue_tracking_matches_resolves_and_labels():
+     a = {"id": "R1-01", "severity": "MAJOR", "category": "statistics", "title": "Paired t-test on one seed pair",
+          "affected": ["T3.1"], "invalidates": [], "blocking": True}
