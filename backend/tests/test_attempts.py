@@ -448,31 +448,6 @@ def test_subagents_cannot_outlive_their_attempt(env, monkeypatch):
     assert out[1]["status"] == "success"
 
 
-def test_modal_download_keeps_unchanged_files_and_stops_for_ended_attempts(tmp_path):
-    from types import SimpleNamespace
-
-    from app.execution import modal_runner as mr
-
-    files = {"/same.csv": b"same", "/new.csv": b"fresh"}
-
-    class Vol:
-        def listdir(self, path, recursive):
-            return [SimpleNamespace(type=SimpleNamespace(name="FILE"), path=p, size=len(b), mtime=9e9)
-                    for p, b in files.items()]
-
-        def read_file_into_fileobj(self, path, f):
-            f.write(files[path])
-
-    (tmp_path / "same.csv").write_bytes(b"same")
-    os.utime(tmp_path / "same.csv", ns=(1_000_000_000, 1_000_000_000))
-    assert mr._download(Vol(), tmp_path, {}, 0.0, keep=lambda: False) == []
-    assert not (tmp_path / "new.csv").exists()
-    assert sorted(mr._download(Vol(), tmp_path, {}, 0.0)) == ["new.csv"]
-    assert (tmp_path / "new.csv").read_bytes() == b"fresh"
-    assert (tmp_path / "same.csv").stat().st_mtime_ns == 1_000_000_000  # untouched: still the old file
-    assert not list(tmp_path.glob("*.os-download"))
-
-
 @pytest.mark.skipif(not Path("/proc/self/environ").exists() or not hasattr(os, "setsid"),
                     reason="needs Linux /proc (runs remotely in E2B)")
 def test_reaper_script_kills_tagged_trees_only():

@@ -75,7 +75,7 @@ function Spend({ projectId }: { projectId: string }) {
       {usage.gpu.spent > 0 && (
         <div className="flex justify-between border-b border-dashed border-rule py-2">
           <dt className="uppercase tracking-wider text-faint">GPU spend</dt>
-          <dd className="text-ink" title="Cloud GPUs (Modal), metered per second">
+          <dd className="text-ink" title="Cloud GPUs (Google Colab), metered per second">
             ${usage.gpu.spent.toFixed(2)} / ${usage.gpu.budget.toFixed(0)}
           </dd>
         </div>

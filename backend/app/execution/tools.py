@@ -237,19 +237,17 @@ async def _request_credential(ctx: ToolContext, a: dict) -> str:
 
 
 async def _run_gpu_jobs(ctx: ToolContext, a: dict) -> str:
-    from .sandbox import gpu_runner
+    from . import colab_runner as cr
 
-    mr = gpu_runner()
-    colab = settings.gpu_provider == "colab"
-    if not mr.configured():
-        return f"Cloud GPUs are not configured (no {'Colab' if colab else 'Modal'} credentials)."
-    jobs = list(a["jobs"])[: mr.MAX_PARALLEL_JOBS]
+    if not cr.configured():
+        return "Cloud GPUs are not configured (no Colab credentials)."
+    jobs = list(a["jobs"])[: cr.MAX_PARALLEL_JOBS]
     names = [j.get("name", "") for j in jobs]
     if not jobs or any(not re.match(r"^[A-Za-z0-9_-]{1,60}$", n) for n in names) or len(set(names)) != len(names):
         return "Give 1-40 jobs with unique names (letters, digits, - and _)."
     gpu = a.get("gpu", "L4")
-    if gpu not in mr.GPU_PRICES:
-        return f"Unknown GPU {gpu}; choose from {', '.join(mr.GPU_PRICES)}."
+    if gpu not in cr.GPU_PRICES:
+        return f"Unknown GPU {gpu}; choose from {', '.join(cr.GPU_PRICES)}."
     timeout_s = max(60, min(int(a.get("timeout_minutes", 20)) * 60, 3 * 3600))
     packages = [p for p in a.get("pip_packages", []) if p]
     from .sandbox import _PKG
@@ -257,23 +255,18 @@ async def _run_gpu_jobs(ctx: ToolContext, a: dict) -> str:
     bad = [p for p in packages if not _PKG.match(p)]
     if bad:
         return f"Rejected package specs: {', '.join(bad)}"
-    remaining = mr.gpu_budget(ctx.project_id) - mr.gpu_spent(ctx.project_id)
-    worst = len(jobs) * timeout_s * mr.rate(gpu)
+    remaining = cr.gpu_budget(ctx.project_id) - cr.gpu_spent(ctx.project_id)
+    worst = len(jobs) * timeout_s * cr.rate(gpu)
     if worst > remaining:
         return (f"Refused: worst case {len(jobs)} jobs x {timeout_s // 60} min on {gpu} = ${worst:.2f}, but only "
                 f"${remaining:.2f} of the GPU budget remains. Lower timeout_minutes, use fewer jobs or a cheaper GPU.")
     await ctx.sandbox.pull()  # the GPU runner uploads the host workspace; the next sandbox command picks up its results
-    if colab:
-        try:
-            result = await mr.run_async(ctx.project_id, ctx.sandbox.root, jobs, gpu, timeout_s, packages)
-        except mr.ColabError as exc:  # refused (budget, compute units) or credentials need a new login
-            return str(exc)
-    else:
-        # The thread outlives a cancelled attempt; ctx.live stops it writing results after that.
-        result = await asyncio.to_thread(mr.run_jobs, ctx.project_id, ctx.sandbox.root, jobs, gpu, timeout_s, packages,
-                                         ctx.live)
-    spent = mr.gpu_spent(ctx.project_id)
-    result["gpu_budget"] = {"spent": round(spent, 3), "remaining": round(mr.gpu_budget(ctx.project_id) - spent, 3)}
+    try:
+        result = await cr.run_async(ctx.project_id, ctx.sandbox.root, jobs, gpu, timeout_s, packages)
+    except cr.ColabError as exc:  # refused (budget, compute units) or credentials need a new login
+        return str(exc)
+    spent = cr.gpu_spent(ctx.project_id)
+    result["gpu_budget"] = {"spent": round(spent, 3), "remaining": round(cr.gpu_budget(ctx.project_id) - spent, 3)}
     return json.dumps(result, ensure_ascii=False)
 
 
@@ -395,31 +388,20 @@ async def _report_result(ctx: ToolContext, a: dict) -> str:
 _TIMEOUT = {"type": "integer", "description": "Seconds before the process is killed (default 300, max 3600)"}
 
 
-def _gpu_tool(provider: str) -> Tool:
-    """run_gpu_jobs as agents see it, true to the provider's limits (Colab: few GPUs, queued jobs)."""
-    if provider == "colab":
-        n = max(1, settings.colab_max_sessions)
-        description = (
-            f"Run heavy computation on cloud NVIDIA GPUs (Google Colab). Up to {n} GPU session(s) are shared by all "
-            "running tasks; further jobs queue and run one after another, each on its own GPU starting from a fresh "
-            f"copy of the workspace (cwd), so a call takes about ceil(jobs / {n}) x the job runtime. New or changed "
-            "files are synced back as each job ends; files over 500 MB are not uploaded. Use CUDA "
-            "(torch.device('cuda')). Each job's output goes to logs/gpu/<name>.log. Pack small runs into one job when "
-            "they fit on one GPU (e.g. 'python run.py 1 & python run.py 2 & wait'). Before a large grid, run ONE "
-            "representative job to measure its real runtime, then size timeouts from that.")
-        gpu = {"type": "string", "enum": ["T4", "L4"], "description": "L4 is a good default; T4 is cheaper and slower"}
-        timeout = {"type": "integer", "description": "Per job, from its own start; worst case is billed against the budget"}
-        packages = "Packages to pip-install on the GPU VM (Colab's image already has torch with CUDA, numpy, pandas)"
-    else:
-        description = (
-            "Run heavy computation on cloud NVIDIA GPUs (Modal), many jobs in parallel. The "
-            "workspace is synced to each job (cwd), and new or changed files are synced back when all jobs finish. "
-            "Use CUDA (torch.device('cuda')). Each job's output goes to logs/gpu/<name>.log. Before a large grid, "
-            "run ONE representative job to measure its real runtime, then size timeouts from that.")
-        gpu = {"type": "string", "enum": ["T4", "L4", "A10", "L40S", "A100-40GB", "A100-80GB", "H100"],
-               "description": "L4 is a good default for small models"}
-        timeout = {"type": "integer", "description": "Per job; worst case is billed against the budget"}
-        packages = "Packages for the GPU image, e.g. ['torch', 'numpy', 'pandas']"
+def _gpu_tool() -> Tool:
+    """run_gpu_jobs as agents see it, true to Google Colab's limits (few GPUs, queued jobs)."""
+    n = max(1, settings.colab_max_sessions)
+    description = (
+        f"Run heavy computation on cloud NVIDIA GPUs (Google Colab). Up to {n} GPU session(s) are shared by all "
+        "running tasks; further jobs queue and run one after another, each on its own GPU starting from a fresh "
+        f"copy of the workspace (cwd), so a call takes about ceil(jobs / {n}) x the job runtime. New or changed "
+        "files are synced back as each job ends; files over 500 MB are not uploaded. Use CUDA "
+        "(torch.device('cuda')). Each job's output goes to logs/gpu/<name>.log. Pack small runs into one job when "
+        "they fit on one GPU (e.g. 'python run.py 1 & python run.py 2 & wait'). Before a large grid, run ONE "
+        "representative job to measure its real runtime, then size timeouts from that.")
+    gpu = {"type": "string", "enum": ["T4", "L4"], "description": "L4 is a good default; T4 is cheaper and slower"}
+    timeout = {"type": "integer", "description": "Per job, from its own start; worst case is billed against the budget"}
+    packages = "Packages to pip-install on the GPU VM (Colab's image already has torch with CUDA, numpy, pandas)"
     return Tool("run_gpu_jobs", description, _obj({
         "jobs": {"type": "array", "items": _obj({"name": {"type": "string"}, "command": {"type": "string"}},
                                                  ["name", "command"])},
@@ -508,7 +490,7 @@ TOOLS: dict[str, Tool] = {
              "(e.g. 'protein structure', 'building energy'). It is NOT exhaustive: use web_search and read_webpage "
              "to find and learn any other service or tool.",
              _obj({"query": {"type": "string"}, "limit": {"type": "integer"}}, ["query"]), (), _lookup_resources),
-        _gpu_tool(settings.gpu_provider),
+        _gpu_tool(),
         Tool("web_search", "Search the web (hosted).", _obj({"query": {"type": "string"}}, ["query"]),
              ("internet",), _web_search),
         Tool("report_result", "Finish the task: summarise what was done and list the artifacts produced.",

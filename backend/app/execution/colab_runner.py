@@ -1,6 +1,6 @@
 """Cloud GPU jobs on Google Colab, through Google's `colab` CLI (google-colab-cli).
 
-Same contract as modal_runner.run_jobs. A call runs its jobs on up to
+The only GPU provider; same contract as the former Modal runner. A call runs its jobs on up to
 `settings.colab_max_sessions` Colab GPU VMs, drawn from one pool shared by every
 project. Each VM is set up once per call (workspace upload, pip packages) and runs
 that call's jobs one after another, each from a fresh copy of the workspace,

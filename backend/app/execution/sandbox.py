@@ -3,7 +3,7 @@
 `Sandbox` is the interface; `E2BSandbox` (e2b_sandbox.py) is the implementation:
 agent code always runs in an E2B cloud sandbox, against a synced copy of the
 per-project workspace, which stays on this machine as the source of truth. There
-is no local execution. Explicit CUDA GPU jobs go to Modal (modal_runner.py).
+is no local execution. Explicit CUDA GPU jobs go to Google Colab (colab_runner.py).
 """
 
 import re
@@ -136,19 +136,14 @@ _sandboxes: dict[str, Sandbox] = {}
 
 def sandbox_for(project_id: str) -> Sandbox:
     if project_id not in _sandboxes:
-        from .e2b_sandbox import E2BSandbox  # imports modal_runner, which imports the db
+        from .e2b_sandbox import E2BSandbox  # imports colab_runner, which imports the db
 
         _sandboxes[project_id] = E2BSandbox(project_id)
     return _sandboxes[project_id]
 
 
 def gpu_runner():
-    """The module behind run_gpu_jobs: modal_runner or colab_runner (settings.gpu_provider).
-    Temporary, while Colab replaces Modal."""
-    from ..config import settings
+    """The module behind run_gpu_jobs: always colab_runner (Google Colab is the only GPU provider)."""
+    from . import colab_runner
 
-    if settings.gpu_provider == "colab":
-        from . import colab_runner as runner
-    else:
-        from . import modal_runner as runner
-    return runner
+    return colab_runner

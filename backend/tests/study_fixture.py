@@ -192,8 +192,8 @@ def isolate(tmp_path: Path, monkeypatch) -> tuple[Path, Path]:
         return {d.id: True for d in datasets if d.url}
 
     monkeypatch.setattr(blueprint_agent, "_verify_urls", no_urls)
-    from app.execution import modal_runner
-    monkeypatch.setattr(modal_runner, "configured", lambda: False)
+    from app.execution import colab_runner
+    monkeypatch.setattr(colab_runner, "configured", lambda: False)
     monkeypatch.setattr(llm, "_GRAMMAR_FALLBACK", {})
     monkeypatch.setattr(orchestrator, "_controls", {})
     return workspaces, exports

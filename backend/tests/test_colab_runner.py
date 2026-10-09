@@ -582,26 +582,46 @@ def test_result_line_parsing():
     assert cr._reason("│ x │\n╰──╯\nColabRequestError: Failed: Service Unavailable\n").startswith("ColabRequestError")
 
 
-# ── Wiring: tool spec, provider switch, capability, startup reaper ─────────
+# ── Wiring: tool spec, the only provider, capability, startup reaper ───────
 
 
-def test_gpu_tool_spec_per_provider():
+def test_gpu_tool_spec_is_colab():
     from app.execution.tools import TOOLS, _gpu_tool
 
-    modal, colab = _gpu_tool("modal"), _gpu_tool("colab")
-    assert TOOLS["run_gpu_jobs"] == modal  # the suite runs on the Modal path: unchanged for agents
-    assert "(Modal), many jobs in parallel" in modal.description
-    assert modal.parameters["properties"]["gpu"]["enum"] == ["T4", "L4", "A10", "L40S", "A100-40GB", "A100-80GB", "H100"]
+    colab = TOOLS["run_gpu_jobs"]
+    assert colab == _gpu_tool() and "Modal" not in colab.description
     assert colab.parameters["properties"]["gpu"]["enum"] == sorted(cr.GPU_PRICES, reverse=True) == ["T4", "L4"]
     assert "Google Colab" in colab.description and "queue" in colab.description
-    assert colab.requires == modal.requires == ("cuda_gpu",) and colab.parameters["required"] == ["jobs", "pip_packages"]
+    assert colab.requires == ("cuda_gpu",) and colab.parameters["required"] == ["jobs", "pip_packages"]
+
+
+def test_colab_is_the_only_gpu_provider(tmp_path, monkeypatch):
+    import importlib
+
+    from app.config import Settings
+    from app.execution.e2b_sandbox import E2BSandbox
+    from app.execution.sandbox import gpu_runner
+    from app.execution.tools import TOOLS, ToolContext
+
+    monkeypatch.setenv("GPU_PROVIDER", "modal")  # the old switch is ignored, never an error or a fallback
+    assert not hasattr(Settings(_env_file=None), "gpu_provider")
+    assert gpu_runner() is cr
+    with pytest.raises(ModuleNotFoundError):
+        importlib.import_module("app.execution.modal_runner")
+    # No credentials (the suite's environment): a clear error, no GPU capability, no other provider.
+    monkeypatch.setattr(cr.settings, "colab_credentials_file", None)
+    sb = E2BSandbox("_c")
+    sb.root = tmp_path
+    args = {"jobs": [{"name": "a", "command": "python x.py"}], "gpu": "L4", "timeout_minutes": 10, "pip_packages": []}
+    assert not cr.configured() and "cuda_gpu" not in sb.capabilities
+    assert asyncio.run(TOOLS["run_gpu_jobs"].handler(ToolContext("_c", sb, None), args)) == (
+        "Cloud GPUs are not configured (no Colab credentials).")
 
 
 def test_run_gpu_jobs_routes_to_colab(tmp_path, monkeypatch):
     from app.execution.e2b_sandbox import E2BSandbox
     from app.execution.tools import TOOLS, ToolContext
 
-    monkeypatch.setattr(cr.settings, "gpu_provider", "colab")
     sb = E2BSandbox("_c")
     sb.root = tmp_path
     ctx = ToolContext("_c", sb, None)
@@ -635,21 +655,35 @@ def test_run_gpu_jobs_routes_to_colab(tmp_path, monkeypatch):
     monkeypatch.setattr(cr, "run_async", refused)
     assert asyncio.run(TOOLS["run_gpu_jobs"].handler(ctx, args)).startswith("Refused: the Colab account")
 
+    async def rejected(*a):
+        raise cr.ColabAuthError()
 
-def test_startup_reaper_runs_only_for_colab(monkeypatch):
+    monkeypatch.setattr(cr, "run_async", rejected)
+    assert asyncio.run(TOOLS["run_gpu_jobs"].handler(ctx, args)) == cr.AUTH_MESSAGE
+
+
+def test_startup_reaper_always_runs(monkeypatch):
     from fastapi.testclient import TestClient
 
     from app.main import app
 
     started = []
     monkeypatch.setattr(cr, "start_reaper", lambda: started.append(1))
-    with TestClient(app):
-        pass
-    assert started == []  # Modal: untouched startup
-    monkeypatch.setattr(cr.settings, "gpu_provider", "colab")
+    monkeypatch.setenv("GPU_PROVIDER", "modal")
     with TestClient(app):
         pass
     assert started == [1]
+
+
+def test_reaper_is_a_noop_without_credentials(monkeypatch):
+    checked = threading.Event()
+    monkeypatch.setattr(cr, "_startup_check", checked.set)
+    monkeypatch.setattr(cr, "configured", lambda: False)
+    cr.start_reaper()
+    assert not checked.wait(0.2)  # unconfigured: no thread, no CLI call
+    monkeypatch.setattr(cr, "configured", lambda: True)
+    cr.start_reaper()
+    assert checked.wait(5)
 
 
 # ── The VM-side scripts, run for real on this machine ──────────────────────

@@ -702,10 +702,10 @@ def get_usage(project_id: str, session: Session = Depends(get_session),
     by_model: dict[str, float] = {}
     for u in rows:
         by_model[u.model] = by_model.get(u.model, 0.0) + u.cost
-    from ..execution import modal_runner
+    from ..execution import colab_runner
 
     return {"total": round(sum(by_model.values()), 4), "by_model": by_model, "calls": len(rows),
-            "gpu": {"spent": round(modal_runner.gpu_spent(project_id), 4), "budget": modal_runner.gpu_budget(project_id)}}
+            "gpu": {"spent": round(colab_runner.gpu_spent(project_id), 4), "budget": colab_runner.gpu_budget(project_id)}}
 
 
 @router.get("/{project_id}/graph")

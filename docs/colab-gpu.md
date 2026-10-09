@@ -1,6 +1,7 @@
 # Cloud GPUs on Google Colab
 
-`run_gpu_jobs` can run on Google Colab instead of Modal (`GPU_PROVIDER=colab`).
+`run_gpu_jobs` always runs on Google Colab, the only GPU provider (Modal has been
+removed; there is no `GPU_PROVIDER` setting and no fallback).
 The backend drives Google's official `colab` CLI (google-colab-cli 0.7.4, pinned)
 with your own Colab account, authenticated once with Application Default
 Credentials (ADC). Code: `backend/app/execution/colab_runner.py`.
@@ -14,6 +15,7 @@ Credentials (ADC). Code: `backend/app/execution/colab_runner.py`.
 | `run_gpu_jobs` tool handler + workspace/usage routes, isolated, no LLM calls; fresh-process auth | **Yes** (2026-10-08, 34/34 checks; 0.16 CU) |
 | Ported into the Bedrock (Claude Sonnet 4.6) version: offline suites on Windows and WSL, no original test changed outcome | **Yes** (2026-10-08) |
 | Same isolated handler test (`backend/scripts/colab_gpu_tool_check.sh`) on the Bedrock version | **Yes** (2026-10-08, 34/34 checks; 0.10 CU metered) |
+| Modal removed; Colab hardcoded as the only GPU provider: offline suites on Windows and WSL | **Yes** (2026-10-08) |
 | End-to-end, agent-driven research run through the backend and UI | Not yet |
 | Unattended authentication over ≥ 8 days (hourly canary since 2026-10-07 21:22) | **Not yet verified** |
 | Long GPU jobs | **45 min validated on T4**; 150 min on a CPU runtime. Jobs up to the tool's 3 h limit are not yet validated on GPU |
@@ -44,7 +46,6 @@ The CLI supports Linux and macOS only. On Windows, run the backend in WSL2.
    variables override `.env`; keep them out of the repo's `.env` while a
    Windows-run backend shares that file, since Colab cannot run there:
    ```
-   GPU_PROVIDER=colab
    COLAB_CREDENTIALS_FILE=/home/you/.openscientist/colab/credentials.json
    COLAB_MAX_SESSIONS=1
    ```
@@ -90,7 +91,7 @@ cd backend && uv run python -m app.execution.colab_runner reap
 The startup check only warns about Colab sessions OpenScientist does not own
 (for example your own notebooks); it never stops them. Run a single backend process.
 
-## How it differs from Modal
+## How it differs from Modal (the former provider)
 
 - **Parallelism:** at most `COLAB_MAX_SESSIONS` GPUs at once, shared by all tasks
   (default 1; Colab does not document its concurrency limit). Further jobs queue,
@@ -118,7 +119,7 @@ The startup check only warns about Colab sessions OpenScientist does not own
 ## Testing
 
 - Offline, any OS: `cd backend && uv run pytest`. Colab is faked, and the suite
-  stays on the Modal path whatever `.env` says.
+  blanks `COLAB_CREDENTIALS_FILE`, so it never reaches Colab whatever the environment holds.
 - On Linux, `tests/test_colab_runner.py::test_remote_steps_locally` also runs the
   VM-side scripts for real. From a Windows checkout, run it in WSL2 with a separate
   environment:
@@ -127,7 +128,7 @@ The startup check only warns about Colab sessions OpenScientist does not own
   ```
 - Live tests use compute units and need explicit approval for each tier, Linux or
   macOS, and `COLAB_INTEGRATION=1`. Run only `tests/test_colab_integration.py`
-  with it: the rest of the suite pins the Modal path.
+  with it: the rest of the suite expects Colab to be unconfigured.
 - Isolated check of the real `run_gpu_jobs` handler, workspace and usage routes
   and a fresh backend start (no LLM calls, temp database, under 1 CU):
   `bash backend/scripts/colab_gpu_tool_check.sh`.

@@ -40,7 +40,7 @@ Step 2 · Blueprint & execution:
    Python and conda envs. The per-project workspace on this machine stays the source of truth:
    changed files are pushed before each command and results pulled back after it (and before
    verification, reports, the workspace browser and package export). API keys never reach agent
-   code; only the project's own credentials do. Explicit CUDA work goes to Modal (`run_gpu_jobs`).
+   code; only the project's own credentials do. Explicit CUDA work goes to Google Colab (`run_gpu_jobs`).
    There is no local execution: without E2B, code-running tools fail with a clear error.
    Tools: `run_python`, `run_shell`, files, `install_packages` (validated specs), `http_request`
    and `download_file` (private/loopback addresses blocked on every redirect hop),

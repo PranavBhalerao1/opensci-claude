@@ -12,7 +12,7 @@ export DATABASE_URL="sqlite:////tmp/osci-gpu-it-$$.db" E2B_API_KEY=""
 # No Bedrock or Tavily call can authenticate (the repo's .env holds real keys; env vars override it).
 export AWS_REGION=us-east-1 AWS_ACCESS_KEY_ID=blocked-no-llm-calls AWS_SECRET_ACCESS_KEY=blocked-no-llm-calls TAVILY_API_KEY=""
 unset AWS_SESSION_TOKEN AWS_PROFILE BEDROCK_MODEL_ID MODEL_REASONING MODEL_STANDARD MODEL_BULK
-export GPU_PROVIDER=colab COLAB_MAX_SESSIONS=1
+export COLAB_MAX_SESSIONS=1
 export COLAB_CREDENTIALS_FILE="${COLAB_CREDENTIALS_FILE:-$HOME/.openscientist/colab/credentials.json}"
 export PYTHONPATH="$PWD"
 UV="$(command -v uv || echo "$HOME/.local/bin/uv")"

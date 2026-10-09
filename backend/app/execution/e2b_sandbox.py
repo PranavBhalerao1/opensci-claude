@@ -123,10 +123,10 @@ class E2BSandbox(Sandbox):
 
     @property
     def capabilities(self) -> set[str]:  # type: ignore[override]
-        """No local GPU: CUDA work goes to the cloud GPU runner (run_gpu_jobs) when it is configured."""
-        from .sandbox import gpu_runner
+        """No local GPU: CUDA work goes to Google Colab (run_gpu_jobs) when it is configured."""
+        from . import colab_runner
 
-        return set(self.BASE_CAPABILITIES) | ({"cuda_gpu"} if gpu_runner().configured() else set())
+        return set(self.BASE_CAPABILITIES) | ({"cuda_gpu"} if colab_runner.configured() else set())
 
     @capabilities.setter
     def capabilities(self, value: set[str]) -> None:
@@ -289,7 +289,7 @@ class E2BSandbox(Sandbox):
         return out
 
     async def _push(self) -> None:
-        """Send host-side changes (file tools, downloads, Modal results) to the sandbox."""
+        """Send host-side changes (file tools, downloads, GPU job results) to the sandbox."""
         host = self._scan_host()
         changed = [r for r, sig in host.items() if self._host_seen.get(r) != sig]
         deleted = [r for r in self._host_seen if r not in host]

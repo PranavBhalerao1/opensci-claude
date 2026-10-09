@@ -379,7 +379,7 @@ def test_budget_is_read_fresh():
 
 
 def test_gpu_budget_refusal(tmp_path, monkeypatch):
-    from app.execution import modal_runner as mr
+    from app.execution import colab_runner as mr
 
     monkeypatch.setattr(mr, "configured", lambda: True)
     monkeypatch.setattr(mr, "gpu_budget", lambda pid: 1.0)
@@ -540,17 +540,17 @@ def test_sandbox_for_is_always_e2b_and_fails_clearly_without_it(monkeypatch, tmp
 
 
 def test_e2b_paths_and_capabilities(tmp_path, monkeypatch):
-    from app.execution import modal_runner
+    from app.execution import colab_runner
     sb = E2BSandbox("_t")
     sb.root = tmp_path
     assert sb._remote(str(sb.path(".scratch/cell_001.py"))) == "/home/user/workspace/.scratch/cell_001.py"
     assert sb._remote(str(tmp_path)) == "/home/user/workspace"
     assert sb._remote("-q") == "-q" and str(sb.python) == "/home/user/.venv/bin/python"
-    monkeypatch.setattr(modal_runner, "configured", lambda: False)
+    monkeypatch.setattr(colab_runner, "configured", lambda: False)
     assert "apple_gpu" not in sb.capabilities and "cuda_gpu" not in sb.capabilities
     assert {"python", "shell", "conda", "background"} <= sb.capabilities
-    monkeypatch.setattr(modal_runner, "configured", lambda: True)
-    assert "cuda_gpu" in sb.capabilities  # explicit CUDA work → Modal
+    monkeypatch.setattr(colab_runner, "configured", lambda: True)
+    assert "cuda_gpu" in sb.capabilities  # explicit CUDA work → Colab
 
 
 def test_e2b_sync_skips_environments(tmp_path):

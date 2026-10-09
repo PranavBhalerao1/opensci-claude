@@ -14,7 +14,7 @@ from sqlmodel import Session, select
 from app import beta, jobs
 from app.auth import CurrentUser, get_current_user
 from app.db import BetaUser, GpuUsage, Project, Run, TaskState, Usage, engine
-from app.execution import modal_runner, orchestrator
+from app.execution import colab_runner, orchestrator
 from app.execution.sandbox import Sandbox
 from app.main import app
 
@@ -555,4 +555,4 @@ def test_gpu_budget_respects_allowance(cap, spent, expected):
     _spend(uid, llm=spent)
     pid = _project(uid, settings={"gpu_budget_usd": 10.0})
     _spend(uid, gpu=0.25, project_id=pid)  # GPU spend counts toward the cap and toward the project
-    assert modal_runner.gpu_budget(pid) == pytest.approx(expected)
+    assert colab_runner.gpu_budget(pid) == pytest.approx(expected)

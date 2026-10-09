@@ -613,7 +613,7 @@ def test_cost_of_unknown_model_uses_the_reasoning_tier_price():
 # ── Tool registry ──────────────────────────────────────────────────────────
 
 # sha256 of (description, requires, parameters) per tool, taken before the provider
-# migration: only web_search may differ.
+# migration: only web_search may differ. run_gpu_jobs is the Google Colab spec (the only GPU provider).
 REGISTRY = {
     "run_python": "202b8af858b3ec00", "run_shell": "3a119e8628ae7d87", "write_file": "ebcb480955a79280",
     "read_file": "40d618f07b9b6f8a", "list_files": "ca5a92d2fccac372", "edit_file": "8428c865eebfa0b7",
@@ -622,7 +622,7 @@ REGISTRY = {
     "wait": "3e6ba88a3abee2eb", "read_webpage": "3bbb4fccea30c82d", "post_note": "26136dbd3f50cfc2",
     "read_notes": "9411dc89f70e250b", "request_credential": "0c31d1972c48da47",
     "spawn_subagents": "e2955b7c4db5659b", "http_request": "1c2fc8e6c3813de0", "download_file": "1cfd98292699f23f",
-    "search_papers": "a1cc79f1f222cced", "lookup_resources": "15f565ad5f46ae8a", "run_gpu_jobs": "989f93ee741f5348",
+    "search_papers": "a1cc79f1f222cced", "lookup_resources": "15f565ad5f46ae8a", "run_gpu_jobs": "8fd3516dda47ce03",
     "report_result": "78947e1a5b5c00dc",
 }
 HANDLERS = {
