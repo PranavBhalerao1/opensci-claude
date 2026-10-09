@@ -7,6 +7,7 @@ registry, the runtime's capabilities and the task graph.
 """
 
 import asyncio
+import copy
 import json
 from datetime import datetime, timezone
 from typing import Literal
@@ -412,6 +413,112 @@ def make_revision_job(instruction: str):
         return {**prev.result, "master_plan": data, "warnings": warnings, "instruction": instruction}
 
     return revise
+
+
+# ── Delta revision after a scientific review (see refine.py) ───────────────
+
+
+class BlueprintDelta(BaseModel):
+    add_tasks: list[ExecTask] = Field(description="New tasks with new ids")
+    replace_tasks: list[ExecTask] = Field(description="Complete new specifications for existing task ids")
+    remove_task_ids: list[str]
+    add_agents: list[AgentDef]
+    add_datasets: list[DatasetSpec]
+    add_python_packages: list[str]
+    notes: list[str] = Field(description="Execution notes explaining the change")
+
+
+DELTA_INSTRUCTIONS = COMPILE_INSTRUCTIONS + """
+
+You are amending an approved blueprint after an independent scientific review. Return ONLY
+the changes: new tasks, complete replacements for tasks whose specification must change, and
+removals. Leave every other task out of the delta; it is kept exactly as it is, and its
+finished results are reused. Keep existing task ids; give new tasks new ids. Wire new tasks
+into the dependency graph (inputs from upstream outputs) and update downstream tasks that
+must consume their outputs by replacing those tasks."""
+
+
+def apply_delta(mp: dict, delta: BlueprintDelta) -> dict:
+    """The master plan with the delta applied. Untouched entries stay exactly as they were
+    (including fields outside the schema, such as each dataset's verified flag)."""
+    out = copy.deepcopy(mp)
+    remove = set(delta.remove_task_ids)
+    replaced = {t.id: t.model_dump() for t in delta.replace_tasks}
+    tasks = [replaced.get(t["id"], t) for t in out["tasks"] if t["id"] not in remove]
+    known = {t["id"] for t in tasks}
+    tasks += [t.model_dump() for t in delta.add_tasks if t.id not in known]
+    out["tasks"] = tasks
+    agents = {a["id"] for a in out["agents"]}
+    out["agents"] += [a.model_dump() for a in delta.add_agents if a.id not in agents]
+    datasets = {d["id"] for d in out["datasets"]}
+    out["datasets"] += [{**d.model_dump(), "verified": False} for d in delta.add_datasets if d.id not in datasets]
+    out["python_packages"] += [p for p in delta.add_python_packages if p not in out["python_packages"]]
+    out["execution_notes"] = [*out.get("execution_notes", []), *delta.notes]
+    return out
+
+
+def approved_run(project_id: str) -> Run | None:
+    with Session(engine) as s:
+        project = s.get(Project, project_id)
+        return s.get(Run, project.blueprint["run_id"]) if project and project.blueprint else None
+
+
+async def draft_delta(project_id: str, instruction: str, h: RunHandle) -> tuple[dict, list[str], dict]:
+    """Amend the approved blueprint by a validated delta. Returns (master plan, warnings, delta)."""
+    run = approved_run(project_id)
+    if run is None:
+        raise RuntimeError("No approved blueprint to amend")
+    with Session(engine) as s:
+        project = s.get(Project, project_id)
+    mp = run.result["master_plan"]
+    capabilities = sandbox_for(project_id).capabilities
+    budget = _budget(project)
+    context = f"Instruction: {instruction}\n\nTools:\n{describe(capabilities)}\n\nCurrent blueprint:\n{json.dumps(mp)}"
+    h.phase("amending", "Amending the blueprint")
+    delta = await parse(model=settings.model_reasoning, instructions=DELTA_INSTRUCTIONS,
+                        messages=[{"role": "user", "content": context}], schema=BlueprintDelta,
+                        reasoning_effort="medium")
+    new = apply_delta(mp, delta)
+    errors, warnings = validate(MasterPlan.model_validate(new), capabilities, budget)
+    if errors:
+        h.phase("repairing", f"Fixing {len(errors)} problems in the amendment")
+        delta = await parse(model=settings.model_reasoning, instructions=DELTA_INSTRUCTIONS,
+                            messages=[{"role": "user", "content": context + "\n\nYour previous delta produced these "
+                                       "problems; return a corrected delta:\n- " + "\n- ".join(errors)
+                                       + f"\n\nPrevious delta:\n{delta.model_dump_json()}"}],
+                            schema=BlueprintDelta, reasoning_effort="low")
+        new = apply_delta(mp, delta)
+        errors, warnings = validate(MasterPlan.model_validate(new), capabilities, budget)
+        if errors:
+            raise RuntimeError("Blueprint amendment still invalid: " + "; ".join(errors[:5]))
+    fresh = [DatasetSpec.model_validate(d) for d in new["datasets"] if not d.get("verified") and d.get("url")]
+    verified = await _verify_urls(fresh) if fresh else {}
+    for d in new["datasets"]:
+        if d["id"] in verified:
+            d["verified"] = verified[d["id"]]
+            if not d["verified"]:
+                warnings.append(f"Dataset {d['id']} URL did not respond: {d['url']}")
+    return new, warnings, delta.model_dump()
+
+
+def save_blueprint_run(project_id: str, mp: dict, warnings: list[str], instruction: str,
+                       plan_run_id: str | None) -> Run:
+    """Store an amended blueprint as a completed blueprint run (approve() then exports it)."""
+    prev = approved_run(project_id)
+    now = datetime.now(timezone.utc)
+    with Session(engine) as s:
+        run = Run(
+            project_id=project_id, kind="blueprint", status="done", phase="done",
+            counts={"agents": len(mp["agents"]), "tasks": len(mp["tasks"]), "warnings": len(warnings)},
+            log=[{"t": now.isoformat(), "text": "Amended after the scientific review"}],
+            result={**(prev.result if prev else {}), "master_plan": mp, "warnings": warnings,
+                    "instruction": instruction, "plan_run_id": plan_run_id or (prev.result or {}).get("plan_run_id")},
+            finished_at=now,
+        )
+        s.add(run)
+        s.commit()
+        s.refresh(run)
+        return run
 
 
 def approve(project_id: str) -> Project:

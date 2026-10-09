@@ -41,6 +41,16 @@ class Settings(BaseSettings):
     model_reasoning: str = ""
     model_standard: str = ""
     model_bulk: str = ""
+    # The independent scientific judge (agents/judge.py); a fresh call per review.
+    model_judge: str = ""
+
+    # Scientific review and refinement (refine.py). New projects get refinement_default;
+    # projects without a "refinement" setting keep the plain pipeline. max_usd counts LLM
+    # and GPU spend after refinement starts.
+    refinement_default: bool = True
+    refinement_max_rounds: int = 3
+    refinement_max_usd: float = 12.0
+    review_numeric_crosscheck: bool = True
 
     # USD per 1M tokens: (input, cached input, output). Used for cost tracking (which
     # feeds credit and project-budget checks); web searches are billed per call. Bedrock regional (us.)
@@ -57,7 +67,7 @@ class Settings(BaseSettings):
     # GPU provider while Colab replaces Modal: "colab" runs run_gpu_jobs on Google Colab through the
     # `colab` CLI (Linux/macOS; see docs/colab-gpu.md). colab_credentials_file is the ADC
     # authorized-user JSON from `gcloud auth application-default login`; keep it outside the repo.
-    gpu_provider: Literal["modal", "colab"] = "modal"
+    gpu_provider: Literal["modal", "colab"] = "colab"
     colab_credentials_file: str | None = None
     colab_max_sessions: int = 1
 
@@ -66,7 +76,7 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def _default_tiers(self) -> "Settings":
-        for tier in ("model_reasoning", "model_standard", "model_bulk"):
+        for tier in ("model_reasoning", "model_standard", "model_bulk", "model_judge"):
             if not getattr(self, tier):
                 setattr(self, tier, self.bedrock_model_id)
         return self

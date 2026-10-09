@@ -8,6 +8,7 @@ const STAGES: { key: Stage; label: string }[] = [
   { key: "blueprint", label: "Blueprint" },
   { key: "executing", label: "Execute" },
   { key: "reporting", label: "Report" },
+  { key: "reviewing", label: "Review" },
 ];
 
 export default function StageBar({ stage }: { stage: Stage }) {

@@ -2,7 +2,9 @@ import { createClient } from "./supabase/client";
 
 export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
-export type Stage = "clarify" | "literature" | "gaps" | "plan" | "done" | "blueprint" | "ready" | "executing" | "executed" | "reporting" | "complete";
+export type Stage =
+  | "clarify" | "literature" | "gaps" | "plan" | "done" | "blueprint" | "ready" | "executing" | "executed"
+  | "reporting" | "reviewing" | "complete";
 
 export type Depth = "quick" | "standard" | "deep";
 
@@ -12,6 +14,7 @@ export interface ProjectSettings {
   citation_hops?: number;
   budget?: { llm_usd: number; gpu_hours: number };
   model_policy?: ModelPolicy;
+  refinement?: { enabled: boolean; max_rounds?: number; max_usd?: number };
 }
 
 export type ModelPolicy = "default" | "economy" | "minimal";
@@ -49,6 +52,7 @@ export interface Project {
   chosen_gap: (Gap & { run_id: string }) | null;
   plan: (ResearchPlan & { run_id: string; approved_at: string }) | null;
   blueprint: { run_id: string; approved_at: string } | null;
+  review: ReviewState | null;
   created_at: string;
   updated_at: string;
 }
@@ -615,9 +619,121 @@ export interface ReportRun extends Omit<Run, "result"> {
 }
 
 export const stageApi = {
-  cancel: (id: string, kind: "literature" | "gaps" | "plan" | "blueprint" | "report") =>
+  cancel: (id: string, kind: "literature" | "gaps" | "plan" | "blueprint" | "report" | "review" | "repair") =>
     post(`${API_URL}/api/projects/${id}/runs/${kind}/cancel`).then(json<{ cancelled: string }>),
 };
+
+// ── Scientific review ──────────────────────────────────────────────────────
+
+export type ReviewStatus =
+  | "reviewing" | "repairing" | "attention" | "approved" | "unresolved" | "budget_exhausted" | "review_failed"
+  | "stopped";
+
+export interface ReviewIssueSummary {
+  id: string;
+  track_id: string | null;
+  severity: "FATAL" | "MAJOR" | "MINOR";
+  category: string;
+  title: string;
+  blocking: boolean;
+  open_concern: boolean;
+  verification: string;
+  grounding: string;
+  tracking: { status: "new" | "persisting" | "resurfaced" | "regression"; previous_ids: string[] } | null;
+}
+
+export interface ReviewIteration {
+  n: number;
+  session: number;
+  review_run_id: string;
+  verdict: "accept" | "minor_revision" | "major_revision" | "reject" | null;
+  judged: boolean;
+  decision: "approved" | "repair" | "repair_gates" | "unresolved" | "budget_exhausted" | "review_failed";
+  reason: string;
+  blocking: { FATAL: number; MAJOR: number };
+  open_concerns: number;
+  issues: ReviewIssueSummary[];
+  cost_usd: number;
+  level?: "report" | "execution" | "blueprint" | "plan";
+  rerun_tasks?: string[];
+  carried_over?: string[];
+  skipped_unselected?: string[];
+  objective_changes?: string[];
+}
+
+export interface ReviewTrack {
+  title: string;
+  category: string;
+  severity: string;
+  status: "open" | "concern" | "resolved" | "disclosed" | "refuted";
+  seen: number[];
+  needs_human?: boolean;
+}
+
+export interface ReviewState {
+  status?: ReviewStatus;
+  step?: "review" | "repair" | "execute" | "report" | null;
+  stale?: boolean;
+  iteration?: number;
+  session_first_iteration?: number;
+  max_rounds?: number;
+  max_usd?: number;
+  attention?: string | null;
+  iterations?: ReviewIteration[];
+  tracks?: Record<string, ReviewTrack>;
+  outcome?: {
+    status: ReviewStatus;
+    reason: string;
+    unresolved: { track: string; title: string; severity: string }[];
+    open_concerns: { track: string; title: string }[];
+    needs_human: { track: string; title: string }[];
+  } | null;
+}
+
+export interface ReviewView extends ReviewState {
+  spent_usd: number;
+  live: Record<"review" | "repair" | "execute" | "report", boolean>;
+}
+
+export const reviewApi = {
+  get: (id: string) =>
+    apiFetch(`${API_URL}/api/projects/${id}/review`).then(
+      json<{ review: ReviewView; run: Run | null; project: Project; enabled: boolean }>,
+    ),
+  start: (id: string) => post(`${API_URL}/api/projects/${id}/review/start`).then(json<{ review: ReviewView }>),
+  resume: (id: string) => post(`${API_URL}/api/projects/${id}/review/resume`).then(json<{ review: ReviewView }>),
+  stop: (id: string) => post(`${API_URL}/api/projects/${id}/review/stop`).then(json<{ review: ReviewView }>),
+  /** Signed for direct <a> use, which can't carry an Authorization header. */
+  fileUrl: (id: string, name: string, token: string | null, iteration?: number) =>
+    `${API_URL}/api/projects/${id}/review/file?name=${encodeURIComponent(name)}${
+      iteration !== undefined ? `&iteration=${iteration}` : ""
+    }${token ? `&token=${encodeURIComponent(token)}` : ""}`,
+};
+
+/** The paper's scientific-review standing, for badges. */
+export function reviewBadge(project: Project): { label: string; tone: "ok" | "warn" | "busy" | "none" } {
+  const r = project.review;
+  if (!r?.status) return { label: "Unreviewed", tone: "none" };
+  if (r.stale) return { label: "Changed since review", tone: "warn" };
+  switch (r.status) {
+    case "approved":
+      return { label: "Reviewed ✓", tone: "ok" };
+    case "reviewing":
+      return { label: "Under review", tone: "busy" };
+    case "repairing":
+      return { label: `Repairing · round ${r.iteration ?? 1}`, tone: "busy" };
+    case "attention":
+      return { label: "Review needs attention", tone: "warn" };
+    case "review_failed":
+      return { label: "Review failed", tone: "warn" };
+    case "budget_exhausted":
+      return { label: "Unresolved · budget used", tone: "warn" };
+    case "stopped":
+      return { label: "Review stopped", tone: "warn" };
+    default:
+      return { label: "Unresolved issues", tone: "warn" };
+  }
+}
 
 export const reportApi = {
   get: (id: string) => apiFetch(`${API_URL}/api/projects/${id}/report`).then(json<{ run: ReportRun | null; project: Project }>),

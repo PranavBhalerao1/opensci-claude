@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 
-import { executionApi, reportApi, type Project, type ReportRun as ReportRunT } from "@/lib/api";
+import { executionApi, reportApi, reviewBadge, type Project, type ReportRun as ReportRunT } from "@/lib/api";
 import { useAuth } from "@/lib/supabase/AuthProvider";
 
 interface Props {
@@ -24,6 +24,9 @@ export default function ReportRun({ project, run, onStart, onOpenFiles }: Props)
   const { session } = useAuth();
   const token = session?.access_token ?? null;
   const file = (p: string) => executionApi.fileUrl(project.id, p, token);
+  const reviewed = reviewBadge(project);
+  // With the scientific review on, the independent judge replaces the claims audit.
+  const judged = Boolean(project.settings?.refinement?.enabled || project.review?.status);
 
   return (
     <section className="mb-10">
@@ -31,8 +34,15 @@ export default function ReportRun({ project, run, onStart, onOpenFiles }: Props)
       <div className="border border-ink">
         <div className="flex items-center justify-between border-b border-ink px-6 py-2.5 font-mono text-[10px] uppercase tracking-[0.16em]">
           <span>Consolidation &amp; paper</span>
-          <span className={r?.files.pdf ? "bg-ink px-1.5 py-0.5 text-paper" : "text-muted"}>
-            {r ? (r.files.pdf ? "Paper ready" : "Written · no PDF") : run?.status === "error" ? "Failed" : run ? "Writing" : "Not started"}
+          <span className="flex items-center gap-2">
+            {r?.files.pdf && (
+              <span className={reviewed.tone === "ok" ? "bg-ink px-1.5 py-0.5 text-paper" : "border border-ink px-1.5 py-0.5"}>
+                {reviewed.label}
+              </span>
+            )}
+            <span className={r?.files.pdf ? "bg-ink px-1.5 py-0.5 text-paper" : "text-muted"}>
+              {r ? (r.files.pdf ? "Paper ready" : "Written · no PDF") : run?.status === "error" ? "Failed" : run ? "Writing" : "Not started"}
+            </span>
           </span>
         </div>
 
@@ -118,7 +128,11 @@ export default function ReportRun({ project, run, onStart, onOpenFiles }: Props)
                     .
                   </p>
                 )}
-                {r.audit.length === 0 ? (
+                {judged ? (
+                  <p>
+                    <span className="font-mono">→</span> Claims: checked by the independent scientific review below.
+                  </p>
+                ) : r.audit.length === 0 ? (
                   <p>
                     <span className="font-mono">✓</span> Claims audit: no statements disagree with the evidence.
                   </p>

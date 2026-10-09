@@ -13,8 +13,9 @@ from pydantic import BaseModel
 from sqlmodel import Session, select
 from sse_starlette.sse import EventSourceResponse
 
-from .. import beta, jobs, pipeline
+from .. import beta, jobs, pipeline, refine
 from ..agents import clarify
+from ..agents import judge
 from ..agents import blueprint as blueprint_agent
 from ..agents import plan as plan_agent
 from ..agents import report as report_agent
@@ -73,6 +74,17 @@ def _get(session: Session, project_id: str, user: CurrentUser) -> Project:
     return project
 
 
+def _no_active_review(project: Project) -> None:
+    """Planning changes would pull the ground from under a scientific review in progress."""
+    if (project.review or {}).get("status") in refine.ACTIVE:
+        raise HTTPException(409, "A scientific review is in progress; stop it first")
+
+
+def _review_idle(project_id: str) -> None:
+    if jobs.is_running(project_id, "review") or jobs.is_running(project_id, "repair"):
+        raise HTTPException(409, "The scientific review is working; wait for it or stop it")
+
+
 @router.get("")
 def list_projects(
     session: Session = Depends(get_session), user: CurrentUser = Depends(get_current_user)
@@ -87,7 +99,8 @@ def create_project(
     body: ProjectCreate, session: Session = Depends(get_session), user: CurrentUser = Depends(get_current_user)
 ) -> Project:
     project = Project(
-        user_id=user.id, autonomous=body.autonomous, settings={**clarify.DEFAULT_SETTINGS, **body.settings}
+        user_id=user.id, autonomous=body.autonomous,
+        settings={**clarify.DEFAULT_SETTINGS, "refinement": refine.default_settings(), **body.settings},
     )
     if body.title:
         project.title = body.title
@@ -110,7 +123,8 @@ def delete_project(
     project_id: str, session: Session = Depends(get_session), user: CurrentUser = Depends(get_current_user)
 ) -> None:
     project = _get(session, project_id, user)
-    if any(jobs.is_running(project_id, k) for k in ("literature", "gaps", "plan", "blueprint", "execute", "report")):
+    if any(jobs.is_running(project_id, k) for k in ("literature", "gaps", "plan", "blueprint", "execute", "report",
+                                                     "review", "repair")):
         raise HTTPException(409, "Stop the running stage before deleting")
     # Papers stay in the shared cache and usage rows stay for spend history.
     for model in (Message, ProjectPaper, TaskState, Run, Secret):
@@ -148,6 +162,7 @@ async def rerun_literature(project_id: str, session: Session = Depends(get_sessi
     project = _get(session, project_id, user)
     if project.stage == "clarify" or not project.brief:
         raise HTTPException(409, "Confirm the research brief first")
+    _no_active_review(project)
     if jobs.is_running(project_id, "literature"):
         raise HTTPException(409, "Literature review already running")
     return pipeline.start_literature(project_id)
@@ -199,7 +214,7 @@ def get_gaps(project_id: str, session: Session = Depends(get_session),
 @router.post("/{project_id}/gaps/run", dependencies=billable)
 async def rerun_gaps(project_id: str, body: GapsRerun, session: Session = Depends(get_session),
                      user: CurrentUser = Depends(get_current_user)) -> Run:
-    _get(session, project_id, user)
+    _no_active_review(_get(session, project_id, user))
     lit_done = session.exec(
         select(Run).where(Run.project_id == project_id, Run.kind == "literature", Run.status == "done")
     ).first()
@@ -213,7 +228,7 @@ async def rerun_gaps(project_id: str, body: GapsRerun, session: Session = Depend
 @router.post("/{project_id}/gaps/select", dependencies=billable)
 async def select_gap(project_id: str, body: GapSelect, session: Session = Depends(get_session),
                      user: CurrentUser = Depends(get_current_user)) -> Project:
-    _get(session, project_id, user)
+    _no_active_review(_get(session, project_id, user))
     if jobs.is_running(project_id, "gaps"):
         raise HTTPException(409, "Gap analysis still running")
     if jobs.is_running(project_id, "plan"):
@@ -251,6 +266,7 @@ async def rerun_plan(project_id: str, session: Session = Depends(get_session),
     project = _get(session, project_id, user)
     if not project.chosen_gap:
         raise HTTPException(409, "Choose a research gap first")
+    _no_active_review(project)
     if jobs.is_running(project_id, "plan"):
         raise HTTPException(409, "Plan already being drafted")
     return pipeline.start_plan(project_id)
@@ -259,7 +275,7 @@ async def rerun_plan(project_id: str, session: Session = Depends(get_session),
 @router.post("/{project_id}/plan/revise", dependencies=billable)
 async def revise_plan(project_id: str, body: PlanRevise, session: Session = Depends(get_session),
                       user: CurrentUser = Depends(get_current_user)) -> dict:
-    _get(session, project_id, user)
+    _no_active_review(_get(session, project_id, user))
     instruction = body.instruction.strip()
     if not instruction:
         raise HTTPException(400, "Empty instruction")
@@ -279,6 +295,7 @@ async def revise_plan(project_id: str, body: PlanRevise, session: Session = Depe
 def edit_plan(project_id: str, body: PlanEdit, session: Session = Depends(get_session),
              user: CurrentUser = Depends(get_current_user)) -> Run:
     project = _get(session, project_id, user)
+    _no_active_review(project)
     if jobs.is_running(project_id, "plan"):
         raise HTTPException(409, "Plan is being revised")
     plan, errors = plan_agent.parse_plan(body.plan)
@@ -295,7 +312,7 @@ def edit_plan(project_id: str, body: PlanEdit, session: Session = Depends(get_se
 @router.post("/{project_id}/plan/approve", dependencies=billable)
 async def approve_plan(project_id: str, session: Session = Depends(get_session),
                        user: CurrentUser = Depends(get_current_user)) -> Project:
-    _get(session, project_id, user)
+    _no_active_review(_get(session, project_id, user))
     if jobs.is_running(project_id, "plan"):
         raise HTTPException(409, "Plan is being revised")
     if jobs.is_running(project_id, "blueprint"):
@@ -326,6 +343,7 @@ async def rerun_blueprint(project_id: str, session: Session = Depends(get_sessio
     project = _get(session, project_id, user)
     if not project.plan:
         raise HTTPException(409, "Approve the research plan first")
+    _no_active_review(project)
     if jobs.is_running(project_id, "blueprint"):
         raise HTTPException(409, "Blueprint already being compiled")
     return pipeline.start_blueprint(project_id)
@@ -334,7 +352,7 @@ async def rerun_blueprint(project_id: str, session: Session = Depends(get_sessio
 @router.post("/{project_id}/blueprint/revise", dependencies=billable)
 async def revise_blueprint(project_id: str, body: BlueprintRevise, session: Session = Depends(get_session),
                            user: CurrentUser = Depends(get_current_user)) -> dict:
-    _get(session, project_id, user)
+    _no_active_review(_get(session, project_id, user))
     instruction = body.instruction.strip()
     if not instruction:
         raise HTTPException(400, "Empty instruction")
@@ -352,7 +370,7 @@ async def revise_blueprint(project_id: str, body: BlueprintRevise, session: Sess
 @router.post("/{project_id}/blueprint/approve")
 def approve_blueprint(project_id: str, session: Session = Depends(get_session),
                       user: CurrentUser = Depends(get_current_user)) -> Project:
-    _get(session, project_id, user)
+    _no_active_review(_get(session, project_id, user))
     if jobs.is_running(project_id, "blueprint"):
         raise HTTPException(409, "Blueprint is being revised")
     try:
@@ -418,6 +436,7 @@ async def start_execution(project_id: str, body: ExecutionStart, session: Sessio
         raise HTTPException(409, "Approve the blueprint first")
     if jobs.is_running(project_id, "execute"):
         raise HTTPException(409, "Execution already running")
+    _review_idle(project_id)
     _apply_exec_settings(session, project, body)
     return pipeline.start_execution(project_id)
 
@@ -437,6 +456,7 @@ def pause_execution(project_id: str, session: Session = Depends(get_session),
 async def resume_execution(project_id: str, body: ExecutionStart, session: Session = Depends(get_session),
                            user: CurrentUser = Depends(get_current_user)) -> dict:
     project = _get(session, project_id, user)
+    _review_idle(project_id)
     _apply_exec_settings(session, project, body)
     ctl = orchestrator.control(project_id)
     if ctl:
@@ -510,11 +530,81 @@ def get_report(project_id: str, session: Session = Depends(get_session),
 async def run_report(project_id: str, session: Session = Depends(get_session),
                      user: CurrentUser = Depends(get_current_user)) -> Run:
     project = _get(session, project_id, user)
-    if project.stage not in ("executed", "complete", "reporting"):
+    if project.stage not in ("executed", "complete", "reporting", "reviewing"):
         raise HTTPException(409, "Execute the blueprint first")
     if jobs.is_running(project_id, "execute") or jobs.is_running(project_id, "report"):
         raise HTTPException(409, "A run is in progress")
+    _review_idle(project_id)
     return pipeline.start_report(project_id)
+
+
+REVIEW_FILES = {"mistakes.json": "application/json", "repair_plan.json": "application/json",
+                "plan_revision.json": "application/json", "blueprint_delta.json": "application/json",
+                "bundle.md": "text/markdown", "paper.tex": "text/plain", "paper.pdf": "application/pdf"}
+REVIEW_SUMMARIES = {"HISTORY.md": "text/markdown", "REVIEW.md": "text/markdown"}
+
+
+@router.get("/{project_id}/review")
+def get_review(project_id: str, session: Session = Depends(get_session),
+               user: CurrentUser = Depends(get_current_user)) -> dict:
+    """Scientific review state (effective status, iterations, issue tracks) and the latest review run."""
+    project = _get(session, project_id, user)
+    run = session.exec(
+        select(Run).where(Run.project_id == project_id, Run.kind.in_(("review", "repair")))
+        .order_by(Run.started_at.desc())
+    ).first()
+    return {"review": refine.view(project_id), "run": run, "project": project,
+            "enabled": refine.config(project)["enabled"]}
+
+
+@router.get("/{project_id}/review/file")
+def get_review_file(project_id: str, name: str, iteration: int | None = None, session: Session = Depends(get_session),
+                    user: CurrentUser = Depends(get_current_user)) -> FileResponse:
+    _get(session, project_id, user)
+    if iteration is None and name in REVIEW_SUMMARIES:
+        path, media = judge.review_dir(project_id) / name, REVIEW_SUMMARIES[name]
+    elif iteration is not None and name in REVIEW_FILES:
+        path, media = judge.review_dir(project_id, iteration) / name, REVIEW_FILES[name]
+    else:
+        raise HTTPException(404, "No such review file")
+    if not path.is_file():
+        raise HTTPException(404, "No such review file")
+    return FileResponse(path, media_type=media, filename=name, content_disposition_type="inline")
+
+
+@router.post("/{project_id}/review/start", dependencies=billable)
+async def start_review(project_id: str, session: Session = Depends(get_session),
+                       user: CurrentUser = Depends(get_current_user)) -> dict:
+    """Opt the project in and review its current paper (a new review session)."""
+    _get(session, project_id, user)
+    if any(jobs.is_running(project_id, k) for k in ("execute", "report", "review", "repair")):
+        raise HTTPException(409, "A run is in progress")
+    try:
+        run = refine.start(project_id)
+    except ValueError as exc:
+        raise HTTPException(409, str(exc)) from exc
+    return {"run": run, "review": refine.view(project_id)}
+
+
+@router.post("/{project_id}/review/resume", dependencies=billable)
+async def resume_review(project_id: str, session: Session = Depends(get_session),
+                        user: CurrentUser = Depends(get_current_user)) -> dict:
+    _get(session, project_id, user)
+    try:
+        step = refine.resume(project_id)
+    except ValueError as exc:
+        raise HTTPException(409, str(exc)) from exc
+    return {"resumed": step, "review": refine.view(project_id)}
+
+
+@router.post("/{project_id}/review/stop")
+async def stop_review(project_id: str, session: Session = Depends(get_session),
+                      user: CurrentUser = Depends(get_current_user)) -> dict:
+    project = _get(session, project_id, user)
+    if (project.review or {}).get("status") not in (*refine.ACTIVE, "review_failed"):
+        raise HTTPException(409, "No scientific review in progress")
+    refine.stop(project_id)
+    return {"review": refine.view(project_id)}
 
 
 @router.get("/{project_id}/package")
@@ -527,7 +617,7 @@ def download_package(project_id: str, session: Session = Depends(get_session),
 
 
 @router.post("/{project_id}/runs/{kind}/cancel")
-def cancel_stage(project_id: str, kind: Literal["literature", "gaps", "plan", "blueprint", "report"],
+def cancel_stage(project_id: str, kind: Literal["literature", "gaps", "plan", "blueprint", "report", "review", "repair"],
                  session: Session = Depends(get_session), user: CurrentUser = Depends(get_current_user)) -> dict:
     """Stop a running planning or report stage (execution has its own pause/cancel)."""
     _get(session, project_id, user)
@@ -548,6 +638,7 @@ async def request_task_changes(project_id: str, task_id: str, body: ChangeReques
     _get(session, project_id, user)
     if not body.feedback.strip():
         raise HTTPException(400, "Describe the change")
+    _review_idle(project_id)
     try:
         rerun = orchestrator.request_changes(project_id, task_id, body.feedback.strip())
     except LookupError as exc:

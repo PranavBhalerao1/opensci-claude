@@ -123,6 +123,133 @@ instruction does not touch. Keep task ids stable where tasks are unchanged and k
 the dependency graph valid."""
 
 
+# ── Repair after an independent scientific review (see refine.py) ──────────
+
+
+class IssueDecision(BaseModel):
+    issue_id: str
+    disposition: Literal["fix", "disclose", "dispute", "escalate"]
+    root_cause: Literal["plan", "blueprint", "execution", "report"] = Field(
+        description="Earliest stage where the mistake was introduced and must be fixed")
+    rationale: str
+
+
+class TaskChange(BaseModel):
+    task_id: str = Field(description="An existing blueprint task id to re-run")
+    change: str = Field(description="Protocol instruction for the re-run, phrased as a method change; "
+                                    "never mention reviews, reviewers or issue ids")
+    issue_ids: list[str]
+
+
+class Directive(BaseModel):
+    issue_ids: list[str]
+    text: str = Field(description="A concrete change the manuscript must make (claims, framing, disclosure)")
+
+
+class RepairPlan(BaseModel):
+    summary: str
+    decisions: list[IssueDecision]
+    plan_revision: str = Field(description="Instruction for revising the research plan; empty if the plan stands")
+    blueprint_changes: str = Field(description="New or changed task specifications (new controls, experiments, "
+                                               "analyses); empty if none")
+    task_changes: list[TaskChange]
+    rerun_failed_tasks: list[str] = Field(description="Unfinished task ids worth retrying; others are skipped")
+    report_directives: list[Directive]
+    withdraw_directives: list[str] = Field(description="Ids of earlier manuscript directives that no longer apply")
+
+
+REPAIR_INSTRUCTIONS = """\
+You are the Planning Agent of OpenScientist. An independent reviewer examined the finished
+study and reported the blocking problems below. Decide how to fix each one at its root
+cause, so the study becomes scientifically valid. You can:
+- revise the research plan (plan_revision) when the design or operationalization is wrong;
+- add or change task specifications (blueprint_changes), e.g. a missing control, baseline,
+  ablation or analysis that needs its own task;
+- re-run existing tasks with a protocol change (task_changes) for implementation or
+  analysis errors; their dependents re-run automatically, everything else is reused;
+- change the manuscript (report_directives) for problems that are only in the text: wrong
+  claims, overstatement, misread citations, captions, missing disclosures.
+
+Rules:
+- Fix each problem at the earliest stage where it was introduced, with the smallest change
+  that fully fixes it. A flawed experiment or analysis is never fixed by rewording the paper.
+- NEVER change the research question or hypothesis, and never redefine success to make the
+  study easier to pass. If a problem cannot be fixed without that, use escalate.
+- Never ask anyone to produce, alter or estimate numbers without running code. If corrected
+  results contradict the hypothesis, the paper reports that honestly.
+- disclose: the problem is real but cannot be fixed with the available data or compute; add a
+  directive that states the limitation and scopes the claims accordingly.
+- dispute: only when the reviewer's evidence is demonstrably wrong; cite the workspace facts.
+  A problem that comes back after a dispute must be fixed, disclosed or escalated.
+- escalate: needs a human decision (e.g. the question itself is ill-posed); also disclose it.
+- Every open concern must be disclosed in the manuscript.
+- Phrase task changes as protocol instructions (what to do differently), not as replies to
+  a review. Use existing task ids. List in rerun_failed_tasks only unfinished tasks whose
+  results the study needs; the rest are recorded as skipped."""
+
+REPAIR_REVISE_GUARD = """
+This revision follows an independent scientific review. Change only what the instruction
+requires. Do not change the research question, hypothesis or null hypothesis. Keep task ids
+of unchanged tasks."""
+
+PROTECTED_FIELDS = ("research_question", "hypothesis", "null_hypothesis")
+OBJECTIVE_FIELDS = ("metrics", "success_criteria", "validation_strategy", "baselines")
+
+
+async def draft_repair(context: str, errors: list[str] | None = None) -> RepairPlan:
+    message = context
+    if errors:
+        message += "\n\nYOUR PREVIOUS REPAIR PLAN WAS REJECTED. Fix these problems:\n- " + "\n- ".join(errors)
+    return await parse(
+        model=settings.model_reasoning,
+        instructions=REPAIR_INSTRUCTIONS,
+        messages=[{"role": "user", "content": message}],
+        schema=RepairPlan,
+        reasoning_effort="high",
+    )
+
+
+def current_plan(project: Project) -> dict:
+    return {k: v for k, v in (project.plan or {}).items() if k not in ("run_id", "approved_at", "schema")}
+
+
+async def revise_for_repair(prev: dict, instruction: str, h: RunHandle) -> tuple[dict, list[str]]:
+    """Revise the plan for a review finding. The question and hypotheses are restored in code;
+    changed metrics, success criteria, validation or baselines are returned for the record."""
+    plan = await parse(
+        model=settings.model_reasoning,
+        instructions=REVISE_INSTRUCTIONS + REPAIR_REVISE_GUARD,
+        messages=[{"role": "user", "content": f"Instruction: {instruction}\n\nCurrent plan:\n" + json.dumps(prev)}],
+        schema=ResearchPlan,
+        reasoning_effort="medium",
+    )
+    plan = await _finalise(plan, h, settings.model_reasoning, [])
+    data = plan.model_dump()
+    for f in PROTECTED_FIELDS:
+        data[f] = prev.get(f, data[f])
+    changed = [f for f in OBJECTIVE_FIELDS
+               if json.dumps(prev.get(f), sort_keys=True) != json.dumps(data.get(f), sort_keys=True)]
+    return data, changed
+
+
+def save_plan_run(project_id: str, plan: dict, instruction: str) -> Run:
+    """Store a review-driven plan revision as a completed plan run (keeps revision history)."""
+    prev = latest_plan_run(project_id)
+    now = datetime.now(timezone.utc)
+    with Session(engine) as s:
+        run = Run(
+            project_id=project_id, kind="plan", status="done", phase="done",
+            counts=_summary(ResearchPlan.model_validate(plan)),
+            log=[{"t": now.isoformat(), "text": "Revised after the scientific review"}],
+            result={**(prev.result if prev else {}), "plan": plan, "instruction": instruction},
+            finished_at=now,
+        )
+        s.add(run)
+        s.commit()
+        s.refresh(run)
+        return run
+
+
 # ── Validation ─────────────────────────────────────────────────────────────
 
 

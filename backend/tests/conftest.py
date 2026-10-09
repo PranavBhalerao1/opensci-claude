@@ -24,7 +24,7 @@ if os.environ.get("BEDROCK_INTEGRATION") != "1":
     os.environ.pop("AWS_SESSION_TOKEN", None)
     os.environ["TAVILY_API_KEY"] = ""
     os.environ.pop("BEDROCK_MODEL_ID", None)
-    for _tier in ("MODEL_REASONING", "MODEL_STANDARD", "MODEL_BULK"):
+    for _tier in ("MODEL_REASONING", "MODEL_STANDARD", "MODEL_BULK", "MODEL_JUDGE"):
         os.environ.pop(_tier, None)
 
 from app.db import init_db  # noqa: E402 (must follow the os.environ overrides above)

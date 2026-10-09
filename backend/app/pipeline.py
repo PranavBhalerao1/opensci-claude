@@ -4,6 +4,9 @@ confirm brief → literature → gaps → choose gap (autonomous: recommended) �
 → approve plan → blueprint → approve blueprint → ready → execute → executed
 → report (consolidate, write, compile, audit) → complete
 (autonomous mode makes every choice and approval itself)
+
+With scientific review enabled (refine.py), the report is followed by an independent
+review instead of "complete"; repairs re-enter execution and report through the same jobs.
 """
 
 import functools
@@ -117,12 +120,21 @@ async def _after_blueprint(project_id: str) -> None:
 
 
 def start_execution(project_id: str) -> Run:
-    return jobs.start(project_id, "execute", orchestrator.run, then=_after_execution)
+    from . import refine  # local import: refine imports this module
+
+    run = jobs.start(project_id, "execute", orchestrator.run, then=_after_execution)
+    refine.ensure_watcher(project_id)
+    return run
 
 
 async def _after_execution(project_id: str) -> None:
     """Autonomous projects write the report only when every task finished (done or
-    skipped); otherwise the run stops for attention rather than reporting on gaps."""
+    skipped); otherwise the run stops for attention rather than reporting on gaps.
+    Repair executions of the scientific review continue in refine."""
+    from . import refine
+
+    if refine.after_execution(project_id):
+        return
     with Session(engine) as s:
         project = s.get(Project, project_id)
         autonomous, stage = project.autonomous, project.stage
@@ -138,4 +150,7 @@ def start_report(project_id: str) -> Run:
 
 
 async def _after_report(project_id: str) -> None:
-    _set_stage(project_id, "complete")
+    from . import refine
+
+    if not refine.after_report(project_id):  # refinement disabled or already finished
+        _set_stage(project_id, "complete")

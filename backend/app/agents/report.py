@@ -10,7 +10,7 @@ references.bib, and a claims audit compares reported numbers with the evidence.
 import json
 import re
 import zipfile
-from datetime import date
+from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Literal
 
@@ -18,7 +18,7 @@ import httpx
 from pydantic import BaseModel, Field
 from sqlmodel import Session, select
 
-from .. import beta
+from .. import beta, integrity
 from ..db import Paper, Project, ProjectPaper, Run, TaskState, engine
 from ..execution.agent import AgentSpec, run_agent
 from ..execution.orchestrator import TEXT_SUFFIXES, model_for, project_amendments
@@ -115,6 +115,7 @@ Rules:
 - Include the listed figures with \\includegraphics (paths relative to {dir}/,
   e.g. ../figures/x.png) and captions; include tables from the listed artifacts.
 - State limitations and deviations honestly; include a reproducibility statement.
+- Write files only under {dir}/ (e.g. {dir}/tables/); never change research files elsewhere.
 - Write like a conference paper: report numbers at sensible precision (usually 3-4
   significant figures, with units), never raw floats; keep file paths, commands
   and task ids out of the abstract and main text — put them in a Reproducibility
@@ -211,9 +212,23 @@ def _gather(project_id: str) -> dict:
         lit = s.exec(select(Run).where(Run.project_id == project_id, Run.kind == "literature", Run.status == "done")
                      .order_by(Run.started_at.desc())).first()
         cfg = project.settings or {}
-        brief, plan, gap = project.brief, project.plan, project.chosen_gap
+        brief, plan, gap, review = project.brief, project.plan, project.chosen_gap, project.review or {}
     return {"brief": brief, "plan": plan, "gap": gap, "blueprint": bp, "states": states,
-            "overview": lit.result["overview"] if lit else None, "policy": cfg.get("model_policy", "default")}
+            "overview": lit.result["overview"] if lit else None, "policy": cfg.get("model_policy", "default"),
+            "refinement": bool((cfg.get("refinement") or {}).get("enabled")) or bool(review),
+            "directives": _directives(review)}
+
+
+def _directives(review: dict) -> str:
+    """Manuscript directives from an in-progress scientific review (see refine.py), as a list."""
+    if review.get("status") not in ("repairing", "attention"):
+        return ""
+    items = [d["text"] for d in (review.get("directives") or {}).values()] + list(review.get("gate_directives") or [])
+    return "\n".join(f"- {t}" for t in items)
+
+
+DIRECTIVES_HEADER = ("REVISION DIRECTIVES (mandatory; never invent or alter results to satisfy them; if one cannot "
+                     "be met from the evidence, state the limitation in the paper):\n")
 
 
 # ── Job ────────────────────────────────────────────────────────────────────
@@ -252,6 +267,8 @@ async def run(project_id: str, h: RunHandle) -> dict:
         f"FILE INVENTORY:\n" + "\n".join(f"- {f['path']} ({f['size']:,} B)" for f in files[:300])
         + f"\n\nFILE CONTENTS:\n{_file_digest(root, files)}"
     )
+    if g["directives"]:
+        context = DIRECTIVES_HEADER + g["directives"] + "\n\n" + context
     scaffold = await parse(
         model=model_for("reasoning", g["policy"]),
         instructions=CONSOLIDATE_INSTRUCTIONS,
@@ -281,23 +298,31 @@ async def run(project_id: str, h: RunHandle) -> dict:
     )
     prompt = (f"Report scaffold ({REPORT_DIR}/scaffold.json):\n{scaffold.model_dump_json()}\n\n"
               f"Citation keys available in {REPORT_DIR}/references.bib: {', '.join(refs) or 'none'}")
+    if g["directives"]:
+        prompt = DIRECTIVES_HEADER + g["directives"] + "\n\n" + prompt
+    # Write guard: the paper is written from the research files, never by changing them.
+    before, writing_from = integrity.workspace_manifest(root), datetime.now(timezone.utc)
     async with httpx.AsyncClient() as http:
         result = await run_agent(spec, prompt, ToolContext(project_id, sandbox, http, agent_name="Report Agent"),
                                  on_event=lambda e: h.note(f"{e.get('tool') or e['type']}: {str(e.get('args') or e.get('text') or '')[:90]}")
                                  if e.get("tool") in ("write_file", "run_shell", "install_conda_packages", "report_result") else None)
     if result.status == "credit_limit":
         raise beta.BetaLimitReached()
-
-    # 3 · Audit
-    h.phase("auditing", "Checking citations and claims against the evidence")
     await sandbox.pull()
+    guard = integrity.manifest_violations(before, integrity.workspace_manifest(root), writing_from,
+                                          integrity.declared_outputs(g["blueprint"]))
+    if guard["hard"]:
+        h.note(f"Research files changed while the paper was written: {', '.join(guard['hard'][:5])}")
+
+    # 3 · Audit (with scientific review on, the independent judge replaces the claims audit)
+    h.phase("auditing", "Checking citations and claims against the evidence")
     tex_path = root / REPORT_DIR / "paper.tex"
     tex = tex_path.read_text(encoding="utf-8", errors="replace") if tex_path.exists() else ""
     cited = set(re.findall(r"\\cite[pt]?\*?(?:\[[^\]]*\])*\{([^}]*)\}", tex))
     cited_keys = {k.strip() for group in cited for k in group.split(",") if k.strip()}
     unknown_citations = sorted(cited_keys - set(refs))
     audit = Audit(issues=[])
-    if tex:
+    if tex and not g["refinement"]:
         audit = await parse(
             model=model_for("standard", g["policy"]),
             instructions=AUDIT_INSTRUCTIONS,
@@ -314,15 +339,24 @@ async def run(project_id: str, h: RunHandle) -> dict:
         "files": {"tex": tex_path.exists(), "pdf": pdf, "bib": True},
         "citations": {"used": sorted(cited_keys), "unknown": unknown_citations, "available": len(refs)},
         "audit": [i.model_dump() for i in audit.issues],
+        "integrity": guard,
     }
 
 
 def package(project_id: str) -> Path:
-    """Zip the research package: everything in the workspace except environments and caches."""
+    """Zip the research package: everything in the workspace except environments and caches,
+    plus the scientific review record (mistakes.json per review, HISTORY.md, REVIEW.md)."""
+    from .plan import EXPORT_DIR
+
     root = sandbox_for(project_id).root
     out = root.parent / f"{project_id}-research-package.zip"
+    review = EXPORT_DIR / project_id / "review"
     with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED) as z:
         for f in _inventory(root):
             if f["size"] < 200 * 1024**2:
                 z.write(root / f["path"], f"{project_id}/{f['path']}")
+        if review.is_dir():
+            for p in sorted(review.rglob("*")):
+                if p.is_file() and p.suffix != ".pdf":
+                    z.write(p, f"{project_id}/review/{p.relative_to(review).as_posix()}")
     return out

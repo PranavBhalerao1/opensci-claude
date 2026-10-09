@@ -1,4 +1,4 @@
-import type { Project } from "@/lib/api";
+import { reviewBadge, type Project } from "@/lib/api";
 import { useAuth } from "@/lib/supabase/AuthProvider";
 import { useBeta } from "./BetaGate";
 
@@ -39,7 +39,10 @@ export default function Sidebar({ projects, activeId, onSelect, onNew, onDelete 
           >
             <button onClick={() => onSelect(p.id)} className="min-w-0 flex-1 px-3 py-2 text-left">
               <div className={`truncate text-[13px] ${p.id === activeId ? "text-ink" : "text-muted"}`}>{p.title}</div>
-              <div className="font-mono text-[10px] uppercase tracking-wider text-faint">{p.stage}</div>
+              <div className="font-mono text-[10px] uppercase tracking-wider text-faint">
+                {p.stage}
+                {p.review?.status ? ` · ${reviewBadge(p).label}` : ""}
+              </div>
             </button>
             <button
               onClick={() => onDelete(p.id)}

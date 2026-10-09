@@ -537,13 +537,15 @@ async def run(project_id: str, h: RunHandle) -> dict:
         # Read everything before commit(): committing expires loaded objects.
         mp, bp_run_id = bp_run.result["master_plan"], bp_run.id
         autonomous = project.autonomous
+        # Scientific-review repairs run without guided checkpoints (they are applied automatically).
+        repairing = (project.review or {}).get("status") in ("repairing", "attention")
         policy = (project.settings or {}).get("model_policy", "default")
         budget = float(((project.settings or {}).get("budget") or {}).get("llm_usd", 15.0))
         project.stage = "executing"
         s.add(project)
         s.commit()
     tasks = {t["id"]: t for t in mp["tasks"]}
-    checkpoints = {} if autonomous else {c["after_task"]: c["reason"] for c in mp["checkpoints"]}
+    checkpoints = {} if autonomous or repairing else {c["after_task"]: c["reason"] for c in mp["checkpoints"]}
     capabilities = sandbox_for(project_id).capabilities
     prepare_states(project_id, bp_run_id, mp)
     load_secrets(project_id)

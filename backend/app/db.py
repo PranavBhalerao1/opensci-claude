@@ -37,7 +37,7 @@ class Project(SQLModel, table=True):
     user_id: str | None = Field(default=None, sa_column=Column(Uuid(as_uuid=False), index=True))
     title: str = "Untitled research"
     # clarify -> literature -> gaps -> plan -> blueprint -> ready -> executing -> executed
-    #   -> reporting -> complete
+    #   -> reporting -> [reviewing ->] complete (refinement may loop back through execution)
     stage: str = "clarify"
     autonomous: bool = False
     settings: dict = Field(default_factory=dict, sa_column=Column(JSON))
@@ -49,6 +49,8 @@ class Project(SQLModel, table=True):
     plan: dict | None = Field(default=None, sa_column=Column(NullableJSON))
     # Approval record for master_plan.json (see agents/blueprint.py)
     blueprint: dict | None = Field(default=None, sa_column=Column(NullableJSON))
+    # Scientific review and refinement state (see refine.py); None = never reviewed
+    review: dict | None = Field(default=None, sa_column=Column(NullableJSON))
     created_at: datetime = Field(default_factory=_now)
     updated_at: datetime = Field(default_factory=_now)
 
@@ -127,7 +129,7 @@ class Run(SQLModel, table=True):
 
     id: str = Field(default_factory=_id, primary_key=True)
     project_id: str = Field(foreign_key="projects.id", index=True)
-    kind: str  # literature | gaps | plan
+    kind: str  # literature | gaps | plan | blueprint | execute | report | review | repair
     status: str = "running"  # running | done | error
     phase: str = "starting"
     counts: dict = Field(default_factory=dict, sa_column=Column(JSON))

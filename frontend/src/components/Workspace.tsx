@@ -12,6 +12,7 @@ import {
   literatureApi,
   planApi,
   reportApi,
+  reviewApi,
   sendTurn,
   stageApi,
   type Answer,
@@ -25,6 +26,8 @@ import {
   type PlanRun as PlanRunT,
   type Project,
   type ReportRun as ReportRunT,
+  type ReviewView,
+  type Run,
   type Turn,
 } from "@/lib/api";
 import BlueprintRun from "./BlueprintRun";
@@ -35,6 +38,7 @@ import Library from "./Library";
 import LiteratureRun from "./LiteratureRun";
 import PlanRun from "./PlanRun";
 import ReportRun from "./ReportRun";
+import ReviewRun from "./ReviewRun";
 import Notebook from "./Notebook";
 import QuestionCards from "./QuestionCards";
 import Sidebar from "./Sidebar";
@@ -67,6 +71,7 @@ export default function Workspace({ projectId: initialId }: { projectId?: string
   const [execKick, setExecKick] = useState(0);
   const [files, setFiles] = useState<{ focus?: string } | null>(null);
   const [reportRun, setReportRun] = useState<ReportRunT | null>(null);
+  const [review, setReview] = useState<{ view: ReviewView; enabled: boolean; run: Run | null } | null>(null);
   const [library, setLibrary] = useState<{ focus?: string } | null>(null);
   // A project created in this tab already has its state locally; skip the reload.
   const justCreated = useRef<string | null>(null);
@@ -139,6 +144,7 @@ export default function Workspace({ projectId: initialId }: { projectId?: string
   const planFor = project?.chosen_gap ? project.id : null;
   const planStatus = planRun?.run?.status;
   const planRunId = planRun?.run?.id;
+  const approvedPlanId = project?.plan?.run_id; // changes when a scientific review revises the plan
   const awaitingAutoApproval = Boolean(project?.autonomous && planStatus === "done" && !project?.plan);
   useEffect(() => {
     if (!planFor) return;
@@ -159,12 +165,13 @@ export default function Workspace({ projectId: initialId }: { projectId?: string
       cancelled = true;
       clearInterval(timer);
     };
-  }, [planFor, planStatus, planRunId, awaitingAutoApproval]);
+  }, [planFor, planStatus, planRunId, approvedPlanId, awaitingAutoApproval]);
 
   // The blueprint compiles once the plan is approved.
   const bpFor = project?.plan ? project.id : null;
   const bpStatus = bpRun?.status;
   const bpRunId = bpRun?.id;
+  const approvedBpId = project?.blueprint?.run_id; // changes when a scientific review amends the blueprint
   const awaitingBpApproval = Boolean(project?.autonomous && bpStatus === "done" && !project?.blueprint);
   useEffect(() => {
     if (!bpFor) return;
@@ -187,7 +194,7 @@ export default function Workspace({ projectId: initialId }: { projectId?: string
       clearInterval(timer);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- stage only matters for the no-run case
-  }, [bpFor, bpStatus, bpRunId, awaitingBpApproval]);
+  }, [bpFor, bpStatus, bpRunId, approvedBpId, awaitingBpApproval]);
 
   const startBlueprint = async () => {
     if (!projectId) return;
@@ -208,9 +215,10 @@ export default function Workspace({ projectId: initialId }: { projectId?: string
     }
   };
 
-  // Execution: poll while the run is live (and once whenever an action kicks it).
+  // Execution: poll while the run is live (and once whenever an action kicks it). A scientific
+  // review can start a repair execution by itself; its live flag keeps this card current.
   const execFor = project?.blueprint ? project.id : null;
-  const execLive = Boolean(exec?.live);
+  const execLive = Boolean(exec?.live) || Boolean(review?.view.live?.execute);
   useEffect(() => {
     if (!execFor) return;
     let cancelled = false;
@@ -232,9 +240,12 @@ export default function Workspace({ projectId: initialId }: { projectId?: string
     };
   }, [execFor, execLive, execKick]);
 
-  // Report: available once execution has finished.
-  const reportFor = project && ["executed", "reporting", "complete"].includes(project.stage) ? project.id : null;
-  const reportStatus = reportRun?.status;
+  // Report: available once execution has finished (and throughout a scientific review).
+  const reportFor =
+    project && (["executed", "reporting", "reviewing", "complete"].includes(project.stage) || project.review?.status)
+      ? project.id
+      : null;
+  const reportStatus = reportRun?.status === "running" || review?.view.live?.report ? "running" : reportRun?.status;
   useEffect(() => {
     if (!reportFor) return;
     let cancelled = false;
@@ -261,6 +272,59 @@ export default function Workspace({ projectId: initialId }: { projectId?: string
     if (!projectId) return;
     try {
       setReportRun(await reportApi.run(projectId));
+    } catch (e) {
+      setError(String(e));
+    }
+  };
+
+  // Scientific review: shown for finished papers; polled while the review loop is working.
+  const reviewFor =
+    project && (project.review?.status || ["reviewing", "complete"].includes(project.stage)) ? project.id : null;
+  const reviewStatus = project?.review?.status;
+  // Attention and failures wait for the user (other cards refresh the project meanwhile).
+  const reviewBusy =
+    (["reviewing", "repairing"].includes(reviewStatus ?? "") && review?.view.status !== "attention" &&
+      review?.view.status !== "review_failed") ||
+    Object.values(review?.view.live ?? {}).some(Boolean);
+  const loadReview = useCallback(
+    (id: string) =>
+      reviewApi.get(id).then((d) => {
+        setReview({ view: d.review, enabled: d.enabled, run: d.run });
+        setProject(d.project);
+        return d;
+      }),
+    [],
+  );
+  useEffect(() => {
+    if (!reviewFor) return;
+    let cancelled = false;
+    const load = () =>
+      void loadReview(reviewFor)
+        .then((d) => !cancelled && d.review.status && !["reviewing", "repairing"].includes(d.review.status) && refreshProjects())
+        .catch((e) => !cancelled && setError(String(e)));
+    load();
+    if (!reviewBusy) return () => void (cancelled = true);
+    const timer = setInterval(load, 3000);
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+    };
+  }, [reviewFor, reviewBusy, loadReview, refreshProjects]);
+
+  const reviewAction = async (action: "start" | "resume" | "stop") => {
+    if (!projectId) return;
+    if (
+      action === "stop" &&
+      !confirm(
+        "Stop the scientific review? Work in progress stops. Every reviewed version stays in the review history; " +
+          "a paper interrupted mid-rewrite is marked as changed since review.",
+      )
+    )
+      return;
+    try {
+      await reviewApi[action](projectId);
+      await loadReview(projectId);
+      refreshProjects();
     } catch (e) {
       setError(String(e));
     }
@@ -344,6 +408,7 @@ export default function Workspace({ projectId: initialId }: { projectId?: string
     setExecKick(0);
     setFiles(null);
     setReportRun(null);
+    setReview(null);
     setLibrary(null);
     setProjectId(id);
   };
@@ -450,6 +515,8 @@ export default function Workspace({ projectId: initialId }: { projectId?: string
       ["plan", planRun?.run?.status],
       ["blueprint", bpRun?.status],
       ["report", reportRun?.status],
+      ["review", review?.view.live?.review ? "running" : undefined],
+      ["repair", review?.view.live?.repair ? "running" : undefined],
     ] as const
   ).find(([, status]) => status === "running")?.[0];
 
@@ -465,6 +532,7 @@ export default function Workspace({ projectId: initialId }: { projectId?: string
         setPlanRun((p) => (p?.run ? { ...p, run: { ...p.run, status: "error", error: "Cancelled" } } : p));
       if (runningStage === "blueprint") setBpRun((r) => (r ? { ...r, status: "error", error: "Cancelled" } : r));
       if (runningStage === "report") setReportRun((r) => (r ? { ...r, status: "error", error: "Cancelled" } : r));
+      if (runningStage === "review" || runningStage === "repair") await loadReview(projectId);
     } catch (e) {
       setError(String(e));
     }
@@ -579,6 +647,15 @@ export default function Workspace({ projectId: initialId }: { projectId?: string
                         run={reportRun}
                         onStart={startReport}
                         onOpenFiles={(focus) => setFiles({ focus })}
+                      />
+                    )}
+                    {reviewFor && review && (
+                      <ReviewRun
+                        project={project}
+                        review={review.view}
+                        enabled={review.enabled}
+                        run={review.run}
+                        onAction={reviewAction}
                       />
                     )}
                   </>
