@@ -1,0 +1,218 @@
+{
+  "id": "9e0941aaa2df",
+  "project_id": "d95fb65c9f7a",
+  "kind": "literature",
+  "status": "done",
+  "phase": "done",
+  "counts": {
+    "found": 516,
+    "included": 45,
+    "screened": 300,
+    "extracted": 45,
+    "candidates": 300,
+    "queries_done": 10,
+    "queries_total": 12
+  },
+  "log": [
+    {
+      "t": "2026-10-09T19:20:52.351018+00:00",
+      "text": "Searching 12 queries on Semantic Scholar"
+    },
+    {
+      "t": "2026-10-09T19:21:36.949464+00:00",
+      "text": "Semantic Scholar failed for “data augmentation convolutional neural network generalization” (HTTPStatusError); will try OpenAlex"
+    },
+    {
+      "t": "2026-10-09T19:22:24.161102+00:00",
+      "text": "Semantic Scholar failed for “Fashion-MNIST benchmark CNN classification” (HTTPStatusError); will try OpenAlex"
+    },
+    {
+      "t": "2026-10-09T19:23:30.312347+00:00",
+      "text": "Semantic Scholar failed for “small CNN image classification PyTorch” (HTTPStatusError); will try OpenAlex"
+    },
+    {
+      "t": "2026-10-09T19:24:22.668693+00:00",
+      "text": "Semantic Scholar failed for “Fashion-MNIST state of the art accuracy” (HTTPStatusError); will try OpenAlex"
+    },
+    {
+      "t": "2026-10-09T19:25:09.567117+00:00",
+      "text": "Semantic Scholar failed for “deep learning regularization techniques image classification” (HTTPStatusError); will try OpenAlex"
+    },
+    {
+      "t": "2026-10-09T19:25:56.831415+00:00",
+      "text": "Semantic Scholar failed for “augmentation vs no augmentation test accuracy comparison” (HTTPStatusError); will try OpenAlex"
+    },
+    {
+      "t": "2026-10-09T19:26:48.299723+00:00",
+      "text": "Semantic Scholar failed for “torchvision transforms augmentation pipeline” (HTTPStatusError); will try OpenAlex"
+    },
+    {
+      "t": "2026-10-09T19:27:35.572828+00:00",
+      "text": "Semantic Scholar failed for “reproducibility random seed deep learning experiments” (HTTPStatusError); will try OpenAlex"
+    },
+    {
+      "t": "2026-10-09T19:27:35.691390+00:00",
+      "text": "Searching OpenAlex for 8 queries"
+    },
+    {
+      "t": "2026-10-09T19:27:59.818523+00:00",
+      "text": "Found 516 unique papers; screening the top 300"
+    },
+    {
+      "t": "2026-10-09T19:28:22.146549+00:00",
+      "text": "45 papers passed screening"
+    },
+    {
+      "t": "2026-10-09T19:28:53.467716+00:00",
+      "text": "Reading 45 papers"
+    },
+    {
+      "t": "2026-10-09T19:29:36.521963+00:00",
+      "text": "Linking citations between 17 papers"
+    },
+    {
+      "t": "2026-10-09T19:29:37.225527+00:00",
+      "text": "Writing the literature overview"
+    },
+    {
+      "t": "2026-10-09T19:30:00.589714+00:00",
+      "text": "Literature review complete"
+    }
+  ],
+  "result": {
+    "overview": {
+      "themes": [
+        {
+          "name": "CNN Architectures and Baselines on Fashion-MNIST",
+          "paper_ids": [
+            "0f1f5f52211a",
+            "fc420bf8b599",
+            "4547edfd3536",
+            "30dbb26f0428",
+            "2444783adaac",
+            "dd9a710202db",
+            "d9811187e7b0",
+            "09eb24b1fdfe",
+            "e01935a9b771",
+            "73d82654377c",
+            "3bf5f5d90522",
+            "a99921e56ae2"
+          ],
+          "description": "A large body of work benchmarks various CNN designs on Fashion-MNIST, from simple sequential CNNs to deeper multi-block architectures. These papers establish the performance landscape against which augmentation gains can be measured."
+        },
+        {
+          "name": "Effect of Data Augmentation on CNN Generalization",
+          "paper_ids": [
+            "44e58448bd5c",
+            "d7efaef3652c",
+            "d28ad320549d",
+            "310b05d6a070",
+            "286274c89da9",
+            "86c2fcac8831",
+            "8bfc13b8f54e",
+            "da4d9dbf9edd",
+            "5e7fbe0a1102",
+            "88564ebc71d9",
+            "c5d1eeccc9a6",
+            "c991bd15d11a",
+            "b3188440a034"
+          ],
+          "description": "These papers directly study how standard image augmentations (flips, rotations, translations, crops) affect CNN training and test performance. They provide empirical evidence that even simple augmentations meaningfully reduce overfitting and improve accuracy."
+        },
+        {
+          "name": "Augmentation Techniques: Surveys and Taxonomy",
+          "paper_ids": [
+            "e5cd16d4dfbf",
+            "a9ccd647daf8",
+            "b5823c4be657",
+            "ed122d07d46c",
+            "61a39a30a513",
+            "5661879f1565"
+          ],
+          "description": "Comprehensive surveys cataloguing the breadth of augmentation strategies, from classical geometric transforms to GAN-based and meta-learning approaches. These papers contextualize the three simple augmentations used in this experiment within the wider space of options."
+        },
+        {
+          "name": "Optimizer, Regularization, and Hyperparameter Interactions",
+          "paper_ids": [
+            "0f1f5f52211a",
+            "4fdf3425e9fd",
+            "82fabaf7cebb",
+            "de536f09d77d",
+            "97da22b2a365",
+            "8e99c357da72"
+          ],
+          "description": "These papers examine how optimizer choice (Adam, SGD), dropout, batch normalization, and hyperparameter tuning interact with augmentation to affect CNN performance. Relevant because the experiment fixes optimizer and hyperparameters to isolate augmentation effects."
+        },
+        {
+          "name": "Fashion-MNIST Augmentation and High-Accuracy Results",
+          "paper_ids": [
+            "2444783adaac",
+            "4fdf3425e9fd",
+            "0f1f5f52211a",
+            "a99921e56ae2"
+          ],
+          "description": "Papers that specifically combine augmentation with CNN training on Fashion-MNIST and report high accuracy results, directly relevant as upper-bound benchmarks and as evidence that augmentation helps on this exact dataset."
+        },
+        {
+          "name": "Augmentation Effects Across Domains and Datasets",
+          "paper_ids": [
+            "835e64d40497",
+            "3e0448b22b43",
+            "6d913913eccc",
+            "b3188440a034",
+            "8bfc13b8f54e",
+            "c5d1eeccc9a6",
+            "c991bd15d11a",
+            "e6e95e4de057"
+          ],
+          "description": "Papers applying augmentation to diverse domains (medical, satellite, plant, defect detection) that collectively reinforce the generality of augmentation benefits while also showing dataset-specific variation in what augmentations help most."
+        },
+        {
+          "name": "Lightweight CNN Design and Reproducibility in PyTorch",
+          "paper_ids": [
+            "7bf8d9723b33",
+            "504159c8693d",
+            "5d5bb54373af",
+            "d9811187e7b0",
+            "30dbb26f0428",
+            "8e99c357da72",
+            "c1612ea7e879"
+          ],
+          "description": "Papers focusing on building and evaluating small, efficient CNN models in frameworks like PyTorch, addressing practical concerns of training speed, reproducibility across seeds, and controlled experimental design."
+        }
+      ],
+      "summary": "The field of CNN-based image classification on Fashion-MNIST is well-established, with reported test accuracies ranging from ~88% for simple architectures to near 99.65% for optimized, augmented models. Data augmentation — including flips, translations, rotations, and more exotic methods — is broadly shown to improve generalization, reduce overfitting, and push accuracy higher, particularly when training data is limited or the model is small. The literature consistently demonstrates that even basic geometric augmentations (the focus of this experiment) provide measurable accuracy gains over unaugmented baselines.\n\nHowever, the field increasingly moves beyond simple augmentations toward advanced strategies (Mixup, CutMix, AutoAugment) and larger architectures (ResNets, ViTs), making it harder to isolate the specific contribution of simple augmentation on small CNNs. Most published work does not run controlled two-condition experiments with fixed seeds, making direct comparisons across studies difficult. This experiment's controlled design — holding architecture, optimizer, and hyperparameters fixed while varying only augmentation — directly addresses a gap in reproducible, minimal-footprint benchmarking on Fashion-MNIST.",
+      "open_problems": [
+        "Isolating the contribution of individual augmentation types (e.g., flips vs. rotations vs. translations) without confounding from other design choices",
+        "Determining how augmentation benefits scale with model size — whether small CNNs benefit more or less than larger architectures",
+        "Lack of standardized controlled experiments: most papers vary multiple factors simultaneously, making attribution of accuracy gains to augmentation alone difficult",
+        "Reproducibility across random seeds is rarely reported with more than one or two seeds, leaving statistical reliability of results unclear",
+        "Optimal augmentation magnitude (degree of rotation, translation range) is dataset- and architecture-dependent and rarely systematically searched for simple CNNs",
+        "Generalization from benchmark datasets like Fashion-MNIST to real-world fashion images remains a persistent gap",
+        "Whether gains from simple augmentations plateau quickly with more training epochs, and whether 5 epochs is sufficient to observe the full effect"
+      ],
+      "common_methods": [
+        "Convolutional Neural Networks (CNN)",
+        "Data augmentation (random flips, rotations, translations)",
+        "Adam and SGD optimizers",
+        "Dropout regularization",
+        "Batch normalization",
+        "ReLU activation",
+        "Max pooling",
+        "Softmax classification head",
+        "PyTorch / TensorFlow / Keras",
+        "Train/validation/test splits with fixed random seeds"
+      ],
+      "common_datasets": [
+        "Fashion-MNIST",
+        "MNIST",
+        "CIFAR-10",
+        "ImageNet / Imagenette",
+        "CIFAR-100"
+      ]
+    }
+  },
+  "error": null,
+  "started_at": "2026-10-09 19:20:51.648413+00:00",
+  "finished_at": "2026-10-09 19:30:00.711596+00:00"
+}

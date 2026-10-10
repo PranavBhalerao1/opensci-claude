@@ -1,0 +1,93 @@
+{
+  "title": "Data Augmentation Impact on CNN: Fashion-MNIST",
+  "domain": "Computer Science",
+  "summary": "This study trains a small convolutional neural network on Fashion-MNIST under two controlled conditions — standard training and training with basic image augmentations — holding all other hyperparameters fixed. Each condition is run with two random seeds (42 and 123) to provide modest reproducibility evidence without overstating statistical significance. The experiment measures test accuracy, training curves, and validation performance to determine whether simple augmentation meaningfully improves generalization.",
+  "scope_in": [
+    "Fashion-MNIST dataset (60 000 train / 10 000 test split)",
+    "Small CNN implemented in PyTorch (two or three conv blocks + fully connected head)",
+    "Two training conditions: no augmentation vs. random horizontal flip + small random translation (up to 10%) + minor rotation (up to 10°)",
+    "5 training epochs per condition",
+    "Random seeds 42 and 123 for both conditions",
+    "Identical architecture, optimizer (Adam or SGD with fixed LR), batch size, and train/validation split across conditions",
+    "GPU training on Google Colab T4 or L4 via CUDA, with logged evidence of GPU detection",
+    "Test accuracy, per-epoch training loss, and validation accuracy curves",
+    "Summary table comparing conditions and seeds",
+    "Figures: learning curves per condition, bar chart of final test accuracies"
+  ],
+  "scope_out": [
+    "Hyperparameter search or learning-rate tuning",
+    "Architectures other than the single small CNN",
+    "Augmentation strategies beyond the three specified transforms (no Cutout, Mixup, AutoAugment, etc.)",
+    "Statistical significance testing (e.g., t-tests) given only two seeds",
+    "Transfer learning or pre-trained weights",
+    "Datasets other than Fashion-MNIST",
+    "CPU-only training runs as substitutes for GPU runs"
+  ],
+  "subfields": [
+    "Deep Learning",
+    "Computer Vision",
+    "Empirical Machine Learning"
+  ],
+  "assumptions": [
+    "Optimizer assumed to be Adam with a fixed learning rate of 1e-3 (a standard sensible default for small CNNs on Fashion-MNIST), as the user did not specify one explicitly.",
+    "Train/validation split assumed to be 90/10 of the 60 000 training images (54 000 train, 6 000 validation), a common practical choice.",
+    "CNN architecture assumed to consist of two convolutional blocks (Conv→ReLU→MaxPool) followed by a two-layer fully connected head, balancing speed and capacity for Fashion-MNIST.",
+    "Batch size assumed to be 64, a widely used default that fits comfortably on a T4/L4 GPU.",
+    "Augmentations are applied only at training time; the validation and test sets use only normalization (mean/std of Fashion-MNIST)."
+  ],
+  "constraints": [
+    "PyTorch framework only",
+    "CUDA GPU training mandatory — CPU substitution not permitted",
+    "Exactly 5 training epochs per condition per seed",
+    "Seeds: 42 and 123 only",
+    "No overstating statistical significance with two seeds",
+    "Real computations and real experimental outputs; no fabricated results",
+    "Augmentations limited to: random horizontal flip, small random translation (≤10%), minor rotation (≤10°)",
+    "All non-training code (plotting, tables) may run on CPU sandbox"
+  ],
+  "result_type": "empirical",
+  "key_concepts": [
+    {
+      "term": "Data Augmentation",
+      "definition": "Artificially expanding the training dataset by applying label-preserving transformations (e.g., flips, shifts, rotations) to input images during training to improve generalization."
+    },
+    {
+      "term": "Convolutional Neural Network (CNN)",
+      "definition": "A neural network architecture that uses learnable spatial filters to extract hierarchical features from images, commonly used for image classification."
+    },
+    {
+      "term": "Fashion-MNIST",
+      "definition": "A benchmark image dataset of 70,000 28×28 grayscale images across 10 clothing categories, used as a drop-in replacement for the original MNIST digit dataset."
+    },
+    {
+      "term": "Generalization",
+      "definition": "A model's ability to perform well on unseen test data rather than merely memorizing the training set."
+    },
+    {
+      "term": "Random Seed",
+      "definition": "An integer that initializes the random number generator, ensuring that weight initialization and data shuffling are reproducible across runs."
+    },
+    {
+      "term": "Test Accuracy",
+      "definition": "The fraction of test-set examples correctly classified by the trained model, the primary evaluation metric here."
+    }
+  ],
+  "core_question": "Does applying simple image augmentation (random horizontal flips, small translations, and minor rotations) during training improve the test accuracy of a small CNN on Fashion-MNIST compared with identical training without augmentation?",
+  "data_resources": "Fashion-MNIST loaded directly via torchvision.datasets.FashionMNIST (public, ~30 MB); no external data acquisition needed.",
+  "user_expertise": "Specified by the user; project is scoped for clear, reproducible execution with explicit implementation constraints.",
+  "search_keywords": [
+    "data augmentation convolutional neural network generalization",
+    "Fashion-MNIST benchmark CNN classification",
+    "image augmentation training regularization deep learning",
+    "random flipping rotation translation augmentation CNN",
+    "small CNN image classification PyTorch",
+    "data augmentation empirical study image recognition",
+    "Fashion-MNIST state of the art accuracy",
+    "deep learning regularization techniques image classification",
+    "augmentation vs no augmentation test accuracy comparison",
+    "training data augmentation overfitting reduction",
+    "torchvision transforms augmentation pipeline",
+    "reproducibility random seed deep learning experiments"
+  ],
+  "compute_resources": "Google Colab GPU instance (T4 or L4) via the GPU job tool for all neural-network training runs; standard CPU sandbox for data preprocessing, result aggregation, and plotting."
+}

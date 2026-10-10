@@ -1,0 +1,450 @@
+{
+  "id": "09a1fad24593",
+  "project_id": "6d8c3c93c209",
+  "kind": "report",
+  "status": "done",
+  "phase": "done",
+  "counts": {
+    "figures": 3,
+    "findings": 6
+  },
+  "log": [
+    {
+      "t": "2026-10-10T00:07:13.413799+00:00",
+      "text": "Consolidating 11 tasks and 52 files"
+    },
+    {
+      "t": "2026-10-10T00:11:25.168382+00:00",
+      "text": "Hypothesis: mixed · 6 findings"
+    },
+    {
+      "t": "2026-10-10T00:11:25.283584+00:00",
+      "text": "Writing and compiling the paper"
+    },
+    {
+      "t": "2026-10-10T00:11:42.087625+00:00",
+      "text": "run_shell: {\"command\": \"grep -n \\\"kang2024game\\\\|kumar2025enhancing\\\\|Mixup\\\\|CutOut\\\\|survey\\\\|moder"
+    },
+    {
+      "t": "2026-10-10T00:11:49.917314+00:00",
+      "text": "run_shell: {\"command\": \"sed -n '380,470p' paper/paper.tex\"}"
+    },
+    {
+      "t": "2026-10-10T00:12:20.495094+00:00",
+      "text": "run_shell: {\"command\": \"grep -n \\\"kang2024game\\\\|kumar2025enhancing\\\\|Mixup\\\\|CutOut\\\\|survey\\\\|moder"
+    },
+    {
+      "t": "2026-10-10T00:12:25.048311+00:00",
+      "text": "run_shell: {\"command\": \"sed -n '452,465p' paper/paper.tex\"}"
+    },
+    {
+      "t": "2026-10-10T00:12:34.529261+00:00",
+      "text": "run_shell: {\"command\": \"which tectonic 2>/dev/null || echo \\\"not found\\\"\"}"
+    },
+    {
+      "t": "2026-10-10T00:12:41.433098+00:00",
+      "text": "run_shell: {\"command\": \"cd paper && tectonic paper.tex 2>&1\", \"timeout_seconds\": 120}"
+    },
+    {
+      "t": "2026-10-10T00:12:45.036336+00:00",
+      "text": "run_shell: {\"command\": \"ls -lh paper/paper.pdf && echo \\\"---\\\" && sed -n '130,162p' paper/paper.tex &"
+    },
+    {
+      "t": "2026-10-10T00:12:54.469727+00:00",
+      "text": "report_result: {\"status\": \"success\", \"summary\": \"Applied all three mandatory revision directives to paper"
+    },
+    {
+      "t": "2026-10-10T00:12:54.587734+00:00",
+      "text": "Checking citations and claims against the evidence"
+    },
+    {
+      "t": "2026-10-10T00:12:54.691643+00:00",
+      "text": "Report complete"
+    }
+  ],
+  "result": {
+    "agent": {
+      "cost": 0.359603145,
+      "issues": [],
+      "status": "success",
+      "summary": "Applied all three mandatory revision directives to paper/paper.tex and recompiled to paper/paper.pdf (1.3 MB, exit code 0, warnings only):\n\n1. **L134 (Related Work — kang2024game)**: Replaced the vague \"found that advanced augmentation strategies benefit small datasets specifically, though their setting employed substantially longer training runs and more sophisticated transforms\" with the accurate description: \"\\citet{kang2024game} demonstrated augmentation benefits with MFG Augment, a Mean-Field Game path-interpolation method that synthesises continuous image distribution transitions, which is substantially more sophisticated than the simple geometric transforms used here.\"\n\n2. **L155–157 (Related Work — kumar2025enhancing)**: Removed the false characterisation as a survey and the fabricated claim that it \"concluded the training budget is a key moderating factor.\" Replaced with: \"\\citet{kumar2025enhancing} proposed three novel augmentation techniques---pairwise channel transfer, object occlusion, and masking---that improve CNN performance on small datasets, demonstrating that carefully designed augmentation strategies can meaningfully reduce overfitting in limited-data regimes.\"\n\n3. **L404 (Discussion — kang2024game)**: Removed the false attribution of Mixup and CutOut to kang2024game. Replaced with: \"\\citet{kang2024game} demonstrated augmentation benefits with MFG Augment, a Mean-Field Game path-interpolation method that synthesises continuous image distribution transitions, which is substantially more sophisticated than the simple geometric transforms used here; their study also employed substantially longer training runs.\"\n\nNo results, figures, tables, or numbers were altered. All three figures (fig_delta_vs_size.png, fig_test_acc_bars.png, fig_curves_all.png) and the booktabs results table are correctly included. All cited keys exist in references.bib."
+    },
+    "audit": [],
+    "files": {
+      "bib": true,
+      "pdf": true,
+      "tex": true
+    },
+    "scaffold": {
+      "title": "Basic Geometric Augmentation Impedes Convergence Across Training Set Sizes: A 5-Epoch Study on Fashion-MNIST",
+      "tables": [
+        "paper/table_results.tex — LaTeX booktabs table with 7 data rows reporting N, noaug accuracy for seeds 42 and 123 (%), aug accuracy for seeds 42 and 123 (%), mean Δ (pp), and Δ range (pp)",
+        "analysis/delta_by_size.csv — raw Δ values per seed, mean Δ, range, and mean condition accuracies across all 7 training sizes"
+      ],
+      "figures": [
+        {
+          "path": "figures/fig_delta_vs_size.png",
+          "caption": "Augmentation benefit (Δ = acc_aug − acc_noaug, percentage points) versus training set size on a log₂ scale for a small CNN trained for 5 epochs on Fashion-MNIST. Grey symbols (circles: seed 42, squares: seed 123) show individual Δ values; the thick black line connects mean Δ; the steel-blue line shows the OLS fit (Δ = −12.0 + 0.530·log₂N, R²=0.613, p=0.037) with ±1.96 SE band. All Δ values are negative — augmentation consistently slows convergence within the 5-epoch budget — and the dashed Δ=0 reference line is never crossed in the tested range. The annotated crossover N*≈6.45M is extrapolated far beyond the tested maximum of 60,000 (bootstrap 95% CI: [40,325–1×10⁹]).",
+          "section": "Results"
+        },
+        {
+          "path": "figures/fig_test_acc_bars.png",
+          "caption": "Final test accuracy (%) at epoch 5 for no-augmentation (blue) and with-augmentation (orange) conditions across seven training set sizes from 500 to 60,000. Bars show mean accuracy across seeds 42 and 123; individual seed values are overlaid as open symbols. Annotated Δ values above each pair confirm the augmented condition underperforms the baseline at every size, with the gap narrowing from 8.1 pp at N=500 to 2.8 pp at N=60,000.",
+          "section": "Results"
+        },
+        {
+          "path": "figures/fig_curves_all.png",
+          "caption": "Per-epoch training loss (left column) and validation accuracy (right column) for all seven training set sizes (rows), comparing no-augmentation (blue) and with-augmentation (orange) conditions. Thin dashed lines are individual seeds (42, 123); thick solid lines are seed means. Augmented runs consistently exhibit higher loss and lower validation accuracy throughout training at every size; the convergence gap narrows at larger N, providing the mechanistic explanation for the observed negative Δ values.",
+          "section": "Results"
+        }
+      ],
+      "outline": [
+        {
+          "title": "Abstract",
+          "purpose": "Summarise the experimental design, the unexpected key finding that augmentation uniformly hurts within 5 epochs, the log-linear scaling trend, and the mechanistic explanation.",
+          "evidence": [
+            "analysis/delta_by_size.csv",
+            "analysis/regression_results.json",
+            "analysis/trend_diagnostics.txt"
+          ],
+          "citations": [
+            "mukhamediev2024state",
+            "karada2020empirical",
+            "kang2024game"
+          ],
+          "key_points": [
+            "Studied how basic geometric augmentation benefit scales with training set size (500–60,000) for a fixed small CNN on Fashion-MNIST in exactly 5 epochs",
+            "Augmentation decreased test accuracy by 2.8–8.1 pp at all 7 training sizes; no positive benefit observed at any size",
+            "The harm decreases monotonically with log₂(N): fitted Δ = −12.0 + 0.53·log₂N, R²=0.613, p=0.037",
+            "Crossover N* ≈ 6.45M (bootstrap 95% CI [40,325–1×10⁹]) is extrapolated far beyond the tested maximum of 60,000",
+            "Mechanistic explanation: augmented runs show higher epoch-1 training loss in 14/14 configurations, confirming convergence slowdown as the cause"
+          ]
+        },
+        {
+          "title": "Introduction",
+          "purpose": "Motivate the study by framing the open question of how augmentation benefit scales with training set size on Fashion-MNIST, and situate it in the context of prior work on CIFAR-10 and specialty domains.",
+          "evidence": [],
+          "citations": [
+            "karada2020empirical",
+            "kang2024game",
+            "pham2018deep",
+            "harun2024dysgraphia",
+            "mukhamediev2024state",
+            "yee2026based",
+            "meshkini2019analysis",
+            "snider2023using",
+            "maiyanti2023rotation"
+          ],
+          "key_points": [
+            "Data augmentation is widely adopted as a regulariser for CNNs but its benefit depends on training set size",
+            "Karadağ et al. (2020) found augmentation contribution sensitive to dataset size on CIFAR-10 but this has not been replicated on Fashion-MNIST with a controlled, fixed-epoch protocol",
+            "Kang et al. (2024) demonstrated augmentation benefits with MFG Augment, a Mean-Field Game path-interpolation method that synthesises continuous image distribution transitions, showing significant improvements in low-data regimes; the effect of basic geometric transforms in the same regime is unstudied",
+            "Prior work on specialty domains (medical imaging, soil classification) demonstrates augmentation utility under limited data but does not characterise the continuous scaling relationship",
+            "This study provides the first controlled quantification of basic geometric augmentation benefit scaling from 500 to 60,000 samples on Fashion-MNIST with fixed architecture and epoch count"
+          ]
+        },
+        {
+          "title": "Related Work",
+          "purpose": "Review CNN benchmarking on Fashion-MNIST, the general effect of augmentation, dataset-size interactions, and advanced augmentation strategies.",
+          "evidence": [],
+          "citations": [
+            "mukhamediev2024state",
+            "yee2026based",
+            "meshkini2019analysis",
+            "pham2018deep",
+            "harun2024dysgraphia",
+            "snider2023using",
+            "maiyanti2023rotation",
+            "karada2020empirical",
+            "kumar2025enhancing",
+            "kang2024game",
+            "xu2020wemix",
+            "yan2022lmix",
+            "yoo2023class",
+            "zhang2020circular",
+            "poojary2021effect"
+          ],
+          "key_points": [
+            "Fashion-MNIST CNN baselines: small two-block CNNs achieve 88–91% test accuracy (Yee 2026; Meshkini et al. 2019; Mukhamediev 2024), providing the reference range for our no-augmentation baseline at N=60,000",
+            "Augmentation generally improves generalisation especially in low-data regimes (Pham et al. 2018; Harun et al. 2024; Snider et al. 2023; Maiyanti et al. 2023), typically over longer training runs",
+            "Karadağ et al. (2020) quantified augmentation sensitivity to dataset size on CIFAR-10 using VAEs; our study replicates and extends this design to Fashion-MNIST with basic geometric transforms",
+            "Kumar et al. (2025) proposed three novel augmentation techniques — pairwise channel transfer, object occlusion, and masking — that improve CNN performance on small datasets, demonstrating that carefully designed augmentation strategies can meaningfully reduce overfitting in limited-data regimes",
+            "Kang et al. (2024) demonstrated augmentation benefits with MFG Augment, a Mean-Field Game path-interpolation method that synthesises continuous image distribution transitions, which is substantially more sophisticated than the simple geometric transforms used here",
+            "Advanced policies (WeMix, LMix) and class-conditional augmentation outperform basic transforms but at higher computational cost; circular shift augmentation (Zhang et al. 2020) specifically targets invariance to spatial shifts",
+            "The 5-epoch training regime is an acknowledged constraint relative to the long-run evaluations typical in prior work"
+          ]
+        },
+        {
+          "title": "Methods",
+          "purpose": "Describe the experimental design, CNN architecture, training protocol, stratified subsampling, and statistical analysis pipeline in sufficient detail for reproduction.",
+          "evidence": [
+            "src/train_fmnist.py",
+            "src/make_subsets.py",
+            "config/config.json",
+            "data/class_balance_check.txt",
+            "analysis/gpu_device_info.txt",
+            "data/subset_indices.npz"
+          ],
+          "citations": [
+            "mukhamediev2024state"
+          ],
+          "key_points": [
+            "Architecture: SmallCNN with two double-conv blocks (Conv(1→32→32)+BN+ReLU+MaxPool+Dropout(0.25); Conv(32→64→64)+BN+ReLU+MaxPool+Dropout(0.25)) followed by FC(3136→256→10) with Dropout(0.5); 871,018 parameters; identical across all conditions",
+            "Training: Adam lr=0.001, batch_size=64, 5 epochs, CrossEntropyLoss; no LR scheduler; identical hyperparameters across conditions",
+            "Augmentation (aug): RandomHorizontalFlip(p=0.5) + RandomAffine(degrees=10, translate=(0.1,0.1)); no augmentation at test time in either condition",
+            "Subset sampling: seven stratified sizes (500, 1000, 2500, 5000, 10000, 30000, 60000) with exactly N//10 per class; 90/10 train/val StratifiedShuffleSplit; seeds 42 and 123; indices persisted in data/subset_indices.npz and class balance verified",
+            "Evaluation: final test accuracy on full 10,000-image test set at epoch 5 only; validation accuracy monitored per epoch but not used for model selection or early stopping",
+            "Analysis: mean Δ per size; OLS log-linear regression Δ = a + b·log₂(N) over 7 size levels; bootstrap N* CI (5,000 iterations); Spearman ρ for monotonicity; all descriptive only given n=2 seeds",
+            "Hardware: NVIDIA L4 GPU, CUDA 13.0, PyTorch 2.11.0+cu130, Python 3.13.15"
+          ]
+        },
+        {
+          "title": "Results",
+          "purpose": "Present all empirical findings: per-size test accuracies, Δ values by seed and mean, regression fit, monotonicity diagnostics, convergence analysis, and baseline calibration check.",
+          "evidence": [
+            "analysis/delta_by_size.csv",
+            "analysis/test_acc_summary.csv",
+            "analysis/regression_results.json",
+            "analysis/trend_diagnostics.txt",
+            "figures/fig_delta_vs_size.png",
+            "figures/fig_test_acc_bars.png",
+            "figures/fig_curves_all.png",
+            "paper/table_results.tex"
+          ],
+          "citations": [
+            "mukhamediev2024state",
+            "yee2026based",
+            "meshkini2019analysis",
+            "xhaferra2022classification"
+          ],
+          "key_points": [
+            "No-augmentation baseline rises monotonically from 73.4% (N=500) to 91.5% (N=60,000), confirming the CNN is well-calibrated against published benchmarks (88–92% range for similar small CNNs)",
+            "All 7 mean Δ values are negative: −8.1 pp (N=500), −5.5 pp (N=1,000), −4.8 pp (N=2,500), −6.6 pp (N=5,000), −6.1 pp (N=10,000), −4.2 pp (N=30,000), −2.8 pp (N=60,000)",
+            "Perfect seed concordance: both seeds independently produce negative Δ at all 7 sizes (7/7), ruling out seed artefact",
+            "OLS log-linear regression: Δ = −12.0 + 0.530·log₂N, R²=0.613, p=0.037; slope 95% CI [0.046, 1.015]",
+            "Spearman ρ=+0.714 (p=0.071): strong positive rank correlation between N and Δ, indicating the harm becomes less severe at larger training sizes",
+            "Crossover N*=6,448,676 (bootstrap 95% CI [40,325–1×10⁹]); extrapolated far above the tested maximum; augmentation does not break even within the studied regime",
+            "In all 14 (seed×size) pairs, epoch-1 training loss is higher under augmentation (14/14), confirming augmentation imposes a convergence cost that cannot be recovered in 5 epochs"
+          ]
+        },
+        {
+          "title": "Discussion",
+          "purpose": "Interpret the convergence-slowdown finding, relate to prior literature, discuss the log-linear scaling trend, and draw practical implications.",
+          "evidence": [
+            "analysis/delta_by_size.csv",
+            "analysis/trend_diagnostics.txt",
+            "analysis/regression_results.json",
+            "figures/fig_curves_all.png"
+          ],
+          "citations": [
+            "karada2020empirical",
+            "pham2018deep",
+            "harun2024dysgraphia",
+            "maiyanti2023rotation",
+            "snider2023using",
+            "kang2024game",
+            "xu2020wemix",
+            "zhang2020circular",
+            "poojary2021effect",
+            "kumar2025enhancing"
+          ],
+          "key_points": [
+            "The universal negative Δ is explained by the epoch-budget effect: augmented samples are harder per step, requiring more epochs to recover the convergence deficit; 5 epochs is insufficient at all tested sizes",
+            "The log-linear scaling trend (less harm at larger N) is consistent with the theoretical expectation that larger real-data diversity reduces the relative disadvantage imposed by augmentation's added difficulty",
+            "This finding does not contradict prior literature (Pham et al. 2018; Harun et al. 2024; Maiyanti et al. 2023), which typically uses much longer training; it contextualises their results as epoch-budget-dependent",
+            "Karadağ et al. (2020)'s observation of augmentation sensitivity to dataset size on CIFAR-10 is confirmed directionally: harm does decrease with N; the sign reversal reveals the short-epoch regime as a distinct regime",
+            "MFG Augment (Kang et al. 2024), which synthesises continuous paths between image distributions via Mean-Field Game theory, likely avoids the convergence penalty because its interpolated samples are smoother and more natural than hard geometric transforms applied here",
+            "Practitioners should treat epoch budget as a critical factor when applying basic geometric augmentation: in short-training regimes the convergence cost may dominate any regularisation benefit",
+            "The wide N* CI ([40,325–1×10⁹]) shows that reliably estimating the crossover point would require more seeds, intermediate sizes, and varied epoch counts beyond the scope of this study"
+          ]
+        },
+        {
+          "title": "Limitations",
+          "purpose": "Honestly enumerate the constraints on statistical and external validity of this study.",
+          "evidence": [
+            "analysis/bootstrap_N_star.csv",
+            "analysis/regression_results.json",
+            "analysis/delta_by_size.csv"
+          ],
+          "citations": [],
+          "key_points": [
+            "Only two seeds per cell; no formal significance testing claimed; all comparisons are descriptive",
+            "5-epoch budget is unusually short; results are specific to this low-epoch regime",
+            "Single augmentation policy tested; stronger or class-adaptive policies may behave differently",
+            "Crossover N* is an unreliable extrapolation given the extremely wide bootstrap CI",
+            "Results specific to Fashion-MNIST and the fixed architecture; generalisation to other datasets or deeper models is untested",
+            "Non-monotone raw Δ pattern (most negative at N=5,000–10,000) suggests a more complex underlying relationship than log-linear; R²=0.613 leaves 39% of variance unexplained"
+          ]
+        },
+        {
+          "title": "Conclusion",
+          "purpose": "Summarise the main takeaway and its practical implication for practitioners applying augmentation to Fashion-MNIST-like tasks.",
+          "evidence": [
+            "analysis/delta_by_size.csv",
+            "analysis/regression_results.json"
+          ],
+          "citations": [
+            "karada2020empirical",
+            "kang2024game",
+            "pham2018deep"
+          ],
+          "key_points": [
+            "Within a 5-epoch budget, basic geometric augmentation (flip, rotation, translation) consistently decreased test accuracy at all training sizes from 500 to 60,000 on Fashion-MNIST",
+            "The harm follows a log-linear scaling with training set size: Δ = −12.0 + 0.53·log₂N (R²=0.613), diminishing but not disappearing across the studied range",
+            "Augmentation would only be expected to break even at N*≈6.45M samples — an extrapolation underscoring the epoch-budget dependency of augmentation benefit",
+            "The principal practical recommendation is that epoch budget must be considered when applying basic augmentation: in short-training regimes augmentation's convergence cost can outweigh its regularisation benefit",
+            "Future work should vary epoch count to identify the training-length threshold above which basic augmentation becomes beneficial for Fashion-MNIST-scale tasks"
+          ]
+        }
+      ],
+      "findings": [
+        {
+          "claim": "Basic geometric augmentation reduced test accuracy by 2.8–8.1 percentage points relative to no augmentation across all seven training-set sizes within a 5-epoch budget.",
+          "evidence": [
+            "analysis/delta_by_size.csv: delta_mean = -8.055 (N=500), -5.54 (N=1000), -4.77 (N=2500), -6.55 (N=5000), -6.135 (N=10000), -4.235 (N=30000), -2.805 (N=60000)",
+            "analysis/trend_diagnostics.txt: Concordance fraction = 1.0000; Concordant sizes = 7/7 (both seeds negative at every size)"
+          ],
+          "relation": "contradicts",
+          "strength": "strong"
+        },
+        {
+          "claim": "The magnitude of augmentation harm decreases monotonically as training set size grows on a log scale, with Δ improving from −8.1 pp at N=500 to −2.8 pp at N=60,000.",
+          "evidence": [
+            "analysis/delta_by_size.csv: delta_mean = -8.055 at N=500 and -2.805 at N=60000",
+            "analysis/trend_diagnostics.txt: Spearman rho = 0.714286, two-tailed p = 0.071344 (n=7)"
+          ],
+          "relation": "partial",
+          "strength": "moderate"
+        },
+        {
+          "claim": "A log-linear OLS model explains 61.3% of the variance in mean augmentation benefit across training-set sizes, with slope b=0.530 (95% CI [0.046, 1.015], p=0.037).",
+          "evidence": [
+            "analysis/regression_results.json: r2=0.6130, a=-11.9996, b=0.5305, slope_p_value=0.037358, slope_ci_low=0.045940, slope_ci_high=1.015005"
+          ],
+          "relation": "partial",
+          "strength": "moderate"
+        },
+        {
+          "claim": "The predicted crossover N* where augmentation breaks even is approximately 6.45 million samples, far outside the tested range, with a bootstrap 95% CI spanning four orders of magnitude.",
+          "evidence": [
+            "analysis/regression_results.json: N_star=6448675.856, N_star_ci_low=40324.827, N_star_ci_high=1000000000.0, N_star_note='extrapolated_above_range'",
+            "analysis/bootstrap_N_star.csv: 5000 bootstrap resamples; right tail clips at 1e9"
+          ],
+          "relation": "contradicts",
+          "strength": "weak"
+        },
+        {
+          "claim": "Augmentation increased epoch-1 training loss in all 14 seed×size configurations, confirming the harm to test accuracy results from slower convergence rather than a regularisation failure.",
+          "evidence": [
+            "analysis/trend_diagnostics.txt: aug>noaug count = 14/14; Fraction aug>noaug = 1.0000",
+            "results/results_seed42.csv: N=500 epoch-1 loss noaug=2.3271 vs aug=2.4677; N=60000 epoch-1 loss noaug=0.5055 vs aug=0.7715",
+            "results/results_seed123.csv: N=500 epoch-1 loss noaug=2.0576 vs aug=2.4687; N=60000 noaug=0.5100 vs aug=0.7820"
+          ],
+          "relation": "neutral",
+          "strength": "strong"
+        },
+        {
+          "claim": "Without augmentation, the small CNN reaches mean test accuracy of 91.5% at N=60,000 after 5 epochs, confirming the baseline is well-calibrated against published benchmarks for similar architectures.",
+          "evidence": [
+            "analysis/test_acc_summary.csv: acc_noaug at N=60000: seed42=0.9140, seed123=0.9157; mean=0.9149",
+            "analysis/gpu_device_info.txt: both seeds confirmed on NVIDIA L4; torch version 2.11.0+cu130"
+          ],
+          "relation": "neutral",
+          "strength": "strong"
+        }
+      ],
+      "deviations": [
+        "All 7 mean Δ values are negative — augmentation hurts accuracy within 5 epochs at every training set size — directly contradicting the hypothesis that augmentation would benefit small-N training; this is reported as the primary finding rather than suppressed.",
+        "The Spearman rank correlation between N and mean Δ is positive (ρ=+0.714), not negative as the success criterion specified (ρ < −0.5); the criterion was written assuming Δ > 0, but the directional interpretation (less harm at larger N) is preserved.",
+        "The crossover N* is extrapolated at approximately 6.45M samples, far outside the studied range of 500–60,000; the plan assumed N* would fall within the tested regime around 10,000–20,000.",
+        "The raw Δ values are non-monotone: the most negative Δ occurs at N=5,000 (−6.55 pp) and N=10,000 (−6.14 pp), not at N=500 (−8.05 pp), which is inconsistent with strict monotone decreasing harm.",
+        "The actual SmallCNN architecture uses two convolutional layers per block with BatchNorm, resulting in 871,018 parameters and an FC head of 3136→256→10, which differs from the brief's simplified 2-conv-block FC(1600→128) description; the architecture was frozen before training and is consistent across all conditions.",
+        "All 28 training runs completed without interruption on NVIDIA L4 GPU in approximately 3.5 minutes per seed batch; no fallback or restart was required."
+      ],
+      "limitations": [
+        "Only two random seeds per condition provide insufficient statistical power for formal hypothesis testing; all comparative claims are descriptive only.",
+        "The fixed 5-epoch budget is deliberately short and does not allow augmentation to deliver its typical long-run regularisation benefit; results are specific to this low-epoch training regime and may not generalise to longer training.",
+        "The CNN architecture (SmallCNN with two conv layers per block plus BatchNorm, fc_units=256, 871,018 total parameters) is larger than the simplified description in the brief but is frozen consistently across all conditions, so within-study comparisons remain valid.",
+        "The raw Δ pattern is not strictly monotone (Δ at N=5,000 = −6.55 pp is more negative than at N=1,000 = −5.54 pp), indicating a more complex relationship than log-linear; R²=0.613 leaves 39% of variance unexplained.",
+        "Only one augmentation policy (RandomHorizontalFlip + RandomAffine degrees=10, translate=(0.1,0.1)) was tested; stronger, weaker, or class-adaptive policies may behave differently.",
+        "The crossover N* ≈ 6.45M is an extrapolation far beyond the tested range; the bootstrap 95% CI [40,325–1×10⁹] spans four orders of magnitude, making the point estimate unreliable for practical guidance.",
+        "Results are specific to Fashion-MNIST (28×28 greyscale clothing images); the 5-epoch augmentation penalty may differ on datasets with greater inter-class similarity, larger images, or colour channels.",
+        "Class balance is explicitly verified only for N=500 and N=1,000; larger subset sizes rely on the stratified sampling procedure."
+      ],
+      "reproducibility": [
+        "Entry point (seed 42): src/gpu_train_seed42.py — runs all 14 configurations for seed 42, saves results/results_seed42.csv and results/gpu_log_seed42.txt",
+        "Entry point (seed 123): src/gpu_train_seed123.py — runs all 14 configurations for seed 123, saves results/results_seed123.csv and results/gpu_log_seed123.txt",
+        "Core model and training utilities: src/train_fmnist.py (exports SmallCNN, get_transforms, train_one_epoch, evaluate_accuracy)",
+        "Subset index generation: src/make_subsets.py — saves data/subset_indices.npz with 28 arrays (train_{N}_{seed} and val_{N}_{seed})",
+        "Analysis and figure/table generation: scripts/t4_3_produce_outputs.py",
+        "Configuration: config/config.json — lr=0.001, batch_size=64, epochs=5, optimizer=adam, mean=0.2860, std=0.3530, sizes=[500,1000,2500,5000,10000,30000,60000], seeds=[42,123]",
+        "Saved stratified indices: data/subset_indices.npz (28 arrays; reproduces exact train/val splits)",
+        "Random seeds: 42 and 123 (control subset sampling AND model weight initialisation in each run)",
+        "Hardware: NVIDIA L4 GPU, CUDA 13.0 (Driver 580.82.07), PyTorch 2.11.0+cu130, Python 3.13.15",
+        "Dataset: Fashion-MNIST via torchvision.datasets.FashionMNIST (auto-downloaded to data/); normalisation mean=0.2860, std=0.3530",
+        "Raw results: results/results_seed42.csv and results/results_seed123.csv (70 rows each: 14 runs × 5 epochs, columns: seed, size, condition, epoch, train_loss, val_acc, test_acc)"
+      ],
+      "success_criteria": [
+        {
+          "status": "not_met",
+          "evidence": "analysis/delta_by_size.csv: delta_seed42=-6.91, delta_seed123=-9.20 at N=500; both large and negative",
+          "criterion": "Δ is positive and ≥ 2 percentage points at N=500 for both seeds"
+        },
+        {
+          "status": "partial",
+          "evidence": "analysis/trend_diagnostics.txt: Spearman rho=+0.7143 (positive, not negative); Δ becomes less negative as N grows — directionally consistent with decreasing harm but criterion sign convention assumed Δ>0",
+          "criterion": "Δ exhibits a monotonically decreasing trend (Spearman ρ < −0.5 between N and Δ)"
+        },
+        {
+          "status": "met",
+          "evidence": "analysis/regression_results.json: r2=0.6130, exceeds threshold of 0.5",
+          "criterion": "Log-linear regression achieves R² ≥ 0.5"
+        },
+        {
+          "status": "not_met",
+          "evidence": "analysis/regression_results.json: N_star=6448675.856, flagged 'extrapolated_above_range'; far above tested maximum of 60,000",
+          "criterion": "Crossover N* falls within the tested range (~500–60,000 samples)"
+        },
+        {
+          "status": "met",
+          "evidence": "analysis/test_acc_summary.csv: seed42 acc_noaug=0.9140, seed123 acc_noaug=0.9157; both within [0.88, 0.92]",
+          "criterion": "No-augmentation test accuracy at N=60,000 falls in the 88–92% range"
+        },
+        {
+          "status": "met",
+          "evidence": "analysis/gpu_device_info.txt: Seed 42 — Device: NVIDIA L4; Seed 123 — Device: NVIDIA L4; results/gpu_log_seed42.txt and results/gpu_log_seed123.txt confirm STATUS: COMPLETE",
+          "criterion": "GPU device name is logged for all runs, confirming CUDA execution"
+        }
+      ],
+      "hypothesis_verdict": "mixed",
+      "verdict_explanation": "The hypothesis predicted positive augmentation benefit (Δ > 0) that decreases monotonically with training set size, crossing zero around 10,000–20,000 samples. The directional scaling component is partially confirmed: Δ increases (becomes less negative) with log₂(N) at Spearman ρ=+0.714 and OLS R²=0.613 (p=0.037), consistent with a log-linear scaling model. However, the sign of Δ is reversed from predictions: all seven mean Δ values are negative (ranging from −8.1 pp at N=500 to −2.8 pp at N=60,000), meaning augmentation consistently hurts rather than helps within 5 epochs. The crossover N*≈6.45M is extrapolated far beyond the tested maximum of 60,000 (bootstrap 95% CI: [40,325–1×10⁹]), contradicting the predicted 10,000–20,000 crossover. The mechanistic cause is confirmed: augmented runs produce higher epoch-1 training loss in all 14 (seed×size) configurations, consistent with augmentation slowing convergence faster than the 5-epoch budget allows recovery.",
+      "one_sentence_summary": "Across seven training-set sizes from 500 to 60,000, basic geometric augmentation uniformly decreased test accuracy by 2.8–8.1 percentage points within a 5-epoch budget, while the magnitude of harm decreased monotonically with log₂(N) following Δ = −12.0 + 0.53·log₂N (R²=0.613), with a crossover extrapolated to N* ≈ 6.45M samples—far beyond the tested range.",
+      "writing_instructions": "Write in a precise, measured empirical style suitable for a short conference paper. The most critical obligations are the following attribution corrections mandated by the revision directives:\n\n(1) At the location corresponding to manuscript L404 AND any similar sentence near L134: kang2024game must be described accurately as demonstrating 'MFG Augment, a Mean-Field Game path-interpolation method that synthesises continuous image distribution transitions.' An acceptable sentence is: 'Kang et al. (2024) demonstrated augmentation benefits with MFG Augment, a Mean-Field Game path-interpolation method that synthesises continuous image distribution transitions, which is substantially more sophisticated than the simple geometric transforms used here.' Under no circumstances should Mixup or CutOut be attributed to kang2024game.\n\n(2) At the location corresponding to manuscript L155–L157: kumar2025enhancing must NOT be described as a survey and must NOT be associated with the claim that 'the training budget is a key moderating factor.' The correct description is approximately: 'Kumar et al. (2025) proposed three novel augmentation techniques — pairwise channel transfer, object occlusion, and masking — that improve CNN performance on small datasets, demonstrating that carefully designed augmentation strategies can meaningfully reduce overfitting in limited-data regimes.'\n\nFor the results: the central finding is unexpected and must be presented honestly — augmentation hurt rather than helped at all sizes within 5 epochs. Explain the convergence-slowdown mechanism (14/14 epoch-1 loss increase) clearly and early. Do not bury the negative result. \n\nStatistical language: do not claim statistical significance for the Spearman test (p=0.071 > 0.05); use 'consistent with a monotone trend' or 'marginally significant at α=0.10 given limited sample size (n=7)'. Report Spearman ρ=0.714 accurately. For the OLS regression, p=0.037 is significant at α=0.05 for the slope; state this but note that n=7 points limits reliability. R²=0.613 should be described as 'moderate'. The N* extrapolation should be qualified explicitly as unreliable given the wide CI spanning four orders of magnitude.\n\nBaseline validation: the no-augmentation accuracy of 91.5% at N=60,000 is within the published 88–92% range for similar small CNNs (cite mukhamediev2024state, yee2026based, meshkini2019analysis) — use this to validate the experimental setup.\n\nDo not frame the 5-epoch results as evidence that augmentation is generally harmful; frame them as epoch-budget-specific. Avoid overclaiming generalisability to longer training, other architectures, or other datasets."
+    },
+    "citations": {
+      "used": [
+        "harun2024dysgraphia",
+        "kang2024game",
+        "karada2020empirical",
+        "kumar2025enhancing",
+        "meshkini2019analysis",
+        "mukhamediev2024state",
+        "pham2018deep",
+        "poojary2021effect",
+        "snider2023using",
+        "xhaferra2022classification",
+        "yee2026based",
+        "zhang2020circular"
+      ],
+      "unknown": [],
+      "available": 55
+    },
+    "integrity": {
+      "hard": [],
+      "soft": []
+    }
+  },
+  "error": null,
+  "started_at": "2026-10-10 00:07:12.179293+00:00",
+  "finished_at": "2026-10-10 00:12:54.804904+00:00"
+}

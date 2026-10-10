@@ -3,12 +3,15 @@
 Compiles the approved research plan into `master_plan.json`: the agent team,
 executable tasks with exact inputs/outputs and acceptance checks, datasets with
 verified sources, and human checkpoints. Validated in code against the tool
-registry, the runtime's capabilities and the task graph.
+registry, the runtime's capabilities and the task graph, then checked for
+requirements no task can satisfy (in code, then by a feasibility review) and
+repaired, boundedly, before it can be approved.
 """
 
 import asyncio
 import copy
 import json
+import re
 from datetime import datetime, timezone
 from typing import Literal
 
@@ -22,7 +25,7 @@ from ..execution import catalog
 from ..execution.sandbox import _PKG, sandbox_for
 from ..execution.tools import TOOLS, public_url, describe
 from ..jobs import RunHandle
-from ..llm import parse
+from ..llm import LONG_MAX_TOKENS, parse
 from .plan import EXPORT_DIR
 
 DEFAULT_BUDGET = {"llm_usd": 15.0, "gpu_hours": 5.0}
@@ -145,6 +148,12 @@ Rules:
   ('dataset:<id>'), or 'workspace'.
 - Outputs use stable workspace paths (data/, analysis/, figures/, paper/).
 - Acceptance checks must be checkable by reading the outputs.
+- Every step and check must be achievable by the task that carries it, in its own
+  environment, when it runs. Agent code runs in a CPU-only sandbox: evidence from
+  hardware (a GPU's device name, CUDA availability, GPU timings) belongs to the task
+  that runs on that hardware through run_gpu_jobs, never to a setup task. A check
+  may rely only on the task's own outputs and inputs, never on what a later or
+  parallel task produces.
 - Only use tools from the tool list; respect UNAVAILABLE tools and the runtime
   capabilities. Mark tasks needing a person as human_required.
 - Design the team for the work: 2-12 agents with focused roles (e.g. data
@@ -181,6 +190,105 @@ Rules:
 # ── Validation ─────────────────────────────────────────────────────────────
 
 
+def _ancestors(tasks: dict[str, ExecTask], tid: str) -> set[str]:
+    """Every task upstream of tid (through known dependencies)."""
+    seen: set[str] = set()
+    stack = [tid]
+    while stack:
+        for d in tasks[stack.pop()].depends_on:
+            if d in tasks and d not in seen:
+                seen.add(d)
+                stack.append(d)
+    return seen
+
+
+HARDWARE = {"cuda_gpu": "CUDA GPU", "apple_gpu": "Apple GPU"}
+# Requirements for evidence only that hardware can produce. Deliberately narrow (a device name, a
+# positive availability check, work that ran on it, a GPU job's log): subtler contradictions are left
+# to the feasibility review.
+HARDWARE_EVIDENCE = {
+    "cuda_gpu": re.compile(
+        r"\b(gpu|cuda)\s+(device\s+|card\s+)?(name|model)\b|nvidia-smi"
+        r"|cuda\.is_available\(\)\s*(==|is|returns?)\s*true|\bcuda\s+available\s*[:=]?\s*true\b"
+        r"|\b(trained|ran|run|executed|computed)\s+on\s+(an?\s+|the\s+)?(cuda\s+|nvidia\s+|cloud\s+)?gpu(?![-\w])"
+        r"|\bgpu\s+(memory|utili[sz]ation|usage)\b|\blogs/gpu/", re.I),
+    "apple_gpu": re.compile(r"\bmps\b[^.;]{0,20}\b(available|device|backend)\b|torch\.backends\.mps"
+                            r"|\bapple\s+(gpu|silicon)\b", re.I),
+}
+# A requirement that holds without the hardware too ("the GPU name, or 'none'").
+_CONDITIONAL = re.compile(r"\b(if|when|whether|unless)\b[^.;]{0,40}\b(gpu|cuda|mps)\b|\bor\s+['\"]?(none|n/?a|cpu)\b"
+                          r"|\b(no|without)\s+(an?\s+)?(gpu|cuda)\b|\bfalls?\s+back\b", re.I)
+_PATH_TOKEN = re.compile(r"[\w./-]+")
+
+
+def _reach(t: ExecTask, capabilities: set[str]) -> set[str]:
+    """Hardware the task is built to run on. Agent code itself runs in a CPU-only sandbox, so that is
+    what its tools reach (a CUDA GPU through run_gpu_jobs) plus its compute kind, for which the
+    orchestrator grants run_gpu_jobs when the runtime has it (orchestrator._task_tools). Whether the
+    runtime has the hardware at all is a separate, non-fatal warning in validate()."""
+    reach = {r for name in t.tools if name in TOOLS for r in TOOLS[name].requires if r in HARDWARE}
+    if t.compute.kind in HARDWARE:
+        reach.add(t.compute.kind)
+        if "cuda_gpu" in capabilities:
+            reach |= set(TOOLS["run_gpu_jobs"].requires)
+    return reach
+
+
+def _evidence(t: ExecTask, kind: str) -> list[str]:
+    """The task's acceptance checks and output descriptions that demand evidence from `kind` hardware."""
+    return [x for x in (*t.acceptance_checks, *(o.description for o in t.outputs))
+            if HARDWARE_EVIDENCE[kind].search(x) and not _CONDITIONAL.search(x)]
+
+
+def _norm_path(path: str) -> str:
+    return path.strip().strip("`'\"").removeprefix("./").rstrip("/.")
+
+
+def _produces(t: ExecTask, path: str) -> bool:
+    """The task declares `path` as an output, or as part of a directory output."""
+    for o in t.outputs:
+        p = _norm_path(o.path)
+        is_dir = o.path.rstrip().endswith("/") or "dir" in o.format.lower()
+        if p and (path == p or (is_dir and path.startswith(p + "/"))):
+            return True
+    return False
+
+
+def feasibility_errors(mp: MasterPlan, capabilities: set[str]) -> list[str]:
+    """Requirements no execution of their task can satisfy, detectable without a model: evidence from
+    hardware that neither the task nor anything upstream of it runs on, and acceptance checks on an
+    artifact that only tasks not upstream of it produce. Each error says where the requirement can be
+    met: the fix is to move it there, never to drop it."""
+    tasks = {t.id: t for t in mp.tasks}
+    reach = {t.id: _reach(t, capabilities) for t in mp.tasks}
+    errors: list[str] = []
+    for t in mp.tasks:
+        up = _ancestors(tasks, t.id)
+        for kind, label in HARDWARE.items():
+            if kind in reach[t.id] or any(kind in reach[a] for a in up):
+                continue
+            a = "an" if label[0] in "AEIOU" else "a"
+            owners = [x.id for x in mp.tasks if kind in reach[x.id]]
+            where = (f"Require it of the task that runs on the {label} ({', '.join(owners)})" if owners
+                     else f"No task in this blueprint runs on {a} {label}: give the work that needs it {label} compute")
+            for text in _evidence(t, kind):
+                errors.append(f"{t.id} runs without {a} {label} (compute '{t.compute.kind}', tools: "
+                              f"{', '.join(t.tools) or 'none'}), and no task upstream of it has one, yet it requires "
+                              f"evidence from one: \"{text}\". {where}; never drop the requirement.")
+        own = {_norm_path(x.path) for x in (*t.outputs, *t.inputs)} - {""}
+        for check in t.acceptance_checks:
+            for path in dict.fromkeys(_norm_path(m) for m in _PATH_TOKEN.findall(check)):
+                if not path or path in own or any(path.startswith(o + "/") for o in own):
+                    continue
+                producers = [u.id for u in mp.tasks if u.id != t.id and _produces(u, path)]
+                if producers and not set(producers) & up:
+                    errors.append(f"{t.id} has an acceptance check on {path}, which only {', '.join(producers)} "
+                                  f"produce(s), none of them upstream of {t.id}: \"{check}\". A check can rely only on "
+                                  f"the task's own outputs and inputs: check this in {producers[0]} or a task "
+                                  "downstream of it, never by dropping it.")
+    return errors
+
+
 def validate(mp: MasterPlan, capabilities: set[str], budget: dict) -> tuple[list[str], list[str]]:
     """Returns (errors that must be fixed, warnings to surface to the user)."""
     errors: list[str] = []
@@ -199,14 +307,8 @@ def validate(mp: MasterPlan, capabilities: set[str], budget: dict) -> tuple[list
         if not _PKG.match(spec):
             errors.append(f"Invalid package spec '{spec}'")
 
-    # Ancestors, for checking that inputs come from upstream tasks.
-    def ancestors(tid: str, seen: set[str] | None = None) -> set[str]:
-        seen = seen if seen is not None else set()
-        for d in tasks[tid].depends_on:
-            if d in tasks and d not in seen:
-                seen.add(d)
-                ancestors(d, seen)
-        return seen
+    def ancestors(tid: str) -> set[str]:  # for checking that inputs come from upstream tasks
+        return _ancestors(tasks, tid)
 
     for t in mp.tasks:
         if t.agent not in agents:
@@ -248,6 +350,9 @@ def validate(mp: MasterPlan, capabilities: set[str], budget: dict) -> tuple[list
                     ready.append(i)
     if seen < len(deps):
         errors.append("Task dependencies contain a cycle")
+
+    # Requirements that contradict their own task: fatal, since no execution attempt could meet them.
+    errors += feasibility_errors(mp, capabilities)
 
     # Runtime feasibility: flagged, not fatal — the user decides.
     for t in mp.tasks:
@@ -293,6 +398,148 @@ async def _verify_urls(datasets: list[DatasetSpec]) -> dict[str, bool]:
     return dict(zip([d.id for d in datasets if d.url], results))
 
 
+# ── Feasibility review and repair ──────────────────────────────────────────
+
+
+class Contradiction(BaseModel):
+    task_id: str
+    requirement: str = Field(description="The impossible requirement, quoted verbatim from that task's objective, "
+                                         "steps, output descriptions or acceptance checks")
+    reason: str = Field(description="Why no honest execution of the task can satisfy it")
+    satisfiable_in: str | None = Field(description="Id of the task whose environment and inputs can satisfy it; "
+                                                   "null if none can")
+
+
+class FeasibilityReview(BaseModel):
+    contradictions: list[Contradiction] = Field(description="Empty if every requirement can be met")
+
+
+REVIEW_INSTRUCTIONS = """\
+You check an execution blueprint, before any task runs, for requirements that are logically
+impossible for the task that carries them. Each task runs once, after the tasks it depends on,
+as an agent with only that task's tools. Agent code runs in a CPU-only sandbox; hardware such as
+a CUDA GPU is reachable only through a tool that provides it (run_gpu_jobs). When a task runs,
+the workspace holds only its inputs, the datasets, context files and what upstream tasks
+produced. A verifier then tests its acceptance checks against its outputs and platform facts
+about workspace files.
+
+Report a requirement only if no honest execution of that task can satisfy it, for example:
+- evidence from hardware the task cannot reach (a GPU device name in a CPU-only task);
+- results, files or measurements that only a later or parallel task produces;
+- a check that contradicts the task's own compute or execution environment;
+- a check that needs a tool, input, service or credential the task does not have.
+Do not report quality concerns, missing detail, requirements that are merely ambitious, budget
+or style. Quote each requirement verbatim. If every requirement can be met, return an empty list."""
+
+REPAIR_INSTRUCTIONS = COMPILE_INSTRUCTIONS + """
+
+You are repairing a blueprint: change only what the problems require and keep everything else
+exactly as it is. Never resolve a problem by deleting or weakening a scientific requirement (a
+task, an output, an acceptance check, a measurement or a control). Move the requirement to the
+task whose environment can satisfy it (evidence from hardware belongs to the task that runs on
+that hardware, for a CUDA GPU the task with run_gpu_jobs; a check on an artifact belongs to the
+task that produces it or to one downstream of it), or change the task's tools, compute or
+dependencies so that it can satisfy it. Keep inputs, outputs and dependencies consistent."""
+
+REPAIR_ROUNDS = 2  # each repaired blueprint is re-validated, re-guarded and re-reviewed before it is accepted
+
+
+def _runtime(capabilities: set[str]) -> str:
+    gpu = "a CUDA GPU only through run_gpu_jobs (cloud GPU jobs)" if "cuda_gpu" in capabilities else "no CUDA GPU"
+    return (f"RUNTIME CAPABILITIES: {', '.join(sorted(capabilities))}. Agent code runs in a CPU-only cloud "
+            f"sandbox; {gpu}; no Apple GPU; conda available; background processes; ~1 GB per download; small disk")
+
+
+def _squash(text: str) -> str:
+    return " ".join(text.split()).casefold().strip("\"'. ")
+
+
+def _quoted(quote: str, t: ExecTask) -> bool:
+    """The quote is, up to whitespace and case, one of the task's own requirements (or part of one)."""
+    q = _squash(quote)
+    fields = [t.objective, *t.steps, *t.acceptance_checks, *(o.description for o in t.outputs)]
+    return len(q) >= 12 and any(q in _squash(f) for f in fields)
+
+
+async def review_feasibility(mp: MasterPlan, capabilities: set[str]) -> tuple[list[str], list[str]]:
+    """Contradictions the deterministic checks cannot see, from one model review. Returns (errors,
+    warnings). Only a finding quoted from the task it names is acted on: an ungrounded one could send a
+    sound task to repair. A review that fails is a warning (the deterministic checks still ran);
+    transient and credit errors propagate like every other call in the stage."""
+    try:
+        review = await parse(
+            model=settings.model_standard,
+            instructions=REVIEW_INSTRUCTIONS,
+            messages=[{"role": "user", "content": f"{_runtime(capabilities)}\n\nTOOLS:\n{describe(capabilities)}"
+                       f"\n\nBLUEPRINT:\n{mp.model_dump_json()}"}],
+            schema=FeasibilityReview,
+            reasoning_effort="medium",
+        )
+    except RuntimeError as exc:  # invalid, refused or truncated structured output
+        return [], [f"Feasibility review unavailable ({str(exc)[:200]}); only the deterministic checks ran"]
+    tasks = {t.id: t for t in mp.tasks}
+    errors = [f"{c.task_id}: \"{c.requirement}\" cannot be satisfied: {c.reason}"
+              + (f" It belongs in {c.satisfiable_in}; move it there, never drop it." if c.satisfiable_in else "")
+              for c in review.contradictions if c.task_id in tasks and _quoted(c.requirement, tasks[c.task_id])]
+    return errors, []
+
+
+def lost_requirements(before: MasterPlan, after: MasterPlan) -> list[str]:
+    """What a repair dropped instead of fixing: tasks, acceptance checks, and any demand for hardware
+    evidence (each must be moved to where it can be met, never deleted)."""
+    errors = []
+    ids = {t.id for t in after.tasks}
+    if gone := [t.id for t in before.tasks if t.id not in ids]:
+        errors.append(f"The repair removed tasks {', '.join(gone)}: restore them; fix problems by changing tasks, "
+                      "not by deleting them")
+    n_before, n_after = (sum(len(t.acceptance_checks) for t in m.tasks) for m in (before, after))
+    if n_after < n_before:
+        kept = {c for t in after.tasks for c in t.acceptance_checks}
+        dropped = [f'{t.id}: "{c}"' for t in before.tasks for c in t.acceptance_checks if c not in kept]
+        errors.append(f"The repair deleted acceptance checks ({n_before} before, {n_after} after) instead of moving "
+                      "them; restore each in the task whose environment can satisfy it"
+                      + (": " + "; ".join(dropped[:8]) if dropped else ""))
+    for kind, label in HARDWARE.items():
+        if any(_evidence(t, kind) for t in before.tasks) and not any(_evidence(t, kind) for t in after.tasks):
+            errors.append(f"The repair dropped every requirement for {label} evidence; require it of the task "
+                          f"that runs on the {label} instead")
+    return errors
+
+
+async def _checked(mp: MasterPlan, capabilities: set[str], budget: dict, h: RunHandle) -> tuple[MasterPlan, list[str]]:
+    """The blueprint once it passes validation (structure, dependencies, deterministic feasibility) and
+    the feasibility review, after at most REPAIR_ROUNDS repairs, none of which may drop a requirement.
+    Raises if problems remain, so an invalid or impossible blueprint never reaches approval or execution."""
+    original = mp
+    for round_ in range(REPAIR_ROUNDS + 1):
+        errors, warnings = validate(mp, capabilities, budget)
+        if round_:
+            errors += lost_requirements(original, mp)
+        if not errors:
+            h.phase("validating", "Checking that every task can meet its requirements")
+            errors, unreviewed = await review_feasibility(mp, capabilities)
+            warnings += unreviewed
+        if not errors:
+            if round_:
+                h.note(f"Blueprint repaired in {round_} round(s)")
+            return mp, warnings
+        if round_ == REPAIR_ROUNDS:
+            break
+        h.phase("repairing", f"Fixing {len(errors)} problems")
+        h.note("Problems found: " + "; ".join(e[:160] for e in errors[:5]))
+        mp = await parse(
+            model=settings.model_standard,
+            instructions=REPAIR_INSTRUCTIONS,
+            messages=[{"role": "user", "content": "Fix these problems:\n- " + "\n- ".join(errors)
+                       + f"\n\nTools:\n{describe(capabilities)}\n\nBlueprint:\n{mp.model_dump_json()}"}],
+            schema=MasterPlan,
+            reasoning_effort="low",
+            max_tokens=LONG_MAX_TOKENS,  # the repair writes the whole blueprint again
+        )
+    raise RuntimeError(f"Blueprint still invalid after {REPAIR_ROUNDS} repair rounds, so it was not approved and no "
+                       "task ran: " + "; ".join(errors[:5]))
+
+
 # ── Job ────────────────────────────────────────────────────────────────────
 
 
@@ -329,8 +576,7 @@ async def run(project_id: str, h: RunHandle) -> dict:
         f"APPROVED PLAN:\n{json.dumps(plan, ensure_ascii=False)}\n\n"
         f"RESOLVED DATASETS:\n{resolution.model_dump_json()}\n\n"
         f"TOOLS:\n{describe(capabilities)}\n\n"
-        f"RUNTIME CAPABILITIES: {', '.join(sorted(capabilities))} (no Apple GPU, no CUDA GPU; "
-        "conda available; background processes; ~1 GB per download; small disk)\n\n"
+        f"{_runtime(capabilities)}\n\n"
         f"BUDGET: ${budget['llm_usd']:.2f} LLM, {budget['gpu_hours']} GPU-hours\n\n"
         f"RESOURCE CATALOG:\n{catalog.summary()}"
     )
@@ -342,24 +588,14 @@ async def run(project_id: str, h: RunHandle) -> dict:
         # High: compiling the execution blueprint is one of the most demanding reasoning
         # steps in the pipeline (team design, task graph, acceptance checks, budget).
         reasoning_effort="high",
+        # Thinking at high effort plus a full blueprint's JSON outgrew MAX_TOKENS (32K): one run spent
+        # all of it reasoning; another reasoned for ~26K and was cut off ~6K tokens into a JSON of ~10-14K.
+        max_tokens=LONG_MAX_TOKENS,
     )
 
-    # 3 · Validate, with one repair pass
-    h.phase("validating", "Checking tools, inputs/outputs, dependencies and budget")
-    errors, warnings = validate(mp, capabilities, budget)
-    if errors:
-        h.phase("repairing", f"Fixing {len(errors)} structural problems")
-        mp = await parse(
-            model=settings.model_standard,
-            instructions=COMPILE_INSTRUCTIONS + "\nYou are repairing a blueprint: change only what the errors require.",
-            messages=[{"role": "user", "content": "Fix these problems:\n- " + "\n- ".join(errors)
-                       + f"\n\nTools:\n{describe(capabilities)}\n\nBlueprint:\n{mp.model_dump_json()}"}],
-            schema=MasterPlan,
-            reasoning_effort="low",
-        )
-        errors, warnings = validate(mp, capabilities, budget)
-        if errors:
-            raise RuntimeError("Blueprint still invalid after repair: " + "; ".join(errors[:5]))
+    # 3 · Validate (structure, dependencies, feasibility), with bounded repair
+    h.phase("validating", "Checking tools, inputs/outputs, dependencies, feasibility and budget")
+    mp, warnings = await _checked(mp, capabilities, budget, h)
 
     verified = await _verify_urls(mp.datasets)
     data = mp.model_dump()
@@ -400,11 +636,10 @@ def make_revision_job(instruction: str):
                        f"\n\nBlueprint:\n{json.dumps(prev.result['master_plan'])}"}],
             schema=MasterPlan,
             reasoning_effort="medium",
+            max_tokens=LONG_MAX_TOKENS,  # the revision writes the whole blueprint again
         )
         h.phase("validating", "Checking the revised blueprint")
-        errors, warnings = validate(mp, capabilities, budget)
-        if errors:
-            raise RuntimeError("Revision produced an invalid blueprint: " + "; ".join(errors[:5]))
+        mp, warnings = await _checked(mp, capabilities, budget, h)
         verified = await _verify_urls(mp.datasets)
         data = mp.model_dump()
         for d in data["datasets"]:

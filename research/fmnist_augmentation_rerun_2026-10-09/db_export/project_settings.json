@@ -1,0 +1,12 @@
+{
+  "depth": "standard",
+  "budget": {
+    "llm_usd": 15.0,
+    "gpu_hours": 5.0
+  },
+  "max_papers": 100,
+  "refinement": {
+    "enabled": true
+  },
+  "citation_hops": 0
+}

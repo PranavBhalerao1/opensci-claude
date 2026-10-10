@@ -1,0 +1,52 @@
+{
+  "id": "b62c02d831e1",
+  "project_id": "6d8c3c93c209",
+  "kind": "review",
+  "status": "done",
+  "phase": "done",
+  "counts": {
+    "fatal": 0,
+    "major": 1,
+    "issues": 7
+  },
+  "log": [
+    {
+      "t": "2026-10-10T00:12:56.505072+00:00",
+      "text": "Deterministic integrity checks"
+    },
+    {
+      "t": "2026-10-10T00:12:57.334146+00:00",
+      "text": "Assembling the evidence for an independent review"
+    },
+    {
+      "t": "2026-10-10T00:12:57.789264+00:00",
+      "text": "Independent review of the manuscript and its evidence"
+    },
+    {
+      "t": "2026-10-10T00:20:40.642507+00:00",
+      "text": "Review output rejected (Model returned no structured output (stop reason: max_tokens)); retrying once"
+    },
+    {
+      "t": "2026-10-10T00:23:52.201056+00:00",
+      "text": "Adversarial check of 2 serious claims"
+    },
+    {
+      "t": "2026-10-10T00:24:48.290869+00:00",
+      "text": "Review 2: major_revision → repair: 0 fatal and 1 major issues to repair."
+    }
+  ],
+  "result": {
+    "valid": true,
+    "reason": "0 fatal and 1 major issues to repair.",
+    "verdict": "major_revision",
+    "blocking": {
+      "FATAL": 0,
+      "MAJOR": 1
+    },
+    "decision": "repair",
+    "iteration": 2
+  },
+  "error": null,
+  "started_at": "2026-10-10 00:12:55.802789+00:00",
+  "finished_at": "2026-10-10 00:24:48.399344+00:00"
+}

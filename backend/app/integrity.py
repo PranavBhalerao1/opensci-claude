@@ -54,28 +54,63 @@ _EVIDENCE_NUMBER_RE = re.compile(r"[-+]?\d*\.?\d+(?:[eE][-+]?\d+)?")
 
 
 def strip_comments(line: str) -> str:
-    return re.sub(r"(?<!\\)%.*", "", line)
+    # A % starts a comment unless escaped (\%); after a line break (\\%) it still does.
+    return re.sub(r"(?<!\\)((?:\\\\)*)%.*", r"\1", line)
 
 
-def _braced(text: str, start: int) -> tuple[str, int]:
-    """The balanced {...} group starting at text[start] == '{'; returns (inner, end)."""
+def _escaped(text: str, i: int) -> bool:
+    """Whether text[i] is escaped: preceded by an odd run of backslashes (\\{ is a brace, \\\\{ is not)."""
+    n = 0
+    while i - n > 0 and text[i - n - 1] == "\\":
+        n += 1
+    return n % 2 == 1
+
+
+def _group(text: str, start: int) -> tuple[str, int] | None:
+    """The balanced argument opening at text[start], a {...} or an optional [...] (braces nested
+    inside either; a ] inside braces does not close [...]); returns (inner, end), or None if it is
+    never closed."""
+    optional = text[start] == "["
     depth = 0
     for i in range(start, len(text)):
-        if text[i] == "{" and (i == 0 or text[i - 1] != "\\"):
-            depth += 1
-        elif text[i] == "}" and text[i - 1] != "\\":
-            depth -= 1
-            if depth == 0:
+        c = text[i]
+        if c not in "{}]" or _escaped(text, i):
+            continue
+        if c == "]":
+            if optional and depth == 0:
                 return text[start + 1:i], i + 1
-    return text[start + 1:], len(text)
+            continue
+        depth += 1 if c == "{" else -1
+        if depth < 0:
+            return None
+        if depth == 0 and not optional:
+            return text[start + 1:i], i + 1
+    return None
 
 
-def _caption(block: str) -> str:
-    m = re.search(r"\\caption\*?(?:\[[^\]]*\])?\s*\{", block)
-    if not m:
-        return ""
-    inner, _ = _braced(block, m.end() - 1)
-    return re.sub(r"\s+", " ", inner).strip()
+def _args(text: str, pos: int, spec: str) -> tuple[list[str | None], int] | None:
+    """A command's arguments from text[pos] on, by spec: 'o' an optional [...] (None if absent),
+    'm' a mandatory {...}. Returns (args, end), or None if a mandatory one is missing or unclosed."""
+    out: list[str | None] = []
+    for kind in spec:
+        i = pos
+        while i < len(text) and text[i] in " \t\n":
+            i += 1
+        if i < len(text) and text[i] == ("[" if kind == "o" else "{"):
+            group = _group(text, i)
+            if group is None:
+                return None
+            out.append(group[0])
+            pos = group[1]
+        elif kind == "o":
+            out.append(None)
+        else:
+            return None
+    return out, pos
+
+
+def _clean_caption(text: str) -> str:
+    return re.sub(r"\s+", " ", LABEL_RE.sub(" ", text)).strip()
 
 
 def _sentence(line: str, pos: int, limit: int = 320) -> str:
@@ -101,9 +136,14 @@ def _context(lines: list[str], idx: int, pos: int, limit: int = 320) -> str:
 class Graphic:
     target: str  # as written in \includegraphics
     line: int
-    caption: str = ""
+    caption: str = ""  # its own unit's: the sub-figure's when panel, else the figure's
     label: str = ""
     path: str | None = None  # resolved workspace-relative posix path, if the file exists
+    panel: bool = False  # inside a sub-figure (subfigure, \subfloat, \subcaptionbox, \subcaption)
+    figure_caption: str = ""  # the enclosing figure's own caption and label, when the graphic is
+    figure_label: str = ""  # in a sub-figure or captioned minipage inside it (else empty)
+    figure_line: int = 0  # line of the enclosing figure's \begin (0 outside any figure)
+    note: str = ""  # why a caption could not be extracted (malformed LaTeX), if it could not
 
 
 @dataclass
@@ -154,21 +194,155 @@ def parse_tex(tex: str) -> TexInfo:
             for key in (k.strip() for k in m.group(1).split(",")):
                 info.refs.setdefault(key, n)
 
-    # Graphics with their figure's caption and label (figure and figure* environments).
-    figures = [(m.start(), m.end()) for m in
-               re.finditer(r"\\begin\{(figure\*?|wrapfigure|subfigure)\}.*?\\end\{\1\}", text, re.DOTALL)]
+    # Graphics with their own caption and label, and their enclosing figure's (see _figure_units).
+    units = _figure_units(text, line_of)
     for m in GRAPHICS_RE.finditer(text):
         if "#" in m.group(1) or "\\" in m.group(1):  # a macro parameter or path macro, not a file
             continue
         g = Graphic(target=m.group(1).strip(), line=line_of(m.start()))
-        env = next(((a, b) for a, b in figures if a <= m.start() < b), None)
-        if env:
-            block = text[env[0]:env[1]]
-            g.caption = _caption(block)
-            labels = LABEL_RE.findall(block)
-            g.label = labels[0].strip() if labels else ""
+        _attach(g, m.start(), units)
         info.graphics.append(g)
     return info
+
+
+# ── Figures, sub-figures, captions and labels ──────────────────────────────
+# A figure's \begin/\end pairs are matched as a tree, so a sub-figure is never swallowed by the
+# figure around it. A graphic takes the caption and label of its own unit (the sub-figure that
+# holds it, or else the figure), and a sub-figure's enclosing figure keeps its own caption and
+# label separately. Captions are only ever read from the source: one that cannot be parsed, or
+# that belongs to an environment that is never closed, is left empty with a note.
+
+FLOAT_ENVS = frozenset({"figure", "figure*", "wrapfigure", "wrapfigure*", "SCfigure", "sidewaysfigure",
+                        "sidewaysfigure*", "table", "table*", "wraptable", "SCtable", "sidewaystable"})
+PANEL_ENVS = frozenset({"subfigure", "subfigure*", "subtable", "subtable*"})  # subcaption package
+BOX_ENVS = frozenset({"minipage"})  # a unit of its own only when it carries a caption
+ENV_RE = re.compile(r"\\(begin|end)\s*\{([^{}]+)\}")
+# \caption[short]{text}, \captionof{type}[short]{text}, \subcaption[short]{text}; not \captionsetup,
+# \subcaptionbox (a panel command below) or a user macro such as \captionfont.
+CAPTION_RE = re.compile(r"\\(caption|captionof|subcaption)(?![a-zA-Z@])\s*\*?")
+CAPTION_ARGS = {"caption": ("om", 1), "captionof": ("mom", 2), "subcaption": ("om", 1)}  # (spec, text index)
+# Sub-figures written as commands: \subfloat[list][caption]{body} (subfig), \subfigure[..][..]{body}
+# (subfigure package), \subcaptionbox[list]{caption}[width][pos]{body} (subcaption).
+PANEL_CMD_RE = re.compile(r"\\(subfloat|sidesubfloat|subfigure|subtable|subcaptionbox)(?![a-zA-Z@])\s*\*?")
+
+
+@dataclass
+class _Unit:
+    kind: str  # "float", "panel" or "box"
+    name: str
+    start: int
+    end: int
+    line: int
+    captions: list[tuple[int, str | None, bool]] = field(default_factory=list)  # (pos, text or None, sub)
+    labels: list[tuple[int, str]] = field(default_factory=list)
+    malformed: str = ""
+    command: bool = False  # a sub-figure command (\subfloat...), whose caption is an argument
+
+    def contains(self, pos: int) -> bool:
+        return self.start <= pos < self.end
+
+
+def _figure_units(text: str, line_of) -> list[_Unit]:
+    """Every float, sub-figure and minipage in `text`, each with its own captions and labels
+    (those not inside a smaller unit nested in it)."""
+    units: list[_Unit] = []
+    stack: list[tuple[str, int]] = []
+
+    def close(name: str, start: int, end: int, malformed: str = "") -> None:
+        kind = "float" if name in FLOAT_ENVS else "panel" if name in PANEL_ENVS else "box" if name in BOX_ENVS else ""
+        if kind:
+            units.append(_Unit(kind, name, start, end, line_of(start), malformed=malformed))
+
+    for m in ENV_RE.finditer(text):
+        if _escaped(text, m.start()):
+            continue
+        name = m.group(2).strip()
+        if m.group(1) == "begin":
+            stack.append((name, m.start()))
+            continue
+        if not any(n == name for n, _ in stack):
+            continue  # a stray \end: ignored
+        while stack:
+            open_name, start = stack.pop()
+            if open_name == name:
+                close(name, start, m.end())
+                break
+            close(open_name, start, m.start(), f"\\begin{{{open_name}}} on line {line_of(start)} is never closed")
+    for name, start in stack:
+        close(name, start, len(text), f"\\begin{{{name}}} on line {line_of(start)} is never closed")
+
+    for m in PANEL_CMD_RE.finditer(text):
+        if _escaped(text, m.start()):
+            continue
+        box = m.group(1) == "subcaptionbox"
+        parsed = _args(text, m.end(), "omoom" if box else "oom")
+        if parsed is None:
+            around = [u for u in units if u.contains(m.start())]
+            end = min((u.end for u in around), default=len(text))
+            units.append(_Unit("panel", m.group(1), m.start(), end, line_of(m.start()), command=True,
+                               malformed=f"the arguments of \\{m.group(1)} on line {line_of(m.start())} "
+                                         "could not be parsed"))
+            continue
+        args, end = parsed
+        caption = args[1] if box else (args[1] if args[1] is not None else args[0])
+        unit = _Unit("panel", m.group(1), m.start(), end, line_of(m.start()), command=True)
+        if caption is not None:
+            unit.captions.append((m.start(), _clean_caption(caption), True))
+        units.append(unit)
+
+    def owner(pos: int) -> _Unit | None:
+        return min((u for u in units if u.contains(pos)), key=lambda u: u.end - u.start, default=None)
+
+    for m in CAPTION_RE.finditer(text):
+        u = owner(m.start())
+        if u is None or u.command or _escaped(text, m.start()):
+            continue  # outside any figure, or a command panel, whose caption is its argument
+        spec, index = CAPTION_ARGS[m.group(1)]
+        parsed = _args(text, m.end(), spec)
+        caption = _clean_caption(parsed[0][index]) if parsed else None
+        u.captions.append((m.start(), caption, m.group(1) == "subcaption"))
+    for m in LABEL_RE.finditer(text):
+        u = owner(m.start())
+        if u is not None:
+            u.labels.append((m.start(), m.group(1).strip()))
+    for u in units:
+        u.captions.sort()
+    return units
+
+
+def _caption_at(u: _Unit, pos: int) -> tuple[str, str, bool, str]:
+    """(caption, label, is_sub_caption, note) of unit u for something at `pos` in it. With several
+    captions (two figures in one float), the first one after pos, else the last before it. A label
+    belongs to the caption it follows (or to the first, if it precedes them all)."""
+    if u.malformed:
+        return "", "", False, u.malformed
+    if not u.captions:
+        return "", u.labels[0][1] if u.labels else "", False, ""
+    k = next((i for i, c in enumerate(u.captions) if c[0] > pos), len(u.captions) - 1)
+    owners = [max((i for i, c in enumerate(u.captions) if c[0] < at), default=0) for at, _ in u.labels]
+    label = next((name for (at, name), i in zip(u.labels, owners) if i == k), "")
+    _, caption, sub = u.captions[k]
+    if caption is None:
+        return "", label, sub, f"the caption on line {u.line} could not be parsed"
+    return caption, label, sub, ""
+
+
+def _attach(g: Graphic, pos: int, units: list[_Unit]) -> None:
+    """Set g's caption and label from its own unit, and its enclosing figure's separately."""
+    chain = sorted((u for u in units if u.contains(pos)), key=lambda u: u.end - u.start)
+    # A minipage without a caption only lays things out: the graphic belongs to what encloses it.
+    own = next((u for u in chain if u.kind != "box" or u.captions or u.malformed), None)
+    if own is None:
+        return
+    g.caption, g.label, sub, g.note = _caption_at(own, pos)
+    g.panel = own.kind == "panel" or sub
+    outer = next((u for u in chain if u.kind == "float" and u.start <= own.start and u is not own), None)
+    if own.kind == "float":
+        g.figure_line = own.line
+    elif outer is not None:
+        g.figure_line = outer.line
+        g.figure_caption, g.figure_label, _, note = _caption_at(outer, own.start)
+        g.note = g.note or note
 
 
 def bib_keys(bib: str) -> set[str]:

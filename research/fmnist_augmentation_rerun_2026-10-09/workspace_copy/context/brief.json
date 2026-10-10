@@ -1,0 +1,92 @@
+{
+  "title": "Data Augmentation Effect on CNN Fashion-MNIST Accuracy",
+  "domain": "Computer Science",
+  "summary": "This study trains a small convolutional neural network on the Fashion-MNIST dataset under two conditions — with and without simple data augmentation — keeping all hyperparameters, architecture, optimizer, and random seeds identical. Each condition is run with two fixed random seeds (42 and 123) for approximately 5 epochs on a CUDA GPU via Google Colab, and test accuracy, training curves, and validation performance are compared between conditions. The goal is to provide a clean, reproducible, computationally modest demonstration of whether basic augmentation meaningfully generalises a small CNN on this benchmark.",
+  "scope_in": [
+    "Fashion-MNIST dataset (60 000 train / 10 000 test split)",
+    "One small CNN architecture (two conv blocks + fully connected head)",
+    "Two training conditions: no augmentation vs. basic augmentation (random horizontal flip, ±10% translation, ±10° rotation)",
+    "Two random seeds per condition (42 and 123)",
+    "~5 training epochs per run",
+    "PyTorch implementation on CUDA GPU (Google Colab T4 or L4)",
+    "Metrics: per-epoch training loss, validation accuracy, final test accuracy",
+    "Figures: training/validation curves per condition, bar chart of test accuracy by seed and condition",
+    "Summary table of all results"
+  ],
+  "scope_out": [
+    "Hyperparameter search or architecture search",
+    "Advanced augmentation (Cutout, Mixup, AutoAugment, RandAugment)",
+    "More than two seeds or statistical significance testing beyond descriptive comparison",
+    "Transfer learning or pre-trained models",
+    "Datasets other than Fashion-MNIST",
+    "CPU-only training runs as substitutes for GPU runs"
+  ],
+  "subfields": [
+    "Deep Learning",
+    "Computer Vision",
+    "Empirical ML Methodology"
+  ],
+  "assumptions": [
+    "Augmentation set fixed as: RandomHorizontalFlip, RandomAffine(degrees=10, translate=(0.1,0.1)) — reasonable defaults for Fashion-MNIST clothing images",
+    "Adam optimizer with lr=1e-3 chosen as a sensible, widely used default for small CNNs",
+    "Batch size of 64 assumed; train/val split of 54 000/6 000 (90/10 of training set) assumed",
+    "Small CNN defined as: Conv(1→32,3×3,ReLU,MaxPool) → Conv(32→64,3×3,ReLU,MaxPool) → FC(1600→128,ReLU) → FC(128→10)",
+    "No learning-rate scheduler applied, to keep conditions simple and equal",
+    "Results will be reported descriptively (mean ± range across seeds) without formal significance testing, per user instruction"
+  ],
+  "constraints": [
+    "PyTorch framework only",
+    "CUDA GPU mandatory for training; must log torch.cuda.get_device_name() as evidence",
+    "Exactly 5 epochs per run",
+    "Seeds 42 and 123 for both conditions",
+    "Architecture, optimizer (Adam or SGD), learning rate, batch size, and train/val split must be identical across conditions",
+    "No wet-lab, fieldwork, or human-subject components",
+    "Do not overstate statistical significance given only two seeds",
+    "Keep scope narrow — no expansion into broader benchmarks"
+  ],
+  "result_type": "empirical",
+  "key_concepts": [
+    {
+      "term": "Data augmentation",
+      "definition": "Artificially expanding the training set by applying label-preserving transformations (e.g. flips, small rotations, translations) to each image during training so the model sees more variation."
+    },
+    {
+      "term": "Convolutional Neural Network (CNN)",
+      "definition": "A type of neural network that uses sliding filter operations to detect spatial patterns in images, well-suited to image classification."
+    },
+    {
+      "term": "Fashion-MNIST",
+      "definition": "A publicly available benchmark dataset of 70,000 28×28 greyscale images of clothing items across 10 classes, used as a drop-in replacement for MNIST."
+    },
+    {
+      "term": "Generalisation",
+      "definition": "A model's ability to perform well on unseen test data, not just the data it was trained on."
+    },
+    {
+      "term": "Random seed",
+      "definition": "A fixed starting value for the random number generator that makes training fully reproducible across runs."
+    },
+    {
+      "term": "Test accuracy",
+      "definition": "The percentage of correctly classified samples in the held-out test set, the primary evaluation metric here."
+    }
+  ],
+  "core_question": "Does applying basic image augmentation (small random horizontal flips, translations, and rotations) during training improve the test accuracy of a small CNN on Fashion-MNIST compared with identical training without augmentation?",
+  "data_resources": "Fashion-MNIST loaded directly via torchvision.datasets (public, ~30 MB); no external data collection required.",
+  "user_expertise": "Comfortable with ML concepts and PyTorch; wants rigorous but concise experimental reporting without overstated statistical claims.",
+  "search_keywords": [
+    "data augmentation CNN image classification",
+    "Fashion-MNIST benchmark convolutional neural network",
+    "random flip rotation translation image augmentation",
+    "deep learning generalisation regularisation",
+    "torchvision transforms augmentation PyTorch",
+    "small CNN architecture MNIST Fashion-MNIST",
+    "training vs test accuracy gap overfitting",
+    "data augmentation empirical evaluation",
+    "image augmentation training regularisation effect",
+    "CNN benchmark reproducibility fixed random seed",
+    "Fashion-MNIST state of the art baseline",
+    "augmentation-induced variance deep learning"
+  ],
+  "compute_resources": "Google Colab GPU instance (T4 or L4) via the GPU job tool for all neural-network training; standard CPU sandbox for data preprocessing, result aggregation, and plotting."
+}

@@ -818,3 +818,39 @@ def test_after_execution_does_not_report_unfinished_guided_runs(env):
         assert started == [study.pid]
     finally:
         pipeline.start_report = original
+
+
+def _cut_off(thinking_only: bool = False) -> llm.OutputLimitReached:
+    return llm.OutputLimitReached("Model returned no structured output (stop reason: max_tokens): the answer was "
+                                  "cut off by the output limit (64,000 output tokens)", thinking_only=thinking_only)
+
+
+def test_judge_output_limit_is_recovered_by_one_fresh_attempt(env):
+    study, llm_, lab = env()
+    llm_.add(JudgeReport, _cut_off(thinking_only=True), accept())
+    st = loop(study.pid)
+    assert st["status"] == "approved" and llm_.kinds().count("JudgeReport") == 2
+
+
+def test_exhausted_judge_output_fails_the_review_explicitly_and_resume_recovers(env):
+    study, llm_, lab = env()
+    llm_.add(JudgeReport, _cut_off(thinking_only=True), _cut_off())
+    st = loop(study.pid)
+    assert st["status"] == "review_failed" and study.project().stage == "reviewing"
+    assert "did not return a valid review" in st["attention"] and "max_tokens" in st["attention"]
+    assert not jobs.is_running(study.pid, "review")
+    llm_.add(JudgeReport, accept())
+
+    async def again():
+        refine.resume(study.pid)
+
+    st = loop(study.pid, again)
+    assert st["status"] == "approved"
+
+
+def test_a_judge_stream_interrupted_twice_fails_the_review_as_bedrock_unavailable(env):
+    study, llm_, lab = env()
+    broken = llm.StreamInterrupted(httpx2.ReadError("connection reset", request=REQUEST))
+    llm_.add(JudgeReport, broken, broken)
+    st = loop(study.pid)
+    assert st["status"] == "review_failed" and "Bedrock unavailable: StreamInterrupted" in st["attention"]

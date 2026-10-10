@@ -1,0 +1,26 @@
+{
+  "id": "f41c36a86530",
+  "project_id": "d95fb65c9f7a",
+  "kind": "blueprint",
+  "status": "error",
+  "phase": "compiling",
+  "counts": {},
+  "log": [
+    {
+      "t": "2026-10-09T19:45:59.603472+00:00",
+      "text": "Locating sources for 1 datasets"
+    },
+    {
+      "t": "2026-10-09T19:46:44.679274+00:00",
+      "text": "Found sources for 1 of 1 datasets"
+    },
+    {
+      "t": "2026-10-09T19:46:44.799343+00:00",
+      "text": "Designing the agent team and executable tasks"
+    }
+  ],
+  "result": null,
+  "error": "Model returned no structured output (stop reason: max_tokens)",
+  "started_at": "2026-10-09 19:45:58.995624+00:00",
+  "finished_at": "2026-10-09 19:52:30.739091+00:00"
+}

@@ -1,0 +1,25 @@
+{
+  "architecture": {
+    "conv_filters": [32, 32, 64, 64],
+    "fc_units": 256,
+    "dropout_conv": 0.25,
+    "dropout_fc": 0.5
+  },
+  "training": {
+    "lr": 0.001,
+    "batch_size": 64,
+    "epochs": 5,
+    "optimizer": "adam"
+  },
+  "augmentation": {
+    "flip_p": 0.5,
+    "degrees": 10,
+    "translate": [0.1, 0.1]
+  },
+  "normalization": {
+    "mean": 0.2860,
+    "std": 0.3530
+  },
+  "sizes": [500, 1000, 2500, 5000, 10000, 30000, 60000],
+  "seeds": [42, 123]
+}

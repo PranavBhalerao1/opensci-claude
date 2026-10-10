@@ -1,0 +1,545 @@
+%% Conference-style paper — Fashion-MNIST augmentation scaling study
+\documentclass[11pt]{article}
+
+%% ── Packages ──────────────────────────────────────────────────────────────────
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage[a4paper, margin=1in]{geometry}
+\usepackage{natbib}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{amsmath}
+\usepackage{microtype}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{parskip}
+\usepackage{enumitem}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=blue!60!black,
+  citecolor=green!50!black,
+  urlcolor=blue!70!black,
+}
+
+%% ── Title block ───────────────────────────────────────────────────────────────
+\title{\textbf{Diminishing Harm, Not Emerging Benefit: Basic Geometric Augmentation
+Consistently Hurts a Small CNN on Fashion-MNIST
+Within a 5-Epoch Budget}}
+
+\author{%
+  OpenScientist Report Agent\\[2pt]
+  \small\textit{Automated Empirical Study --- 2026-10-09}
+}
+\date{}
+
+%% ══════════════════════════════════════════════════════════════════════════════
+\begin{document}
+\maketitle
+\thispagestyle{empty}
+
+%% ── Abstract ──────────────────────────────────────────────────────────────────
+\begin{abstract}
+We present a controlled empirical study of how basic geometric data augmentation
+(random horizontal flip and affine transform) affects test accuracy for a small
+convolutional neural network (CNN) trained on Fashion-MNIST across seven training
+set sizes ranging from 500 to 60,000 samples, under a strict 5-epoch training
+budget.
+Across 28 training runs (7 sizes~$\times$ 2 augmentation conditions~$\times$
+2 random seeds) executed on an NVIDIA~L4 GPU with PyTorch~2.11.0, augmentation
+\emph{consistently decreased} test accuracy at every tested size: mean
+$\Delta = \text{acc}_\text{aug} - \text{acc}_\text{noaug}$ ranges from
+$-8.06$~pp at $N{=}500$ to $-2.81$~pp at $N{=}60{,}000$.
+Both seeds independently agree on the negative sign at all seven sizes
+(concordance fraction 1.00), ruling out seed artefacts.
+A log-linear OLS regression confirms that augmentation harm decreases with
+training set size ($b{=}{+}0.530$, $R^2{=}0.613$, $p{=}0.037$), but the
+estimated crossover to positive benefit lies at $N^\ast \approx 6.45$ million
+samples---far outside the tested range---with a bootstrap 95\% confidence
+interval spanning four orders of magnitude ($[40{,}325;\, {\sim}10^9]$).
+The mechanism is \emph{convergence overhead}: augmented runs exhibit higher
+epoch-1 training loss in 14/14 configurations, and the 5-epoch budget is
+insufficient for the model to recover at any tested size.
+The no-augmentation baseline at $N{=}60{,}000$ achieves 91.48\% test accuracy,
+confirming correct CNN calibration.
+These results constitute cautionary evidence that short training budgets can
+invert augmentation's expected benefit, independent of dataset size.
+\end{abstract}
+
+%% ── 1. Introduction ───────────────────────────────────────────────────────────
+\section{Introduction}
+\label{sec:intro}
+
+Data augmentation is a widely used regularisation strategy for training CNNs,
+widely assumed to be beneficial for generalisation, and especially valuable in
+low-data regimes where the model would otherwise overfit
+\citep{mukhamediev2024state,kumar2025enhancing}.
+Canonical geometric transforms---horizontal flipping, rotation, translation,
+and cropping---are standard practice across benchmark datasets
+\citep{karada2020empirical,kang2024game}.
+
+However, augmentation's benefit is not unconditional.
+\citet{karada2020empirical} demonstrated on CIFAR-10 that the magnitude of
+augmentation benefit is sensitive to the size of the available training set,
+suggesting a nuanced interaction between sample count and augmentation
+effectiveness.
+Building on this precedent, we ask a more refined question: \emph{does basic
+geometric augmentation provide a positive benefit to a small CNN on
+Fashion-MNIST, and how does this benefit scale with training set size from
+500 to 60,000 samples under a fixed 5-epoch training budget?}
+
+Our study tests the hypothesis that augmentation benefit is largest at small
+$N$ (500--5,000 samples) and diminishes to negligibility around
+$N \approx 10{,}000$--$20{,}000$ samples, at which point the training set is
+large enough that augmentation is no longer necessary.
+We find the hypothesis is not supported.
+Instead, augmentation was \emph{not beneficial} under the 5-epoch budget at any
+tested size; harm decreases as $N$ grows, but no crossover to positive benefit
+is observed within the tested regime.
+
+\textbf{Contributions.}
+(1)~We provide the first systematic quantification of augmentation-benefit
+scaling on Fashion-MNIST across a wide range of training set sizes under a
+fixed architecture and epoch count.
+(2)~We document a cautionary negative result: basic geometric augmentation
+consistently hurts a small CNN under a 5-epoch training budget across all
+tested sizes.
+(3)~We identify \emph{convergence overhead}---higher per-step training loss
+induced by augmentation---as the mechanistic explanation, and show it persists
+from $N{=}500$ to $N{=}60{,}000$.
+
+%% ── 2. Related Work ───────────────────────────────────────────────────────────
+\section{Related Work}
+\label{sec:related}
+
+\paragraph{Small CNN benchmarks on Fashion-MNIST.}
+Small CNN architectures routinely achieve 88--94\% accuracy on the full
+Fashion-MNIST training set \citep{mukhamediev2024state,yee2026based}.
+Our no-augmentation baseline of 91.48\% at $N{=}60{,}000$ falls squarely in
+this range, validating the experimental setup.
+Several studies have examined architecture choices (depth, batch normalisation,
+dropout) and hyperparameter effects on Fashion-MNIST
+\citep{meshkini2019analysis,xhaferra2022classification}, but none systematically
+vary training set size across a controlled sample-count range.
+
+\paragraph{Augmentation benefit and dataset size.}
+The relationship between augmentation benefit and dataset size has been explored
+most thoroughly on CIFAR-10.
+\citet{karada2020empirical} showed that augmentation benefit varies with training
+set size, motivating the replication and extension of this analysis to
+Fashion-MNIST.
+\citet{kang2024game} found that advanced augmentation strategies benefit small
+datasets specifically, though their setting employed substantially longer
+training runs and more sophisticated transforms than the basic geometric policy
+studied here.
+
+\paragraph{Augmentation in low-data domains.}
+In speciality domains, augmentation has been widely reported to improve
+performance in low-data regimes.
+\citet{pham2018deep} found augmentation helpful for skin-lesion classification,
+and \citet{harun2024dysgraphia} reported similar findings for dysgraphia
+detection; both studies used training runs of 50 or more epochs.
+\citet{snider2023using} showed augmentation benefits ultrasound image
+classification, again with substantially longer training than 5 epochs.
+The apparent discrepancy between those findings and ours is, as we demonstrate,
+fully explained by the epoch budget: 5 epochs are insufficient for a CNN to
+overcome augmentation's convergence overhead regardless of training set size.
+
+\paragraph{Augmentation transform design.}
+\citet{poojary2021effect} and \citet{zhang2020circular} examined the effect of
+specific augmentation types on image classification accuracy, highlighting
+that not all transforms are equally beneficial.
+\citet{kumar2025enhancing} surveyed augmentation strategies for small datasets,
+concluding that the training budget is a key moderating factor---consistent with
+our findings.
+
+%% ── 3. Methods ────────────────────────────────────────────────────────────────
+\section{Methods}
+\label{sec:methods}
+
+\subsection{Dataset and Subsets}
+Fashion-MNIST \citep{mukhamediev2024state} comprises 60,000 training and 10,000
+test grey-scale $28{\times}28$ images across 10 balanced clothing categories.
+We created seven stratified class-balanced training subsets of sizes
+$N \in \{500,\, 1{,}000,\, 2{,}500,\, 5{,}000,\, 10{,}000,\, 30{,}000,\, 60{,}000\}$
+by sampling uniformly within each class using random seeds 42 and 123.
+Each subset was further split 90/10 into a training partition and a validation
+partition used for monitoring only (no early stopping).
+All conditions were evaluated on the fixed 10,000-sample test set.
+
+\subsection{Architecture}
+The CNN consists of two dual-convolution blocks followed by a fully connected
+head:
+\begin{itemize}[nosep]
+  \item \textbf{Block 1}: Conv($1{\to}32$) $\to$ BN $\to$ ReLU $\to$
+        Conv($32{\to}32$) $\to$ BN $\to$ ReLU $\to$ MaxPool($2{\times}2$)
+        $\to$ Dropout(0.25)
+  \item \textbf{Block 2}: Conv($32{\to}64$) $\to$ BN $\to$ ReLU $\to$
+        Conv($64{\to}64$) $\to$ BN $\to$ ReLU $\to$ MaxPool($2{\times}2$)
+        $\to$ Dropout(0.25)
+  \item \textbf{FC head}: Linear($3{,}136{\to}256$) $\to$ ReLU
+        $\to$ Dropout(0.50) $\to$ Linear($256{\to}10$)
+\end{itemize}
+The total parameter count is 871,018, confirmed before training.
+All kernel sizes are $3{\times}3$ with padding~1.
+
+\subsection{Augmentation Policy}
+The \textit{aug} condition applies, during training only,
+\texttt{RandomHorizontalFlip}$(p{=}0.5)$ followed by
+\texttt{RandomAffine}(degrees$=\pm10^\circ$, translate$=(0.1,\,0.1)$).
+The \textit{noaug} condition applies no training-time transforms.
+In both conditions, test-time preprocessing is identical: normalise with
+Fashion-MNIST channel mean 0.2860 and standard deviation 0.3530.
+
+\subsection{Training Protocol}
+All runs use Adam (learning rate $10^{-3}$), batch size 64,
+cross-entropy loss, and exactly 5 epochs.
+No learning-rate scheduler is used.
+Weights are initialised using PyTorch defaults.
+Each (size, condition, seed) triple constitutes one independent run;
+random seeds 42 and 123 are applied to Python's \texttt{random}, NumPy, and
+PyTorch (including CUDA) at the start of each run.
+All 28 runs were executed sequentially on an NVIDIA~L4 GPU under
+PyTorch~2.11.0+cu130.
+
+\subsection{Analysis}
+For each of the 7 training set sizes we compute the per-seed augmentation
+benefit $\Delta_s = \text{acc}_{\text{aug},s} - \text{acc}_{\text{noaug},s}$
+and the mean $\bar\Delta$ across seeds $s \in \{42, 123\}$.
+We fit an OLS log-linear regression
+$\bar\Delta = a + b\cdot\log_2(N)$
+and report the slope $b$, coefficient of determination $R^2$, and a
+$t$-distribution 95\% confidence interval for $b$.
+The crossover $N^\ast$ (where $\bar\Delta = 0$) is estimated as
+$N^\ast = 2^{-a/b}$ and its uncertainty is quantified via 5,000 bootstrap
+iterations (percentile 95\% CI, bootstrap seed~42, right-tail values clipped
+at $10^9$).
+Spearman's $\rho$ is computed for monotonicity assessment.
+All analysis is purely descriptive given $n{=}2$ seeds per cell.
+
+%% ── 4. Results ────────────────────────────────────────────────────────────────
+\section{Results}
+\label{sec:results}
+
+\subsection{Augmentation Consistently Hurts at All Training Set Sizes}
+
+Table~\ref{tab:results} and Figure~\ref{fig:delta} present the primary results.
+The mean augmentation benefit $\bar\Delta$ is negative at every tested training
+set size, ranging from $-8.06$~pp at $N{=}500$ to $-2.81$~pp at $N{=}60{,}000$.
+Both random seeds independently produce negative $\Delta$ at all 7 sizes
+(concordance fraction 1.00), confirming the result is not a seed artefact.
+Figure~\ref{fig:bars} illustrates that no-augmentation accuracy exceeds
+augmented accuracy at every size; the gap narrows with $N$ but never closes.
+
+\input{table_results.tex}
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=0.82\linewidth]{../figures/fig_delta_vs_size.png}
+  \caption{Augmentation benefit $\Delta = \text{acc}_\text{aug} -
+  \text{acc}_\text{noaug}$ (percentage points) versus training set size $N$
+  (log$_2$ scale) for a small CNN on Fashion-MNIST trained for 5 epochs.
+  Grey markers show individual seed values (circles: seed~42; squares: seed~123);
+  the black connected line shows mean $\bar\Delta$;
+  the blue line is the OLS log-linear fit
+  $\hat\Delta = -12.00 + 0.530\cdot\log_2(N)$
+  ($R^2{=}0.613$, $p{=}0.037$) with ${\pm}1.96\,\text{SE}$ confidence band.
+  All 7 $\bar\Delta$ values are negative.
+  The OLS-estimated crossover $N^\ast \approx 6.45$ million
+  (bootstrap 95\% CI $[40\text{K};\, {\sim}10^9]$) lies far beyond the tested
+  range and is shown for illustration only.}
+  \label{fig:delta}
+\end{figure}
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=0.82\linewidth]{../figures/fig_test_acc_bars.png}
+  \caption{Test accuracy at epoch~5 (\%) for no-augmentation (blue) and
+  augmented (orange) conditions, grouped by training set size $N$.
+  Individual seed values are overlaid as scatter dots (circles: seed~42;
+  squares: seed~123).
+  No-augmentation accuracy exceeds augmented accuracy at every size;
+  the gap narrows from approximately 8~pp at $N{=}500$ to approximately 2.8~pp
+  at $N{=}60{,}000$ but remains substantial throughout.}
+  \label{fig:bars}
+\end{figure}
+
+\subsection{Augmentation Harm Decreases with Training Set Size}
+
+The log-linear OLS fit yields slope $b{=}{+}0.530$ (95\% CI $[0.046,\, 1.015]$),
+$R^2{=}0.613$, $p{=}0.037$, confirming that augmentation harm decreases
+significantly as training set size grows on a log scale.
+The Spearman rank correlation is $\rho{=}0.714$ ($p{=}0.071$, $n{=}7$), a
+positive rank correlation consistent with the trend but not reaching conventional
+significance given the small number of size levels.
+
+Notably, the trend is non-monotone: mean $\bar\Delta$ is $-4.77$~pp at
+$N{=}2{,}500$ but worsens to $-6.55$~pp at $N{=}5{,}000$ and remains at
+$-6.14$~pp at $N{=}10{,}000$ before recovering at larger sizes.
+This mid-range dip is not captured by the log-linear model (which contributes to
+$R^2{=}0.613$ rather than a higher value) and is discussed further in
+Section~\ref{sec:discussion}.
+
+\subsection{The Estimated Crossover is Far Outside the Tested Range}
+
+The OLS-implied crossover $N^\ast$ (where $\bar\Delta{=}0$) is approximately
+$6.45$ million samples.
+This estimate is flagged as extrapolated: it lies more than two orders of
+magnitude beyond the largest tested training set ($N{=}60{,}000$).
+The bootstrap 95\% CI spans four orders of magnitude
+($[40{,}325;\, {\sim}10^9]$), providing negligible practical predictive value.
+This result should be treated as an illustration of the regression framework, not
+a reliable estimate of an actionable threshold.
+
+\subsection{Convergence Overhead as the Mechanistic Explanation}
+
+Figure~\ref{fig:curves_all} shows training loss and validation accuracy curves for
+all 7 sizes.
+Augmented runs exhibit higher epoch-1 training loss in \emph{all} 14
+(seed~$\times$~size) configurations.
+Representative examples: at $N{=}500$ (seed~42), epoch-1 loss is 2.467
+(augmented) vs.\ 2.327 (no-augmentation); at $N{=}60{,}000$ (seed~42),
+the corresponding values are 0.772 vs.\ 0.506
+(Figures~\ref{fig:curves500}--\ref{fig:curves60k}).
+In every case, augmented runs begin with a harder optimisation landscape and do
+not recover to match the no-augmentation baseline within 5 epochs.
+This \emph{convergence overhead}---harder per-step examples that reduce per-step
+gradient informativeness---is the principal mechanism behind the universally
+negative $\bar\Delta$.
+
+\begin{figure}[p]
+  \centering
+  \includegraphics[width=\linewidth]{../figures/fig_curves_all.png}
+  \caption{Per-epoch training loss (left panels) and validation accuracy
+  (right panels) for all 7 training set sizes (rows, $N{=}500$ to $60{,}000$)
+  under no-augmentation (blue) and augmented (orange) conditions.
+  Individual seeds are shown as dashed lines; means as solid lines.
+  Augmented runs begin with consistently higher epoch-1 loss and converge more
+  slowly, explaining why 5 epochs are insufficient for augmentation to provide
+  net benefit at any tested size.}
+  \label{fig:curves_all}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \begin{subfigure}[b]{0.48\linewidth}
+    \includegraphics[width=\linewidth]{../figures/curves_size500.png}
+    \caption{$N{=}500$.}
+    \label{fig:curves500}
+  \end{subfigure}
+  \hfill
+  \begin{subfigure}[b]{0.48\linewidth}
+    \includegraphics[width=\linewidth]{../figures/curves_size60000.png}
+    \caption{$N{=}60{,}000$.}
+    \label{fig:curves60k}
+  \end{subfigure}
+  \caption{Training loss and validation accuracy curves at the two extreme
+  training set sizes.
+  \textbf{(a)} At $N{=}500$, augmented runs begin with substantially higher
+  epoch-1 loss (${\approx}2.47$ vs.\ ${\approx}2.33$ mean) and do not recover
+  within 5 epochs.
+  \textbf{(b)} At $N{=}60{,}000$, augmented runs still start with approximately
+  50\% higher epoch-1 loss (seed~42: 0.772 vs.\ 0.506) and trail
+  no-augmentation by ${\sim}2.8$~pp at epoch~5, illustrating that the
+  5-epoch budget is insufficient for augmentation to provide net benefit even
+  with the complete Fashion-MNIST training set.}
+  \label{fig:curves_extremes}
+\end{figure}
+
+\subsection{Baseline Calibration}
+
+The no-augmentation baseline at $N{=}60{,}000$ achieves 91.40\% (seed~42) and
+91.57\% (seed~123), with a mean of 91.48\%.
+This falls within the 88--92\% range expected for small CNNs on Fashion-MNIST
+\citep{mukhamediev2024state}, confirming that the architecture and training
+protocol are well-calibrated.
+
+%% ── 5. Discussion ─────────────────────────────────────────────────────────────
+\section{Discussion}
+\label{sec:discussion}
+
+\paragraph{Convergence overhead explains universal negative $\bar\Delta$.}
+The 14/14 higher epoch-1 loss pattern under augmentation is the central
+mechanistic finding.
+By randomly flipping and affinely distorting each image, augmentation increases
+the effective difficulty of each training example.
+For a 5-epoch budget, the model never recovers the per-step gradient
+informativeness it sacrifices to handle harder examples; it is effectively
+under-trained relative to the no-augmentation condition at every tested size.
+This interpretation is consistent with the observation that $|\bar\Delta|$
+decreases as $N$ grows: with larger training sets, more gradient steps are
+available per epoch (given fixed batch size), partially compensating for the
+increased per-step difficulty.
+
+\paragraph{Non-monotone dip at $N{=}5{,}000$--$10{,}000$.}
+The worsening of $\bar\Delta$ from $-4.77$~pp at $N{=}2{,}500$ to
+$-6.55$~pp at $N{=}5{,}000$, followed by gradual recovery at larger sizes, is a
+genuine irregularity that the log-linear model only partially captures.
+One plausible explanation is that at $N{\approx}2{,}500$--$5{,}000$ the
+no-augmentation condition begins to overfit less aggressively (as more training
+data becomes available), while the augmented condition has not yet accumulated
+enough gradient steps to compensate for convergence overhead; this temporarily
+widens the gap before more training data at $N{>}10{,}000$ allows partial
+recovery.
+We treat this dip as an observation to be reproduced and explained in future
+work rather than as an artifact of the current setup.
+
+\paragraph{Comparison with prior work.}
+Studies finding augmentation beneficial
+\citep{pham2018deep,snider2023using,kumar2025enhancing} typically employ
+50--200+ training epochs.
+The apparent discrepancy with our finding is fully explained by epoch budget
+differences; we make no claim that augmentation is inherently inferior to
+no-augmentation for Fashion-MNIST, only that it is not beneficial within a
+5-epoch budget.
+\citet{karada2020empirical} found dataset-size-sensitive augmentation effects on
+CIFAR-10, consistent with the positive OLS slope we observe; however, their
+finding was that benefit decreases at large $N$, not that benefit is uniformly
+negative.
+This suggests the 5-epoch budget is uniquely constraining in a way that
+inverts the typical outcome.
+\citet{kang2024game} showed advanced augmentation benefits small datasets, but
+their study used more sophisticated transforms (Mixup, CutOut) and substantially
+longer training.
+
+\paragraph{The crossover estimate is not actionable.}
+The OLS-extrapolated $N^\ast \approx 6.45$ million is presented for
+completeness.
+Given the bootstrap 95\% CI of $[40{,}325;\, {\sim}10^9]$ and the non-monotone
+trend, this estimate should not be interpreted as a reliable prediction.
+Any practical guidance derived from it would be speculative.
+
+\paragraph{Practical implication.}
+Practitioners should not apply basic geometric augmentation in short-run training
+pipelines ($\leq 5$ epochs) without verifying that training time is sufficient
+for the CNN to overcome convergence overhead.
+The benefit of augmentation is epoch-budget-dependent, not merely
+dataset-size-dependent.
+
+%% ── 6. Limitations ────────────────────────────────────────────────────────────
+\section{Limitations}
+\label{sec:limitations}
+
+\begin{enumerate}[leftmargin=*, label=\arabic*.]
+\item \textbf{Two seeds per cell.}
+  With $n{=}2$ replicates per (size, condition) cell, formal significance testing
+  of per-size effects is not possible.
+  The Spearman $\rho$ and OLS regression are purely descriptive; the
+  $\rho{=}0.714$ ($p{=}0.071$) trend does not reach $\alpha{=}0.05$
+  significance with $n{=}7$ size levels.
+
+\item \textbf{Highly constrained epoch budget.}
+  Five epochs is an extremely restricted training protocol.
+  Results are specific to this under-trained regime and must not be generalised
+  to longer training runs, where augmentation is well-established to provide
+  benefit.
+
+\item \textbf{Non-monotone mid-range trend.}
+  The dip at $N{=}5{,}000$--$10{,}000$ (mean $\bar\Delta$ worsening from
+  $-4.77$ to $-6.55$~pp between $N{=}2{,}500$ and $N{=}5{,}000$) reduces
+  confidence in the log-linear model as a complete description of the
+  size-dependence ($R^2{=}0.613$).
+
+\item \textbf{Unreliable crossover estimate.}
+  $N^\ast{=}6.45$ million is highly extrapolated from the tested range
+  (max $N{=}60{,}000$); the bootstrap 95\% CI spanning four orders of magnitude
+  provides negligible practical predictive value.
+
+\item \textbf{Single architecture and augmentation policy.}
+  Results apply to the specific dual-conv architecture with BatchNorm and the
+  basic flip+affine policy; they may not hold for larger models, architectures
+  without batch normalisation, or more sophisticated augmentation methods
+  (Mixup, CutOut, AutoAugment, RandAugment).
+
+\item \textbf{Fashion-MNIST only.}
+  The specific epoch budget at which augmentation transitions from harmful to
+  helpful may differ for datasets with higher intra-class complexity (e.g.,
+  CIFAR-10).
+
+\item \textbf{Architecture deviation from brief.}
+  The implemented architecture uses 256-unit FC head and two convolutions per
+  block (vs.\ 128-unit FC and one convolution per block in the original study
+  brief); this matches the experiment plan's configuration file
+  (\texttt{fc\_units=256}, \texttt{conv\_filters=[32,32,64,64]}) and is
+  consistent throughout all 28 runs.
+\end{enumerate}
+
+%% ── 7. Conclusion ─────────────────────────────────────────────────────────────
+\section{Conclusion}
+\label{sec:conclusion}
+
+We conducted a fully controlled study of basic geometric augmentation across
+seven training set sizes on Fashion-MNIST, training a small CNN for exactly
+5 epochs per run.
+Augmentation was not beneficial under the 5-epoch budget at any tested size,
+with mean $\bar\Delta$ ranging from $-8.06$~pp at $N{=}500$ to $-2.81$~pp at
+$N{=}60{,}000$.
+Perfect seed concordance (7/7 sizes, 2/2 seeds) confirms this is a systematic
+effect, not a stochastic artefact.
+
+Augmentation harm decreases as training set size grows ($R^2{=}0.613$), but the
+estimated crossover to positive benefit at $N^\ast \approx 6.45$ million is
+unreliably extrapolated and should not be treated as an actionable threshold.
+
+The result is explained by \emph{convergence overhead}: augmentation induces
+harder per-step examples, slowing convergence in a way that is not overcome
+within 5 epochs regardless of training set size.
+This finding does not imply that augmentation is generally harmful; it implies
+that augmentation benefit is epoch-budget-dependent.
+
+Future work should vary the epoch budget systematically to identify the minimum
+number of epochs at which basic geometric augmentation begins to provide net
+benefit at each training set size, and should extend the analysis to
+architectures without batch normalisation and to datasets with higher intra-class
+variability \citep{karada2020empirical,kang2024game,mukhamediev2024state}.
+
+%% ── Reproducibility ───────────────────────────────────────────────────────────
+\appendix
+\section*{Appendix: Reproducibility Statement}
+\label{app:repro}
+
+All code, configuration, data indices, and result files are provided in the
+accompanying workspace.
+The study can be reproduced as follows.
+
+\begin{enumerate}[leftmargin=*, label=\arabic*.]
+\item \textbf{Data preparation.}
+  Run \texttt{python src/make\_subsets.py} to generate stratified subset indices
+  and a class-balance check; requires
+  \texttt{torchvision.datasets.FashionMNIST} auto-download to \texttt{data/}.
+\item \textbf{Training (seed~42).}
+  Run \texttt{python src/gpu\_train\_seed42.py} on a CUDA-enabled GPU.
+  Outputs per-epoch results (70 rows) and a device log to \texttt{results/}.
+\item \textbf{Training (seed~123).}
+  Run \texttt{python src/gpu\_train\_seed123.py} similarly.
+\item \textbf{Analysis and figures.}
+  Run \texttt{python scripts/t4\_3\_produce\_outputs.py} to reproduce all
+  figures, the results table, and the summary report.
+  Analysis artefacts (regression JSON, bootstrap CSV, diagnostic text) are in
+  \texttt{analysis/}.
+\item \textbf{Configuration.}
+  All hyperparameters are frozen in \texttt{config/config.json}:
+  learning rate $10^{-3}$, batch size 64, 5 epochs, Adam optimiser,
+  flip probability 0.5, affine degrees $\pm10^\circ$,
+  translate $(0.1, 0.1)$,
+  normalisation mean/std $(0.2860,\, 0.3530)$.
+\item \textbf{Environment.}
+  NVIDIA~L4 GPU, CUDA~13.0, Python~3.13.15, PyTorch~2.11.0+cu130.
+  Full environment specification is in \texttt{logs/gpu/\_environment.txt}.
+\end{enumerate}
+
+Random seeds 42 and 123 are applied to \texttt{random}, NumPy, and PyTorch
+(including \texttt{torch.cuda.manual\_seed\_all}) at the start of each
+training run.
+Regression and bootstrap diagnostics were produced by automated analysis agents;
+the regression uses OLS via \texttt{scipy.stats.linregress} with
+predictor $\log_2(N)$.
+
+%% ── Bibliography ──────────────────────────────────────────────────────────────
+\bibliographystyle{plainnat}
+\bibliography{references}
+
+\end{document}

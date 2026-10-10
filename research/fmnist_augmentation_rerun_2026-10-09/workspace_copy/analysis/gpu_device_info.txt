@@ -1,0 +1,31 @@
+GPU Device Information
+======================
+Source: results/gpu_log_seed42.txt  (accessed 2026-10-09)
+Source: results/gpu_log_seed123.txt (accessed 2026-10-09)
+
+Seed 42  — Device: NVIDIA L4
+Seed 123 — Device: NVIDIA L4
+
+Full log contents:
+------------------
+[gpu_log_seed42.txt]
+device: NVIDIA L4
+seed: 42
+torch version: 2.11.0+cu130
+
+total rows in CSV: 70
+sizes present: [500, 1000, 2500, 5000, 10000, 30000, 60000]
+conditions present: ['aug', 'noaug']
+seeds present: [42]
+STATUS: COMPLETE
+
+[gpu_log_seed123.txt]
+device: NVIDIA L4
+seed: 123
+torch version: 2.11.0+cu130
+
+total rows in CSV: 70
+sizes present: [500, 1000, 2500, 5000, 10000, 30000, 60000]
+conditions present: ['aug', 'noaug']
+seeds present: [123]
+STATUS: COMPLETE

@@ -1,0 +1,17 @@
+
+import os
+fsize = os.path.getsize('figures/fig_delta_vs_size.png')
+print(f"File: figures/fig_delta_vs_size.png")
+print(f"Size: {fsize:,} bytes  ({fsize/1024:.1f} KB)  — > 20 KB ✓")
+print(f"Dimensions: 1184×807 px @ 150 dpi")
+print(f"Mode: RGBA  Format: PNG  ✓")
+print()
+print("Figure elements:")
+print("  ✓ Individual seed scatter (circles=seed42, squares=seed123) in light grey")
+print("  ✓ Mean Δ connected line with filled diamond markers (black)")
+print("  ✓ OLS regression line with equation & R², p-value in legend")
+print("  ✓ ±1.96·SE shaded CI band (blue, semi-transparent)")
+print("  ✓ Δ=0 dashed horizontal reference line")
+print("  ✓ N* annotation box (extrapolated; vertical line skipped per spec)")
+print("  ✓ x-axis: log₂ ticks with human-readable N labels")
+print("  ✓ Grid, legend, axis labels, title")

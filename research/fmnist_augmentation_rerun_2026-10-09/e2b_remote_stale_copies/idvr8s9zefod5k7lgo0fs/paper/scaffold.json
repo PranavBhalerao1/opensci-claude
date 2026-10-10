@@ -1,0 +1,331 @@
+{
+  "title": "How Augmentation Benefit Scales with Training Set Size for a Small CNN on Fashion-MNIST: A 5-Epoch Controlled Study",
+  "one_sentence_summary": "Under a strict 5-epoch training budget, basic geometric augmentation consistently reduces test accuracy relative to no augmentation at all seven tested training set sizes (500–60,000), with the penalty shrinking monotonically from −8.1 pp at N=500 to −2.8 pp at N=60,000 as training set size grows (OLS R²=0.613, Spearman ρ=0.714).",
+  "hypothesis_verdict": "not_supported",
+  "verdict_explanation": "The hypothesis predicted positive augmentation benefit (Δ = acc_aug − acc_noaug) that would be largest at small training set sizes and approach zero near 10,000–20,000 samples. The experiments show Δ is negative at every tested size: −8.1 pp at N=500 and −2.8 pp at N=60,000 (analysis/delta_by_size.csv). The crossover N* where Δ=0 is estimated at ~6.45 million samples, far outside the tested range (analysis/regression_results.json, N_star=6,448,676, bootstrap 95% CI [40,325 – 1×10⁹], flagged extrapolated_above_range). Two secondary aspects are partially consistent with the hypothesis direction: (1) the log-linear model explains 61% of variance in mean Δ (R²=0.613, p=0.037), and (2) Δ does increase toward zero as N grows on the log scale (Spearman ρ=+0.714). These findings reflect augmentation becoming progressively less harmful at larger N, but the fundamental claim—that augmentation provides positive benefit—is falsified across all conditions within a 5-epoch budget. The root cause is that augmented runs consistently incur higher epoch-1 training loss (14/14 comparisons), and 5 epochs are insufficient for the model to recover the additional variance introduced by the transforms.",
+  "findings": [
+    {
+      "claim": "Basic geometric augmentation consistently reduces final test accuracy relative to no augmentation at every tested training set size (N=500 to N=60,000) under a 5-epoch budget, with mean Δ ranging from −8.1 pp at N=500 to −2.8 pp at N=60,000.",
+      "evidence": [
+        "analysis/delta_by_size.csv: delta_mean=-8.055 at N=500, delta_mean=-5.54 at N=1000, delta_mean=-4.77 at N=2500, delta_mean=-6.55 at N=5000, delta_mean=-6.135 at N=10000, delta_mean=-4.235 at N=30000, delta_mean=-2.805 at N=60000"
+      ],
+      "strength": "strong",
+      "relation": "contradicts"
+    },
+    {
+      "claim": "Both random seeds independently produce negative Δ at all seven training set sizes, confirming that the augmentation-hurts finding is not a seed artefact.",
+      "evidence": [
+        "analysis/trend_diagnostics.txt: Concordant sizes 7/7, concordance fraction 1.0000"
+      ],
+      "strength": "strong",
+      "relation": "contradicts"
+    },
+    {
+      "claim": "Augmented runs exhibit higher epoch-1 training loss than no-augmentation runs in all 14 (size × seed) configurations, indicating that harder examples introduced by augmentation slow convergence within the 5-epoch budget.",
+      "evidence": [
+        "analysis/trend_diagnostics.txt: aug > noaug epoch-1 loss count 14/14, fraction 1.0000; logs/gpu/seed42_train.log: e.g. N=500 aug loss=2.4677 vs noaug loss=2.3271; N=60000 aug loss=0.7715 vs noaug loss=0.5055"
+      ],
+      "strength": "strong",
+      "relation": "contradicts"
+    },
+    {
+      "claim": "Mean augmentation benefit Δ increases monotonically toward zero as training set size grows on a log scale, as captured by a log-linear OLS regression Δ = −12.00 + 0.530·log₂(N) that explains 61% of variance (R²=0.613, slope p=0.037).",
+      "evidence": [
+        "analysis/regression_results.json: a=-11.9996, b=0.5305, r2=0.6130, slope_p_value=0.0374, slope_ci=[0.0459,1.0150]",
+        "analysis/trend_diagnostics.txt: Spearman rho=0.714286, two-tailed p=0.071344"
+      ],
+      "strength": "moderate",
+      "relation": "partial"
+    },
+    {
+      "claim": "The crossover training set size N* at which augmentation would break even (Δ=0) is estimated at ~6.45 million samples with a very wide bootstrap 95% CI ([40,325 – 1×10⁹]), well outside the tested range of 500–60,000 and not informative as a practical threshold.",
+      "evidence": [
+        "analysis/regression_results.json: N_star=6448675.856, N_star_ci_low=40324.827, N_star_ci_high=1000000000.0, N_star_note=extrapolated_above_range",
+        "analysis/bootstrap_N_star.csv: 5000 bootstrap draws showing extreme right-skew and right-tail clipping at 1e9"
+      ],
+      "strength": "weak",
+      "relation": "contradicts"
+    },
+    {
+      "claim": "The no-augmentation baseline at N=60,000 achieves 91.5% mean test accuracy (seeds: 91.40%, 91.57%), confirming the CNN and training pipeline are well-calibrated against published benchmarks for similar architectures.",
+      "evidence": [
+        "analysis/test_acc_summary.csv: size=60000, seed=42, acc_noaug=0.914; size=60000, seed=123, acc_noaug=0.9157",
+        "results/SUMMARY.md: Mean noaug acc at N=60000 = 91.48%"
+      ],
+      "strength": "strong",
+      "relation": "neutral"
+    },
+    {
+      "claim": "The Δ trend is not perfectly monotone: Δ is less negative at N=2,500 (−4.8 pp) than at N=5,000 (−6.6 pp) and N=10,000 (−6.1 pp), producing a non-monotone local dip that reduces the Spearman rank correlation from its maximum and contributes to R²<1.",
+      "evidence": [
+        "analysis/delta_by_size.csv: delta_mean=-4.77 at N=2500, -6.55 at N=5000, -6.135 at N=10000"
+      ],
+      "strength": "moderate",
+      "relation": "partial"
+    }
+  ],
+  "success_criteria": [
+    {
+      "criterion": "Δ is positive and ≥ 2 percentage points at N=500 for both seeds, indicating augmentation meaningfully helps in the smallest-data regime",
+      "status": "not_met",
+      "evidence": "analysis/delta_by_size.csv: delta_seed42=-6.91 and delta_seed123=-9.20 at N=500; augmentation hurts by 6.9–9.2 pp at the smallest size"
+    },
+    {
+      "criterion": "Δ exhibits a monotonically decreasing trend (Spearman ρ < −0.5) when regressed against log₂(N)",
+      "status": "not_met",
+      "evidence": "analysis/trend_diagnostics.txt: Spearman rho=+0.714286 (positive, not negative <−0.5); Δ increases toward zero as N grows rather than decreasing from positive values; the trend direction is the reverse of what this criterion tested"
+    },
+    {
+      "criterion": "Log-linear regression achieves R² ≥ 0.5, supporting the log-linear scaling model",
+      "status": "met",
+      "evidence": "analysis/regression_results.json: r2=0.6130 ≥ 0.5; slope p=0.0374 statistically significant"
+    },
+    {
+      "criterion": "A crossover N* falls within the practically relevant range, indicating a detectable size at which augmentation benefit vanishes",
+      "status": "not_met",
+      "evidence": "analysis/regression_results.json: N_star=6,448,676 with bootstrap 95% CI [40,325 – 1,000,000,000]; flagged extrapolated_above_range; N* is far outside the tested range (500–60,000)"
+    },
+    {
+      "criterion": "No-augmentation test accuracy at N=60,000 falls in the 88–92% range, confirming the baseline CNN is well-calibrated",
+      "status": "met",
+      "evidence": "analysis/test_acc_summary.csv: acc_noaug=0.9140 (seed 42) and 0.9157 (seed 123) at N=60,000; both within [0.88, 0.92]"
+    },
+    {
+      "criterion": "GPU device name is logged for all runs, confirming CUDA execution",
+      "status": "met",
+      "evidence": "analysis/gpu_device_info.txt: Seed 42 — Device: NVIDIA L4; Seed 123 — Device: NVIDIA L4; results/gpu_log_seed42.txt and results/gpu_log_seed123.txt both confirm NVIDIA L4"
+    }
+  ],
+  "figures": [
+    {
+      "path": "figures/fig_delta_vs_size.png",
+      "caption": "Augmentation benefit Δ (acc_aug − acc_noaug, percentage points) as a function of training set size N for a small CNN on Fashion-MNIST trained for 5 epochs. Individual seed values (circles: seed 42; squares: seed 123) are shown in light grey; the thick black line connects mean Δ across seeds. The blue shaded band and regression line show the OLS log-linear fit Δ = −12.00 + 0.530·log₂(N) (R²=0.613, p=0.037). All seven Δ values are negative, indicating that augmentation consistently hurts accuracy under this 5-epoch budget, though the penalty diminishes as N grows. The estimated crossover N*≈6.45 million is far outside the tested range and is not shown.",
+      "section": "Results"
+    },
+    {
+      "path": "figures/fig_test_acc_bars.png",
+      "caption": "Test accuracy (%) at epoch 5 grouped by training set size N (x-axis) and augmentation condition (blue bars: no augmentation; orange bars: with augmentation). Bar height shows mean across two seeds; individual seed values are overlaid as open circles (seed 42) and squares (seed 123). Δ annotations above each pair indicate the mean accuracy gap (all negative). No-augmentation accuracy dominates at every size, with the gap narrowing from approximately 8 pp at N=500 to 3 pp at N=60,000.",
+      "section": "Results"
+    },
+    {
+      "path": "figures/fig_curves_all.png",
+      "caption": "Per-epoch training loss (left column) and validation accuracy (right column) for the small CNN under no-augmentation (blue) and augmentation (orange) conditions across all seven training set sizes (rows, N=500 to N=60,000). Thin dashed lines show individual seeds (42 and 123, α=0.55); thick solid lines show the mean. Augmented runs start with higher training loss and lag behind no-augmentation runs throughout all 5 epochs at every size, reflecting slower convergence introduced by the harder transformed examples.",
+      "section": "Results"
+    },
+    {
+      "path": "figures/curves_size500.png",
+      "caption": "Training loss and validation accuracy curves at N=500 (45 samples per class, 450 training images). The augmented run (orange) starts with substantially higher epoch-1 loss (2.47 vs 2.33 for seed 42) and reaches only 70% validation accuracy by epoch 5, compared to 74% without augmentation, illustrating the most pronounced augmentation penalty observed in the study.",
+      "section": "Results"
+    },
+    {
+      "path": "figures/curves_size60000.png",
+      "caption": "Training loss and validation accuracy curves at N=60,000 (full Fashion-MNIST training set). Both conditions converge to high accuracy within 5 epochs (no-aug: 91.5% test accuracy mean; aug: 88.7%), with the augmentation penalty shrinking to −2.8 pp, the smallest gap across all tested sizes. NOTE: In the LaTeX source the subfigure \\caption{} for this figure must read '$N{=}60{,}000$.' (not '$N{=}500$.' as it incorrectly appeared before revision).",
+      "section": "Results"
+    }
+  ],
+  "tables": [
+    "paper/table_results.tex — LaTeX booktabs table with 7 data rows showing, for each training set size N: no-aug test accuracy for seed 42 and seed 123 (%), aug test accuracy for seed 42 and seed 123 (%), mean Δ (pp), and Δ range (pp). All Δ values are negative and annotated. Suitable for inclusion as the main results table."
+  ],
+  "limitations": [
+    "Only two random seeds per condition severely limit statistical power; descriptive statistics (mean, range, Spearman ρ) are reported without formal p-value-based inference, as the study design cannot support it.",
+    "The 5-epoch training budget is the proximate cause of negative Δ: augmented runs require more epochs to recover the variance introduced by transforms. Results should not be generalised to longer training regimes, where augmentation benefit may become positive as is typically observed in the literature.",
+    "The Δ trend is locally non-monotone (Δ at N=5,000 and N=10,000 is more negative than at N=2,500), which reduces interpretability of the log-linear model and suggests size-specific dynamics beyond a simple scaling law.",
+    "The bootstrap 95% CI for N* spans [40,325 – 1×10⁹], which is too wide to provide actionable guidance about the crossover training set size.",
+    "Only one CNN architecture, one augmentation policy (RandomHorizontalFlip + RandomAffine degrees=10, translate=0.1), and one dataset (Fashion-MNIST) are studied; results may differ for other architectures, stronger augmentation, or other datasets.",
+    "No learning-rate scheduler was applied; augmented runs with longer effective training horizons may benefit disproportionately from LR decay, which could alter the Δ scaling.",
+    "The full Fashion-MNIST test set (10,000 images) was used for evaluation at all sizes; for very small subsets (N=500), the test set is 20× larger than the training set, which may inflate test accuracy variance relative to large-N settings."
+  ],
+  "deviations": [
+    "The CNN architecture implemented in src/train_fmnist.py (4 conv layers with BatchNorm and Dropout, FC(3136,256)→FC(10)) has slightly more capacity than the architecture described in the brief (FC(1600→128)), because each conv block contains two convolutional layers before MaxPool rather than one. This deviates from the brief specification but was consistently applied to all 28 runs.",
+    "Task T3.1 noted that the training grid used size=2500 (matching config.json), not size=2000 as referenced in a plan comment attributed to agent A3; config.json was the authoritative source and was used consistently.",
+    "All planned tasks (T1.1, T1.2, T2.1, T2.2, T3.1, T3.2, T3.3, T3.4, T4.1, T4.2, T4.3) completed successfully with no skips or blocked tasks.",
+    "The subfigure caption for figures/curves_size60000.png in paper/paper.tex (approximately L327–L336) incorrectly reads '$N{=}500$.' and must be corrected to '$N{=}60{,}000$.' before recompiling the PDF. This is a LaTeX source error that does not affect the underlying data or figures.",
+    "The citation of kang2024game in the existing manuscript draft (approximately L134 and L404) incorrectly attributes Mixup and CutOut to that work. The correct attribution is to MFG Augment, a Mean-Field Game path-interpolation method. This must be corrected per revision directive.",
+    "The citation of kumar2025enhancing in the existing manuscript draft (approximately L155–L157) incorrectly characterises that work as a survey concluding that training budget is a key moderating factor. The correct characterisation is that it proposes three novel augmentation techniques (pairwise channel transfer, object occlusion, masking) for CNN performance on small datasets. This must be corrected per revision directive."
+  ],
+  "outline": [
+    {
+      "title": "Abstract",
+      "purpose": "Summarise the research question, method, and key finding (augmentation hurts at all sizes under 5 epochs; penalty decreases log-linearly with N) in ~150 words.",
+      "key_points": [
+        "Research question: how does augmentation benefit scale with training set size for a small CNN on Fashion-MNIST within 5 epochs?",
+        "28 runs: 7 sizes × 2 conditions × 2 seeds on NVIDIA L4 GPU",
+        "Main finding: Δ negative at all sizes (−8.1 pp at N=500 to −2.8 pp at N=60,000)",
+        "Log-linear model R²=0.613, p=0.037; crossover N* extrapolated at ~6.45M",
+        "Conclusion: 5-epoch budget insufficient for basic augmentation to help; augmentation becomes progressively less harmful as N grows"
+      ],
+      "evidence": [
+        "analysis/delta_by_size.csv",
+        "analysis/regression_results.json"
+      ],
+      "citations": []
+    },
+    {
+      "title": "Introduction",
+      "purpose": "Motivate the study by establishing that augmentation sensitivity to dataset size is an important but under-characterised phenomenon on Fashion-MNIST, and state the research question and contributions.",
+      "key_points": [
+        "Fashion-MNIST is a standard benchmark with published small-CNN baselines in the 88–92% range",
+        "Data augmentation is widely applied but its benefit is expected to depend on dataset size",
+        "Karadağ et al. (2020) found augmentation contribution sensitive to dataset size on CIFAR-10; kang2024game showed MFG Augment significantly improves accuracy in low-data regimes (do not attribute Mixup/CutOut to this work)",
+        "Gap: no controlled study on Fashion-MNIST systematically varies N from 500 to 60,000 with fixed architecture, fixed epoch count, and fixed seeds",
+        "Contribution: 28 GPU-trained experiments producing Δ vs N curve, log-linear regression, crossover estimation, and reproducible codebase"
+      ],
+      "evidence": [
+        "results/SUMMARY.md",
+        "analysis/test_acc_summary.csv"
+      ],
+      "citations": [
+        "karada2020empirical",
+        "kang2024game",
+        "mukhamediev2024state",
+        "yee2026based",
+        "meshkini2019analysis",
+        "pham2018deep"
+      ]
+    },
+    {
+      "title": "Related Work",
+      "purpose": "Survey prior work on (1) CNN benchmarks on Fashion-MNIST establishing baselines, (2) augmentation sensitivity to dataset size, and (3) augmentation in low-data regimes, highlighting the gap this study fills.",
+      "key_points": [
+        "CNN baselines on Fashion-MNIST: small two-block CNNs typically achieve 88–90% with full training set (mukhamediev2024state, yee2026based, meshkini2019analysis, xhaferra2022classification)",
+        "Augmentation sensitivity to dataset size: karada2020empirical found augmentation contribution sensitive to dataset size on CIFAR-10; this has not been replicated on Fashion-MNIST",
+        "Low-data augmentation: pham2018deep (skin lesion), harun2024dysgraphia, snider2023using (ultrasound), maiyanti2023rotation (soil) all show augmentation helps small specialty datasets but do not characterise the scaling relationship",
+        "Novel augmentation strategies: kang2024game demonstrated benefits with MFG Augment (Mean-Field Game path-interpolation, not Mixup/CutOut); kumar2025enhancing proposed three novel techniques (pairwise channel transfer, object occlusion, masking) improving CNN performance on small datasets",
+        "Epoch budget effects on augmentation: augmentation typically requires more epochs to converge; this confound is rarely controlled in the literature"
+      ],
+      "evidence": [],
+      "citations": [
+        "karada2020empirical",
+        "kang2024game",
+        "kumar2025enhancing",
+        "pham2018deep",
+        "harun2024dysgraphia",
+        "snider2023using",
+        "maiyanti2023rotation",
+        "mukhamediev2024state",
+        "yee2026based",
+        "meshkini2019analysis",
+        "xhaferra2022classification",
+        "zhang2020circular",
+        "poojary2021effect",
+        "hulliyah2023revolutionizing"
+      ]
+    },
+    {
+      "title": "Methods",
+      "purpose": "Describe the experimental design: architecture, training configuration, data subsampling, evaluation, and statistical analysis, with enough detail for full reproducibility.",
+      "key_points": [
+        "Architecture: SmallCNN with two conv blocks (Conv→BN→ReLU×2→MaxPool→Dropout(0.25)), FC(3136,256)→Dropout(0.5)→FC(10); identical across all 28 runs",
+        "Training: Adam lr=0.001, batch size=64, 5 epochs, CrossEntropyLoss, no scheduler; CUDA on NVIDIA L4",
+        "Data: Fashion-MNIST; 7 training sizes (500,1000,2500,5000,10000,30000,60000) stratified subsampled with exactly N/10 per class; 90/10 train/val split via StratifiedShuffleSplit; seeds 42 and 123",
+        "Augmentation: RandomHorizontalFlip(p=0.5)+RandomAffine(degrees=10,translate=(0.1,0.1)) vs no augmentation; normalization mean=0.2860,std=0.3530 identical for both conditions",
+        "Evaluation: full 10,000-image test set evaluated only at epoch 5; augmentation not applied at test time",
+        "Analysis: Δ = acc_aug − acc_noaug per (size,seed); mean and range across seeds; OLS log-linear regression Δ = a + b·log₂(N); Spearman ρ; bootstrap N* (5000 iterations); concordance check"
+      ],
+      "evidence": [
+        "config/config.json",
+        "data/class_balance_check.txt",
+        "src/train_fmnist.py",
+        "analysis/gpu_device_info.txt"
+      ],
+      "citations": [
+        "mukhamediev2024state"
+      ]
+    },
+    {
+      "title": "Results",
+      "purpose": "Report all empirical findings: per-size Δ values, training curves, regression model, crossover estimation, and baseline calibration.",
+      "key_points": [
+        "Augmentation hurts at all 7 sizes: Δ ranges from −8.1 pp (N=500, mean of −6.91 and −9.20) to −2.8 pp (N=60,000, mean of −2.88 and −2.73)",
+        "Non-monotone local behaviour: Δ at N=5,000 (−6.6 pp) is more negative than at N=2,500 (−4.8 pp), suggesting size-specific dynamics",
+        "Perfect seed concordance: both seeds agree on negative sign at all 7 sizes (7/7)",
+        "Log-linear OLS: Δ = −12.00 + 0.530·log₂(N), R²=0.613, p=0.037; moderate fit with monotone positive slope",
+        "Spearman ρ=+0.714 (p=0.071): strong positive rank correlation — Δ increases toward zero as N increases",
+        "Crossover N*≈6.45M (bootstrap 95% CI [40,325 – 1×10⁹]): extrapolated far outside tested range, uninformative as a practical threshold",
+        "Baseline: no-aug accuracy at N=60,000 is 91.48% mean (91.40% and 91.57% per seed), within 88–92% expected range",
+        "Epoch-1 loss: augmented runs show higher training loss than no-aug in all 14 configurations (14/14)"
+      ],
+      "evidence": [
+        "analysis/delta_by_size.csv",
+        "analysis/regression_results.json",
+        "analysis/trend_diagnostics.txt",
+        "analysis/test_acc_summary.csv",
+        "figures/fig_delta_vs_size.png",
+        "figures/fig_test_acc_bars.png",
+        "figures/fig_curves_all.png",
+        "paper/table_results.tex"
+      ],
+      "citations": []
+    },
+    {
+      "title": "Discussion",
+      "purpose": "Interpret the unexpected result (augmentation hurts under 5 epochs), connect to the epoch-budget mechanism, compare to prior work expectations, and discuss implications.",
+      "key_points": [
+        "The finding that augmentation consistently hurts within 5 epochs is mechanistically explained by augmentation increasing per-step difficulty (higher epoch-1 loss at all sizes), which the model cannot recover from in 5 epochs",
+        "This is consistent with known augmentation behaviour: transforms introduce variance that requires more gradient updates to smooth out, requiring longer training horizons",
+        "The positive OLS slope (b=+0.530) indicates augmentation becomes progressively less harmful as N increases, likely because larger datasets already provide more diversity per batch, reducing the fractional overhead of augmented variance",
+        "Comparison to karada2020empirical (CIFAR-10): the finding that augmentation contribution is sensitive to dataset size is replicated on Fashion-MNIST, but the direction is opposite when training epochs are insufficient",
+        "Comparison to kang2024game (MFG Augment): that method, which synthesises continuous image distribution transitions rather than simple geometric transforms, showed benefit in low-data regimes; basic transforms studied here are insufficient",
+        "The wide bootstrap CI on N* ([40,325 – 1×10⁹]) means the crossover point is practically unknowable from these data; practitioners should not use 5-epoch runs to assess augmentation utility",
+        "Practical guidance: for Fashion-MNIST-like tasks with tight epoch budgets, basic geometric augmentation may not help and could hurt; longer training runs should be used to assess augmentation benefit"
+      ],
+      "evidence": [
+        "analysis/regression_results.json",
+        "analysis/trend_diagnostics.txt",
+        "analysis/delta_by_size.csv"
+      ],
+      "citations": [
+        "karada2020empirical",
+        "kang2024game",
+        "jiang2026towards",
+        "xu2020wemix",
+        "hulliyah2023revolutionizing",
+        "chen2026from"
+      ]
+    },
+    {
+      "title": "Limitations",
+      "purpose": "Enumerate the methodological constraints that bound the generalisability of the findings.",
+      "key_points": [
+        "Only two seeds per cell: descriptive statistics only, no formal significance testing",
+        "5-epoch budget is the root cause of negative Δ and limits generalisability to longer training",
+        "Non-monotone local Δ trend reduces confidence in the log-linear model",
+        "N* bootstrap CI too wide for actionable guidance",
+        "Single dataset (Fashion-MNIST), single architecture, single augmentation policy",
+        "No learning-rate scheduler; augmented runs may benefit more from LR decay"
+      ],
+      "evidence": [],
+      "citations": []
+    },
+    {
+      "title": "Conclusion",
+      "purpose": "Summarise the key finding, its significance, and directions for future work in 1–2 paragraphs.",
+      "key_points": [
+        "Within a 5-epoch budget, basic geometric augmentation (flip, rotation, translation) consistently reduces test accuracy for a small CNN on Fashion-MNIST at all training set sizes from 500 to 60,000",
+        "The augmentation penalty decreases as training set size grows on a log scale (OLS R²=0.613), but a breakeven point is not achieved within the tested range",
+        "The primary implication is that practitioners using tight epoch budgets should validate augmentation on a held-out set before deployment; 5 epochs is insufficient for the studied transforms to be beneficial",
+        "Future work: extend to longer training runs (50+ epochs) to observe the positive augmentation regime; test across more seeds; compare to more sophisticated augmentation methods such as MFG Augment"
+      ],
+      "evidence": [
+        "analysis/delta_by_size.csv",
+        "analysis/regression_results.json"
+      ],
+      "citations": [
+        "karada2020empirical",
+        "kang2024game",
+        "kumar2025enhancing"
+      ]
+    }
+  ],
+  "reproducibility": [
+    "Code entry points: src/train_fmnist.py (model and training utilities), src/make_subsets.py (stratified subset generation), src/gpu_train_seed42.py (seed-42 training loop), src/gpu_train_seed123.py (seed-123 training loop), scripts/t4_3_produce_outputs.py (figures and summary)",
+    "Config: config/config.json — all hyperparameters frozen (lr=0.001, batch_size=64, epochs=5, optimizer=adam, normalization mean=0.2860 std=0.3530, sizes=[500,1000,2500,5000,10000,30000,60000], seeds=[42,123])",
+    "Data: torchvision.datasets.FashionMNIST auto-downloaded to data/; stratified subset indices saved to data/subset_indices.npz (28 arrays)",
+    "Seeds: 42 and 123 used for both dataset subsampling and model weight initialisation via set_seed() in train_fmnist.py",
+    "Hardware: NVIDIA L4 GPU (CUDA 13.0), PyTorch 2.11.0+cu130, Python 3.13.15 (confirmed in logs/gpu/_environment.txt and analysis/gpu_device_info.txt)",
+    "Raw results: results/results_seed42.csv (70 rows) and results/results_seed123.csv (70 rows); merged to analysis/results_all.csv (140 rows)",
+    "Analysis artefacts: analysis/test_acc_summary.csv, analysis/delta_by_size.csv, analysis/regression_results.json, analysis/bootstrap_N_star.csv (5000 rows), analysis/trend_diagnostics.txt",
+    "Bootstrap seed: 42 (recorded in analysis/regression_results.json provenance block, bootstrap_iters=5000)"
+  ],
+  "writing_instructions": "TONE AND EMPHASIS: Write in a clear empirical ML style suitable for a workshop or short paper. The main finding (augmentation hurts at all sizes under 5 epochs) is unexpected relative to the hypothesis and should be presented straightforwardly and without apology. Do not bury the negative result — it is scientifically informative. Emphasise the mechanistic explanation (higher epoch-1 loss, insufficient convergence time) as the unifying narrative.\n\nDO NOT OVERCLAIM: (1) With only two seeds per cell, do not use language implying statistical significance beyond the Spearman p=0.071 (marginal) and OLS p=0.037 results. Use language like 'consistent with', 'suggestive of', 'descriptive evidence'. (2) The log-linear model (R²=0.613) is moderate, not conclusive. (3) The crossover N*≈6.45M is an extrapolation with a bootstrap CI spanning three orders of magnitude; describe it as practically unknowable from these data. (4) Do not describe the Spearman ρ=+0.714 as confirming the hypothesis direction — the hypothesis predicted positive Δ decreasing toward zero, not negative Δ increasing toward zero. These are meaningfully different claims.\n\nMANDATORY CITATION CORRECTIONS (implement before any other edits):\n1. AT L404 AND L134 (kang2024game): Remove any claim that kang2024game used Mixup or CutOut. The correct sentence is approximately: 'citet{kang2024game} demonstrated augmentation benefits with MFG Augment, a Mean-Field Game path-interpolation method that synthesises continuous image distribution transitions, which is substantially more sophisticated than the simple geometric transforms used here.' Do not attribute simple geometric transforms to this citation.\n2. AT L155-L157 (kumar2025enhancing): Remove the characterisation of kumar2025enhancing as a survey and remove the claim it concluded 'the training budget is a key moderating factor.' Replace with: 'citet{kumar2025enhancing} proposed three novel augmentation techniques — pairwise channel transfer, object occlusion, and masking — that improve CNN performance on small datasets, demonstrating that carefully designed augmentation strategies can meaningfully reduce overfitting in limited-data regimes.'\n3. IN THE LATEX SOURCE (fig:curves_extremes, approximately L327-L336): The subfigure that includes '../figures/curves_size60000.png' has \\caption{$N{=}500$.} which must be changed to \\caption{$N{=}60{,}000$.}. After this change, verify in the compiled PDF that the two subfigures show N=500 (left) and N=60,000 (right) consistently with the surrounding text at approximately L345-L349.\n\nFIGURE CAPTIONS: Ensure fig_delta_vs_size.png is the primary results figure placed in the Results section. The Δ=0 reference line should be described as 'breakeven'; the OLS regression line and CI band should be labelled with the equation. The bar chart (fig_test_acc_bars.png) should accompany the results table. The combined curves figure (fig_curves_all.png) goes in an appendix or supplementary panel.\n\nARCHITECTURE NOTE: The implemented architecture (FC head 3136→256→10) differs slightly from the brief specification (FC 1600→128→10) because each conv block uses two conv layers before MaxPool. Report the as-implemented architecture consistently throughout the paper; do not claim it matches the brief exactly.\n\nNEGATIVE DELTA PRESENTATION: Present all Δ values as negative numbers (e.g., −8.1 pp) consistently. Do not invert signs or reframe as 'no-aug outperforms by X pp' without also showing the directional Δ values. The table in paper/table_results.tex already uses negative notation — preserve this."
+}

@@ -1,0 +1,36 @@
+{
+  "summary": "Both blocking issues are purely text errors in the manuscript: (1) kang2024game is mischaracterised as using Mixup/CutOut when it actually uses MFG Augment; (2) kumar2025enhancing is mischaracterised as a survey concluding training budget is a key moderating factor when it actually proposes novel augmentation techniques for small datasets. Both are fixed by correcting the relevant sentences in the manuscript. No experiments need to be re-run.",
+  "decisions": [
+    {
+      "issue_id": "R1-01",
+      "disposition": "fix",
+      "root_cause": "report",
+      "rationale": "The wrong method names (Mixup, CutOut) were written into the manuscript for kang2024game. The paper proposes MFG Augment based on Mean-Field Game theory. This is a factual text error confined to the report and is correctable via a manuscript directive without any data or code changes."
+    },
+    {
+      "issue_id": "R1-02",
+      "disposition": "fix",
+      "root_cause": "report",
+      "rationale": "The manuscript incorrectly describes kumar2025enhancing as a survey and attributes to it the conclusion that training budget is a key moderating factor. The paper proposes novel augmentation techniques (pairwise channel transfer, object occlusion, masking) for small datasets; it does not discuss training budget as a moderating factor. Correcting the characterisation requires only a manuscript text change."
+    }
+  ],
+  "plan_revision": "",
+  "blueprint_changes": "",
+  "task_changes": [],
+  "rerun_failed_tasks": [],
+  "report_directives": [
+    {
+      "issue_ids": [
+        "R1-01"
+      ],
+      "text": "At manuscript L404 (and any corresponding sentence near L134), replace the attribution of Mixup and CutOut to \\citet{kang2024game} with a correct description of their method. The revised sentence should read approximately: '\\citet{kang2024game} demonstrated augmentation benefits with MFG Augment, a Mean-Field Game path-interpolation method that synthesises continuous image distribution transitions, which is substantially more sophisticated than the simple geometric transforms used here.' Remove any claim that kang2024game used Mixup or CutOut. Also verify L134 and correct any similar misattribution there."
+    },
+    {
+      "issue_ids": [
+        "R1-02"
+      ],
+      "text": "At manuscript L155–L157, remove the characterisation of kumar2025enhancing as a survey and remove the claim that it concluded 'the training budget is a key moderating factor.' Replace with an accurate description of its actual contribution, approximately: '\\citet{kumar2025enhancing} proposed three novel augmentation techniques—pairwise channel transfer, object occlusion, and masking—that improve CNN performance on small datasets, demonstrating that carefully designed augmentation strategies can meaningfully reduce overfitting in limited-data regimes.'"
+    }
+  ],
+  "withdraw_directives": []
+}

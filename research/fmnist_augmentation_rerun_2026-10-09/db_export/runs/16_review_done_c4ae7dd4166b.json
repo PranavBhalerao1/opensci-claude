@@ -1,0 +1,60 @@
+{
+  "id": "c4ae7dd4166b",
+  "project_id": "6d8c3c93c209",
+  "kind": "review",
+  "status": "done",
+  "phase": "done",
+  "counts": {
+    "fatal": 0,
+    "major": 1,
+    "issues": 8
+  },
+  "log": [
+    {
+      "t": "2026-10-10T02:29:41.304457+00:00",
+      "text": "Deterministic integrity checks"
+    },
+    {
+      "t": "2026-10-10T02:29:42.126408+00:00",
+      "text": "Assembling the evidence for an independent review"
+    },
+    {
+      "t": "2026-10-10T02:29:42.566405+00:00",
+      "text": "Independent review of the manuscript and its evidence"
+    },
+    {
+      "t": "2026-10-10T02:37:04.400283+00:00",
+      "text": "Review output rejected (Model returned no structured output (stop reason: max_tokens)); retrying once"
+    },
+    {
+      "t": "2026-10-10T02:40:40.358135+00:00",
+      "text": "Adversarial check of 1 serious claims"
+    },
+    {
+      "t": "2026-10-10T02:41:12.200003+00:00",
+      "text": "Second independent review (verdict and issues disagreed)"
+    },
+    {
+      "t": "2026-10-10T02:48:12.202187+00:00",
+      "text": "Adversarial check of 2 serious claims"
+    },
+    {
+      "t": "2026-10-10T02:49:12.998162+00:00",
+      "text": "Review 4: major_revision → unresolved: 1 blocking issues remain after 3 repair rounds."
+    }
+  ],
+  "result": {
+    "valid": true,
+    "reason": "1 blocking issues remain after 3 repair rounds.",
+    "verdict": "major_revision",
+    "blocking": {
+      "FATAL": 0,
+      "MAJOR": 1
+    },
+    "decision": "unresolved",
+    "iteration": 4
+  },
+  "error": null,
+  "started_at": "2026-10-10 02:29:40.646695+00:00",
+  "finished_at": "2026-10-10 02:49:13.105008+00:00"
+}

@@ -275,6 +275,55 @@ def _previews(sandbox, outputs: list[dict]) -> str:
     return "\n\n".join(blocks)
 
 
+# A workspace path in an acceptance check: at least one directory part, optionally a glob or brace pattern.
+_NAMED_PATH = re.compile(r"(?<![\w/.-])(?:\./)?(?:[\w.-]+/)+[\w.*?{},\[\]-]*")
+MAX_NAMED_PATHS = 20
+
+
+def _named_paths(sandbox, task: dict) -> list[str]:
+    """Workspace paths the acceptance checks name that are not declared outputs (a setup task's
+    directories, a log, an upstream file). The previews cover only declared outputs, so without
+    these the verifier has no platform evidence for such a check, only the agent's claim."""
+    outputs = {o["path"].strip().removeprefix("./").rstrip("/") for o in task["outputs"]}
+    found: list[str] = []
+    for check in task["acceptance_checks"]:
+        for m in _NAMED_PATH.finditer(check):
+            token = m.group(0).removeprefix("./").rstrip(",.")
+            if cut := [token.index(c) for c in "*?{[" if c in token]:  # a pattern: list its fixed directory
+                token = token[:min(cut)]
+                token = token[:token.rfind("/") + 1]
+            rel = token.rstrip("/")
+            if not rel or rel in outputs or rel in found:
+                continue
+            # A path, not a phrase like "train/test" or "T-shirt/top": it exists at the top level, is
+            # written as a directory, or ends in a file extension.
+            if (sandbox.root / rel.split("/")[0]).exists() or token.endswith("/") or \
+                    re.search(r"\.[A-Za-z]\w{0,7}$", rel):
+                found.append(rel)
+    return found[:MAX_NAMED_PATHS]
+
+
+def _path_facts(sandbox, rels: list[str]) -> str:
+    lines = []
+    for rel in rels:
+        try:
+            p = sandbox.path(rel)
+        except ValueError:
+            continue
+        if p.is_dir():
+            entries = sorted(x.name + ("/" if x.is_dir() else "") for x in p.iterdir())
+            listing = (f"; entries: {', '.join(entries[:20])}" + (" …" if len(entries) > 20 else "")) if entries \
+                else " (empty)"
+            lines.append(f"- {rel}/: directory, {len(sandbox.files(rel))} file(s) inside{listing}")
+        elif p.is_file():
+            lines.append(f"- {rel}: file, {p.stat().st_size:,} bytes")
+        else:
+            lines.append(f"- {rel}: does not exist in the workspace")
+    return ("FACTS: other workspace paths named in the acceptance checks (platform listing of the synced "
+            "workspace; unlike declared outputs, these are not checked for files left by earlier attempts):\n"
+            + "\n".join(lines)) if lines else ""
+
+
 async def _run_tests(sandbox, outputs: list[dict]) -> str | None:
     """If the task produced tests, run them ourselves so 'tests pass' is a fact, not a claim."""
     tests = [o["path"] for o in outputs
@@ -293,6 +342,8 @@ async def _verify(task: dict, sandbox, policy: str, report: dict | None = None,
     if not task["acceptance_checks"]:
         return []
     evidence = "Output previews:\n" + _previews(sandbox, task["outputs"])
+    if facts := _path_facts(sandbox, _named_paths(sandbox, task)):
+        evidence += "\n\n" + facts
     if leftovers:
         evidence += ("\n\nFACTS: these files in output directories were left by an earlier attempt and NOT written "
                      "by the attempt being verified:\n"

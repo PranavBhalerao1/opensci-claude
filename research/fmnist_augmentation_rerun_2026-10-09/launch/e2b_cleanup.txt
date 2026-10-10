@@ -1,0 +1,10 @@
+remote files 116 | host files 116 | missing on host 0 | size differs 3 | host-only 0
+  ! paper/scaffold.json 30920 27704
+  ! paper/paper.tex 28497 28502
+  ! paper/paper.pdf 1310850 1310872
+  saved sandbox copy: e2b_remote_stale_copies/paper/scaffold.json 30920 bytes
+  saved sandbox copy: e2b_remote_stale_copies/paper/paper.tex 28497 bytes
+  saved sandbox copy: e2b_remote_stale_copies/paper/paper.pdf 1310850 bytes
+terminated idvr8s9zefod5k7lgo0fs | sandboxes now listed: ['iz7ai44kjj9lclru6liwf']
+remote files 116 | host files 116 | missing on host 0 | size differs 0 | host-only 0
+terminated iz7ai44kjj9lclru6liwf | sandboxes now listed: []

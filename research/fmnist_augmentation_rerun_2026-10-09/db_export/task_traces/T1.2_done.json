@@ -1,0 +1,99 @@
+{
+  "id": "1e27c16e8f61",
+  "project_id": "6d8c3c93c209",
+  "blueprint_run_id": "5853e52a54fe",
+  "task_id": "T1.2",
+  "agent": "A2",
+  "status": "done",
+  "attempts": 1,
+  "cost": 0.119153595,
+  "summary": "T1.2 completed successfully. Fashion-MNIST training labels (60,000 samples, 10 balanced classes) were loaded via torchvision. For each of 7 training sizes (500, 1000, 2500, 5000, 10000, 30000, 60000) and 2 seeds (42, 123), a stratified subset was drawn (exactly N//10 per class), then split 90/10 into train/val via StratifiedShuffleSplit. All 28 index arrays (14 train + 14 val) were saved to data/subset_indices.npz. Per-class balance reports for N=500 and N=1000 (both seeds) were written to data/class_balance_check.txt; every class shows exactly 45 training samples at N=500 (well within the [44,46] assertion bound) and exactly 90 at N=1000. The N=1000/seed=42 training size is exactly 900 (90% of 1000).",
+  "artifacts": [
+    "data/subset_indices.npz",
+    "data/class_balance_check.txt",
+    "src/make_subsets.py"
+  ],
+  "checks": [
+    {
+      "check": "data/subset_indices.npz exists and contains exactly 28 keys matching pattern train_{N}_{seed} and val_{N}_{seed}",
+      "passed": true,
+      "reason": "The file exists at 1,751,234 bytes and the agent reports exactly 28 keys; 7 sizes × 2 seeds × 2 splits (train/val) = 28 keys, consistent with the math and confirmed indirectly by the balance check text showing all four N=500/1000 × seed=42/123 combinations."
+    },
+    {
+      "check": "For N=500 seed=42 training split, all 10 per-class counts are in [44,46]",
+      "passed": true,
+      "reason": "data/class_balance_check.txt explicitly shows all 10 classes with count=45 for N=500, seed=42, and states '✓ N=500 assertion passed: all per-class counts in [44,46]'."
+    },
+    {
+      "check": "For N=1000 seed=42 training split, total training size is approximately 900 (90% of 1000)",
+      "passed": true,
+      "reason": "data/class_balance_check.txt shows 'N=1000, seed=42 | train size=900', which is exactly 90% of 1000."
+    },
+    {
+      "check": "data/class_balance_check.txt is non-empty and readable",
+      "passed": true,
+      "reason": "The file is 2,882 bytes and 74 lines of fully readable text content is shown in the preview."
+    }
+  ],
+  "issues": [],
+  "events": [
+    {
+      "t": "2026-10-09T23:09:57.719687+00:00",
+      "args": "{\"packages\": [\"torch\", \"torchvision\", \"scikit-learn\", \"numpy\"]}",
+      "cost": 0.0147774,
+      "step": 1,
+      "tool": "install_packages",
+      "type": "tool",
+      "result": "exit_code: 0"
+    },
+    {
+      "t": "2026-10-09T23:09:59.356655+00:00",
+      "args": "{\"command\": \"mkdir -p data src\"}",
+      "cost": 0.0147774,
+      "step": 1,
+      "tool": "run_shell",
+      "type": "tool",
+      "result": "exit_code: 0"
+    },
+    {
+      "t": "2026-10-09T23:10:22.904052+00:00",
+      "args": "{\"path\": \"src/make_subsets.py\", \"content\": \"\\\"\\\"\\\"\\nsrc/make_subsets.py\\n===================\\nGenerate stratified train/val subset index arrays for Fashion-MNIST.\\n\\nProvenance\\n----------\\nDataset : Fashion-MNIST (Zalando SE, MIT License)\\nSource  : torchvision.datasets.FashionMNIST  →  http://fash…",
+      "cost": 0.053337075,
+      "step": 2,
+      "tool": "write_file",
+      "type": "tool",
+      "result": "Wrote 5961 chars to src/make_subsets.py"
+    },
+    {
+      "t": "2026-10-09T23:11:02.506712+00:00",
+      "args": "{\"code\": \"exec(open(\\\"src/make_subsets.py\\\").read())\", \"timeout_seconds\": 300}",
+      "cost": 0.06505851,
+      "step": 3,
+      "tool": "run_python",
+      "type": "tool",
+      "result": "exit_code: 0\nstdout:\nLoading Fashion-MNIST training set …\n  y_train shape : (60000,)\n  unique labels : [0 1 2 3 4 5 6 7 8 9]\n  class counts  : [6000 6000 6000 6000 6000 6000 6000 6000 6000 6000]\n  N=   500  seed=42  train=450  val=50  (per_class_quota=50)\n  N=  1000  seed=42  train=900  val=100  (per_class_quota=100)\n  N=  2500  seed=42  train=2250  val=250  (per_class_quota=250)\n  N=  5000  seed=42  train=4500  val=500  (per_class_quota=500)\n  N= 10000  seed=42  train=9000  val=1000  (per_class…"
+    },
+    {
+      "t": "2026-10-09T23:11:21.122967+00:00",
+      "args": "{\"code\": \"import numpy as np, os\\n\\n# ── Verify npz ────────────────────────────────────────────────────────────────\\nnpz = np.load(\\\"data/subset_indices.npz\\\")\\nkeys = sorted(npz.files)\\nprint(f\\\"Keys in npz : {len(keys)}  ✓\\\" if len(keys)==28 else f\\\"FAIL: {len(keys)} keys\\\")\\n\\n# Spot-check accep…",
+      "cost": 0.100051545,
+      "step": 4,
+      "tool": "run_python",
+      "type": "tool",
+      "result": "exit_code: 0\nstdout:\nKeys in npz : 28  ✓\nN=500 seed=42 per-class counts: [45, 45, 45, 45, 45, 45, 45, 45, 45, 45]\n  ✓ all in [44,46]\nN=1000 seed=42 train size: 900  (expected 900)\n\nclass_balance_check.txt: 2882 bytes  ✓\n========================================================================\nFashion-MNIST Stratified Subset — Class-Balance Check\nGenerated by src/make_subsets.py  |  Date: 2026-10-09\n========================================================================\n\nN=500, seed=42  |  train …"
+    },
+    {
+      "t": "2026-10-09T23:11:28.897035+00:00",
+      "args": "{\"status\": \"success\", \"summary\": \"T1.2 completed successfully. Fashion-MNIST training labels (60,000 samples, 10 balanced classes) were loaded via torchvision. For each of 7 training sizes (500, 1000, 2500, 5000, 10000, 30000, 60000) and 2 seeds (42, 123), a stratified subset was drawn (exactly N//1…",
+      "cost": 0.119153595,
+      "step": 5,
+      "tool": "report_result",
+      "type": "tool",
+      "result": "Result recorded."
+    }
+  ],
+  "note": null,
+  "feedback": null,
+  "started_at": "2026-10-09 23:09:54.109332+00:00",
+  "finished_at": "2026-10-09 23:11:40.632929+00:00"
+}

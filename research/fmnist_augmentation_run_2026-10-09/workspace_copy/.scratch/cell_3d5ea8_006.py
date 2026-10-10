@@ -1,0 +1,1 @@
+print(open("data/environment_report.txt").read())

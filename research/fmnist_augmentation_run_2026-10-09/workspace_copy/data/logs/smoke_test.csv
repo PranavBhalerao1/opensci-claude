@@ -1,0 +1,4 @@
+epoch,train_loss,train_acc,val_loss,val_acc,lr,epoch_time_s
+1,2.468696,0.12,2.214042,0.28,1e-05,0.23
+epoch,train_loss,train_acc,val_loss,val_acc,lr,epoch_time_s
+1,2.468696,0.12,2.214042,0.28,1e-05,0.18

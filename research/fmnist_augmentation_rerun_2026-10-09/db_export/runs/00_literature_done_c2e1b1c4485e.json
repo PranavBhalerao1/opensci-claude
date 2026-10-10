@@ -1,0 +1,218 @@
+{
+  "id": "c2e1b1c4485e",
+  "project_id": "6d8c3c93c209",
+  "kind": "literature",
+  "status": "done",
+  "phase": "done",
+  "counts": {
+    "found": 405,
+    "included": 55,
+    "screened": 300,
+    "extracted": 55,
+    "candidates": 300,
+    "queries_done": 10,
+    "queries_total": 12
+  },
+  "log": [
+    {
+      "t": "2026-10-09T22:37:11.157987+00:00",
+      "text": "Searching 12 queries on Semantic Scholar"
+    },
+    {
+      "t": "2026-10-09T22:38:11.815020+00:00",
+      "text": "Semantic Scholar failed for “Fashion-MNIST benchmark convolutional neural network” (HTTPStatusError); will try OpenAlex"
+    },
+    {
+      "t": "2026-10-09T22:38:58.544656+00:00",
+      "text": "Semantic Scholar failed for “random flip rotation translation image augmentation” (HTTPStatusError); will try OpenAlex"
+    },
+    {
+      "t": "2026-10-09T22:39:45.041767+00:00",
+      "text": "Semantic Scholar failed for “deep learning generalisation regularisation” (HTTPStatusError); will try OpenAlex"
+    },
+    {
+      "t": "2026-10-09T22:40:31.858476+00:00",
+      "text": "Semantic Scholar failed for “torchvision transforms augmentation PyTorch” (HTTPStatusError); will try OpenAlex"
+    },
+    {
+      "t": "2026-10-09T22:42:13.211854+00:00",
+      "text": "Semantic Scholar failed for “data augmentation empirical evaluation” (HTTPStatusError); will try OpenAlex"
+    },
+    {
+      "t": "2026-10-09T22:43:00.027322+00:00",
+      "text": "Semantic Scholar failed for “image augmentation training regularisation effect” (HTTPStatusError); will try OpenAlex"
+    },
+    {
+      "t": "2026-10-09T22:43:53.821738+00:00",
+      "text": "Semantic Scholar failed for “Fashion-MNIST state of the art baseline” (HTTPStatusError); will try OpenAlex"
+    },
+    {
+      "t": "2026-10-09T22:44:40.480278+00:00",
+      "text": "Semantic Scholar failed for “augmentation-induced variance deep learning” (HTTPStatusError); will try OpenAlex"
+    },
+    {
+      "t": "2026-10-09T22:44:40.607290+00:00",
+      "text": "Searching OpenAlex for 8 queries"
+    },
+    {
+      "t": "2026-10-09T22:45:04.783581+00:00",
+      "text": "Found 405 unique papers; screening the top 300"
+    },
+    {
+      "t": "2026-10-09T22:45:31.176373+00:00",
+      "text": "55 papers passed screening"
+    },
+    {
+      "t": "2026-10-09T22:45:56.634985+00:00",
+      "text": "Reading 45 papers (10 already in the knowledge base)"
+    },
+    {
+      "t": "2026-10-09T22:46:35.928545+00:00",
+      "text": "Linking citations between 38 papers"
+    },
+    {
+      "t": "2026-10-09T22:46:37.455711+00:00",
+      "text": "Writing the literature overview"
+    },
+    {
+      "t": "2026-10-09T22:47:01.711874+00:00",
+      "text": "Literature review complete"
+    }
+  ],
+  "result": {
+    "overview": {
+      "themes": [
+        {
+          "name": "CNN Architecture Benchmarking on Fashion-MNIST",
+          "paper_ids": [
+            "54637c9524d4",
+            "2444783adaac",
+            "d9811187e7b0",
+            "df9ea3a65422",
+            "e01935a9b771",
+            "fc420bf8b599",
+            "30dbb26f0428",
+            "36c6a874d1d8",
+            "dd9a710202db",
+            "787c77cf7a29",
+            "93ca86853753",
+            "5a54cd465128",
+            "5951185a3ff5",
+            "2c450211857f",
+            "6578f27a033f",
+            "3bf5f5d90522",
+            "ba81ffc2acb4",
+            "486c6cd8e765",
+            "edf3ec64602b",
+            "6598f048785a",
+            "c27e56db7825",
+            "49c43c4f964c"
+          ],
+          "description": "A large body of work systematically evaluates CNN architectures of varying depth and complexity on Fashion-MNIST, establishing performance baselines. Studies range from simple two-block CNNs achieving ~88–90% accuracy to optimized residual networks reaching 96%+. These provide important context for interpreting results from a small CNN."
+        },
+        {
+          "name": "Effect of Data Augmentation on CNN Generalization",
+          "paper_ids": [
+            "e6e95e4de057",
+            "6350fee7a645",
+            "3eb4438c8ea2",
+            "2ecc33f6eeb5",
+            "692cabc191fd",
+            "df0dd693189d",
+            "6d0a83ee4e75",
+            "9daca3e27e73",
+            "d0d141fc7a67",
+            "b0f26d959cb9"
+          ],
+          "description": "Several studies directly measure how standard geometric augmentations (flips, rotations, translations, shifts) affect CNN classification accuracy and overfitting. The consistent finding is that augmentation improves generalization, particularly for small datasets or short training runs, though the magnitude varies by architecture and domain."
+        },
+        {
+          "name": "Advanced and Adaptive Augmentation Strategies",
+          "paper_ids": [
+            "6c8fe7f21a68",
+            "963e346e427a",
+            "fa57c19fd172",
+            "366415343941",
+            "5d7cecdcc906",
+            "301cd325f8be",
+            "34f1096131c1",
+            "ac6ba621dcd7"
+          ],
+          "description": "A distinct research thread moves beyond basic geometric transforms toward class-conditional, policy-optimized, or generative augmentation methods. These approaches (WeMix, MFG Augment, LMix, class-adaptive policies, VAEs) seek to correct distribution shift introduced by augmentation or adapt transforms per class, and consistently outperform naive augmentation on standard benchmarks."
+        },
+        {
+          "name": "Hyperparameter and Regularization Tuning on Fashion-MNIST",
+          "paper_ids": [
+            "0f1f5f52211a",
+            "c654d6fdfde9",
+            "32cdb749e05e",
+            "e4722fd3c0a6",
+            "fa1b916ec939",
+            "db6705c2f796",
+            "339d652309bf",
+            "db7c6aeb4084",
+            "6598f048785a",
+            "5c9b6e4a6b01",
+            "4e85caba864c"
+          ],
+          "description": "Multiple studies treat Fashion-MNIST as a testbed for examining the interaction between hyperparameters (filter size, batch size, dropout rate, learning rate, normalization placement) and model accuracy. These papers highlight that architecture choices and regularization can dominate augmentation effects, complicating isolated analysis."
+        },
+        {
+          "name": "Transfer Learning and Lightweight CNNs",
+          "paper_ids": [
+            "520014e5d694",
+            "9466f72d392d",
+            "7bf8d9723b33",
+            "486c6cd8e765",
+            "ec8e439a13a4"
+          ],
+          "description": "A pragmatic thread addresses deployment constraints by building efficient lightweight CNNs or fine-tuning pre-trained models, often combining augmentation with transfer learning. These studies show that augmentation's benefit is architecture- and data-scale-dependent, and diminishes when pre-trained representations are available."
+        },
+        {
+          "name": "Quantum and Hybrid CNN Architectures",
+          "paper_ids": [
+            "edf3ec64602b",
+            "24251a4a2b1f"
+          ],
+          "description": "An emerging niche applies quantum computing concepts to CNN design on Fashion-MNIST, replacing classical convolutional filters with quantum circuits. While parameter-efficient, these approaches currently underperform classical CNNs on complex tasks and remain limited by hardware constraints."
+        }
+      ],
+      "summary": "The use of convolutional neural networks (CNNs) for image classification on Fashion-MNIST is a well-established benchmark, with dozens of studies reporting accuracies ranging from roughly 88% for simple architectures up to ~99.65% for heavily optimized models. Data augmentation — including basic geometric transforms like flips, rotations, and translations — is widely recognized as a practical regularization tool that reduces overfitting and improves generalization, especially in low-data or short-training regimes.\n\nDespite the abundance of Fashion-MNIST studies, clean controlled comparisons isolating the effect of basic augmentation on a small CNN are surprisingly rare: most papers either apply augmentation as one component in a larger optimization pipeline, or omit it entirely. The field has matured toward increasingly complex architectures and augmentation strategies (Mixup, CutOut, AutoAugment), which makes the proposed study's focused, reproducible, seed-controlled design a useful empirical baseline contribution.",
+      "open_problems": [
+        "Isolating the contribution of basic augmentation from other simultaneously varied factors (architecture depth, regularization, optimizer) remains rare in the literature",
+        "Most Fashion-MNIST studies do not report results across multiple fixed random seeds, making it hard to distinguish genuine improvement from seed-dependent variance",
+        "The regime in which simple augmentation (flip/rotation/translation) actually helps small CNNs vs. larger or pre-trained models is not well characterized",
+        "Short training runs (~5 epochs) may not give augmentation enough time to reduce overfitting, and optimal epoch count for observing augmentation benefit is underexplored",
+        "Fashion-MNIST accuracy gains from augmentation appear modest (~1–2%) in short runs, raising the question of whether improvements are practically meaningful given measurement noise",
+        "The interaction between augmentation strength (degree of rotation/translation) and dataset difficulty has not been systematically studied on Fashion-MNIST",
+        "Reproducibility is inconsistently ensured: many papers omit random seed details, preventing direct comparison of results across studies"
+      ],
+      "common_methods": [
+        "Convolutional Neural Networks (CNN)",
+        "Random horizontal flip augmentation",
+        "Random rotation augmentation",
+        "Random translation/shift augmentation",
+        "Dropout regularization",
+        "Batch Normalization",
+        "MaxPooling",
+        "ReLU activation",
+        "Softmax output layer",
+        "SGD / Adam optimizer",
+        "Train/validation/test splits",
+        "Fixed random seeds for reproducibility"
+      ],
+      "common_datasets": [
+        "Fashion-MNIST (60,000 train / 10,000 test)",
+        "MNIST",
+        "CIFAR-10",
+        "Caltech-101",
+        "ImageNet (subset)",
+        "Remote sensing scene datasets (NWPU-RS45)",
+        "Stanford Dogs"
+      ]
+    }
+  },
+  "error": null,
+  "started_at": "2026-10-09 22:37:10.498807+00:00",
+  "finished_at": "2026-10-09 22:47:01.827035+00:00"
+}

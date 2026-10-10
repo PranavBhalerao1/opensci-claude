@@ -1,0 +1,74 @@
+{
+  "id": "g2",
+  "risks": [
+    "Very small subsets (500 samples) produce extreme accuracy variance, potentially masking or exaggerating the trend.",
+    "Stratified sampling errors at tiny subset sizes could introduce class imbalance, confounding accuracy estimates.",
+    "The relationship may be non-monotonic if augmentation actively hurts at very small sizes due to label-inconsistent transforms."
+  ],
+  "title": "Training set size modulates augmentation benefit on Fashion-MNIST",
+  "run_id": "0503725dc018",
+  "scores": {
+    "impact": {
+      "why": "Provides concrete guidance on when augmentation is worth applying for practitioners with limited labelled data on Fashion-MNIST-like tasks.",
+      "score": 4
+    },
+    "novelty": {
+      "why": "While 'State-of-the-Art Results with the Fashion-MNIST Dataset' examines a small CNN with data augmentation on Fashion-MNIST, none of the prior works systematically vary training set size to measure how augmentation benefit scales and identify a crossover/negligibility point. The proposed study's core contribution—quantifying Δ accuracy vs. log-training-size across subsampled regimes—remains unaddressed.",
+      "score": 3
+    },
+    "feasibility": {
+      "why": "Stratified subsampling and 28 short GPU runs are straightforward to implement with torchvision Subset and WeightedRandomSampler.",
+      "score": 5
+    },
+    "testability": {
+      "why": "The augmentation benefit vs. training size curve has a clear expected shape and a well-defined crossover point that can be estimated by regression.",
+      "score": 5
+    }
+  },
+  "overall": 4.15,
+  "approach": "Stratify-subsample the Fashion-MNIST training set at sizes 500, 1,000, 2,500, 5,000, 10,000, 30,000, and 60,000 images using balanced class proportions. Train the fixed small CNN with and without augmentation at each size using seeds 42 and 123 for 5 epochs per run. Plot augmentation benefit (Δ test accuracy) versus log-training-size and fit a simple linear regression on the log scale to identify the crossover point.",
+  "gap_type": "generalization",
+  "question": "How does the test accuracy benefit of basic geometric augmentation scale with training set size for a small CNN on Fashion-MNIST, and at what sample count does the benefit become negligible?",
+  "why_open": "(Karadağ et al. 2020) found that 'the contribution of data augmentation is sensitive to the size of the dataset' on CIFAR-10 but this has not been replicated or quantified on Fashion-MNIST. (Kang et al. 2024) shows that MFG Augment 'significantly improves test accuracy when dataset size is small' but for an advanced augmentation method, not basic geometric transforms. (Pham et al. 2018) and (Harun et al. 2024) demonstrate augmentation helps small specialty datasets yet do not characterise the relationship across a systematic range of sample sizes with a fixed architecture and fixed epoch count.",
+  "hypothesis": "Augmentation benefit will be largest at small training set sizes (500–5,000 samples) and will decrease monotonically toward negligibility at the full 60,000-sample dataset within 5 epochs, with a crossover point around 10,000–20,000 samples.",
+  "data_needed": "Stratified random subsamples of Fashion-MNIST's 60,000-image training split; test set remains the full 10,000 images.",
+  "novelty_check": {
+    "status": "novel",
+    "closest": [
+      {
+        "url": "https://www.semanticscholar.org/paper/ef0545e59c2c6aa37039f7cc5fab385dfe0cb97d",
+        "year": 2024,
+        "title": "State-of-the-Art Results with the Fashion-MNIST Dataset",
+        "overlap": "Evaluates a small CNN with data augmentation on the full Fashion-MNIST dataset but does not vary training set size or measure augmentation benefit as a function of sample count.",
+        "in_review": true
+      },
+      {
+        "url": "https://www.semanticscholar.org/paper/c2b67ea26ee864fca0fdb01f8831ecace0ba6b4d",
+        "year": 2026,
+        "title": "Exploring the Effectiveness Boundary of Data Augmentation in Low-Resource Text Classification",
+        "overlap": "Systematically studies the effectiveness boundary of data augmentation as a function of per-category sample size, but for text classification, not image CNNs or Fashion-MNIST.",
+        "in_review": false
+      },
+      {
+        "url": "https://www.semanticscholar.org/paper/3d97e69bc14e5132b8c571ef5062fb07559546c5",
+        "year": 2025,
+        "title": "Iterative Data Distillation and Augmentation for Enhancing Deep Learning Performance With Limited Image Training Data",
+        "overlap": "Addresses augmentation for limited image training data but focuses on a distillation-based augmentation method rather than measuring how basic geometric augmentation benefit scales with training size.",
+        "in_review": false
+      }
+    ],
+    "explanation": "While 'State-of-the-Art Results with the Fashion-MNIST Dataset' examines a small CNN with data augmentation on Fashion-MNIST, none of the prior works systematically vary training set size to measure how augmentation benefit scales and identify a crossover/negligibility point. The proposed study's core contribution—quantifying Δ accuracy vs. log-training-size across subsampled regimes—remains unaddressed."
+  },
+  "compute_needed": "Google Colab T4/L4 GPU; 28 training runs (7 sizes × 2 conditions × 2 seeds × 5 epochs); estimated 2–3 GPU hours.",
+  "novelty_queries": [
+    "data augmentation effectiveness training set size Fashion MNIST",
+    "augmentation benefit sample size scaling image classification CNN",
+    "sample size augmentation interaction accuracy benchmark small CNN"
+  ],
+  "supporting_paper_ids": [
+    "9daca3e27e73",
+    "5d7cecdcc906",
+    "6350fee7a645",
+    "d0d141fc7a67"
+  ]
+}

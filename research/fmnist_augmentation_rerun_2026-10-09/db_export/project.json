@@ -1,0 +1,1464 @@
+{
+  "id": "6d8c3c93c209",
+  "user_id": "56ec46c1-8aa1-467d-a4c9-7a76a7248153",
+  "title": "Data Augmentation Effect on CNN Fashion-MNIST Accuracy",
+  "stage": "complete",
+  "autonomous": true,
+  "settings": {
+    "depth": "standard",
+    "budget": {
+      "llm_usd": 15.0,
+      "gpu_hours": 5.0
+    },
+    "max_papers": 100,
+    "refinement": {
+      "enabled": true
+    },
+    "citation_hops": 0
+  },
+  "brief": {
+    "title": "Data Augmentation Effect on CNN Fashion-MNIST Accuracy",
+    "domain": "Computer Science",
+    "summary": "This study trains a small convolutional neural network on the Fashion-MNIST dataset under two conditions — with and without simple data augmentation — keeping all hyperparameters, architecture, optimizer, and random seeds identical. Each condition is run with two fixed random seeds (42 and 123) for approximately 5 epochs on a CUDA GPU via Google Colab, and test accuracy, training curves, and validation performance are compared between conditions. The goal is to provide a clean, reproducible, computationally modest demonstration of whether basic augmentation meaningfully generalises a small CNN on this benchmark.",
+    "scope_in": [
+      "Fashion-MNIST dataset (60 000 train / 10 000 test split)",
+      "One small CNN architecture (two conv blocks + fully connected head)",
+      "Two training conditions: no augmentation vs. basic augmentation (random horizontal flip, ±10% translation, ±10° rotation)",
+      "Two random seeds per condition (42 and 123)",
+      "~5 training epochs per run",
+      "PyTorch implementation on CUDA GPU (Google Colab T4 or L4)",
+      "Metrics: per-epoch training loss, validation accuracy, final test accuracy",
+      "Figures: training/validation curves per condition, bar chart of test accuracy by seed and condition",
+      "Summary table of all results"
+    ],
+    "scope_out": [
+      "Hyperparameter search or architecture search",
+      "Advanced augmentation (Cutout, Mixup, AutoAugment, RandAugment)",
+      "More than two seeds or statistical significance testing beyond descriptive comparison",
+      "Transfer learning or pre-trained models",
+      "Datasets other than Fashion-MNIST",
+      "CPU-only training runs as substitutes for GPU runs"
+    ],
+    "subfields": [
+      "Deep Learning",
+      "Computer Vision",
+      "Empirical ML Methodology"
+    ],
+    "assumptions": [
+      "Augmentation set fixed as: RandomHorizontalFlip, RandomAffine(degrees=10, translate=(0.1,0.1)) — reasonable defaults for Fashion-MNIST clothing images",
+      "Adam optimizer with lr=1e-3 chosen as a sensible, widely used default for small CNNs",
+      "Batch size of 64 assumed; train/val split of 54 000/6 000 (90/10 of training set) assumed",
+      "Small CNN defined as: Conv(1→32,3×3,ReLU,MaxPool) → Conv(32→64,3×3,ReLU,MaxPool) → FC(1600→128,ReLU) → FC(128→10)",
+      "No learning-rate scheduler applied, to keep conditions simple and equal",
+      "Results will be reported descriptively (mean ± range across seeds) without formal significance testing, per user instruction"
+    ],
+    "constraints": [
+      "PyTorch framework only",
+      "CUDA GPU mandatory for training; must log torch.cuda.get_device_name() as evidence",
+      "Exactly 5 epochs per run",
+      "Seeds 42 and 123 for both conditions",
+      "Architecture, optimizer (Adam or SGD), learning rate, batch size, and train/val split must be identical across conditions",
+      "No wet-lab, fieldwork, or human-subject components",
+      "Do not overstate statistical significance given only two seeds",
+      "Keep scope narrow — no expansion into broader benchmarks"
+    ],
+    "result_type": "empirical",
+    "key_concepts": [
+      {
+        "term": "Data augmentation",
+        "definition": "Artificially expanding the training set by applying label-preserving transformations (e.g. flips, small rotations, translations) to each image during training so the model sees more variation."
+      },
+      {
+        "term": "Convolutional Neural Network (CNN)",
+        "definition": "A type of neural network that uses sliding filter operations to detect spatial patterns in images, well-suited to image classification."
+      },
+      {
+        "term": "Fashion-MNIST",
+        "definition": "A publicly available benchmark dataset of 70,000 28×28 greyscale images of clothing items across 10 classes, used as a drop-in replacement for MNIST."
+      },
+      {
+        "term": "Generalisation",
+        "definition": "A model's ability to perform well on unseen test data, not just the data it was trained on."
+      },
+      {
+        "term": "Random seed",
+        "definition": "A fixed starting value for the random number generator that makes training fully reproducible across runs."
+      },
+      {
+        "term": "Test accuracy",
+        "definition": "The percentage of correctly classified samples in the held-out test set, the primary evaluation metric here."
+      }
+    ],
+    "core_question": "Does applying basic image augmentation (small random horizontal flips, translations, and rotations) during training improve the test accuracy of a small CNN on Fashion-MNIST compared with identical training without augmentation?",
+    "data_resources": "Fashion-MNIST loaded directly via torchvision.datasets (public, ~30 MB); no external data collection required.",
+    "user_expertise": "Comfortable with ML concepts and PyTorch; wants rigorous but concise experimental reporting without overstated statistical claims.",
+    "search_keywords": [
+      "data augmentation CNN image classification",
+      "Fashion-MNIST benchmark convolutional neural network",
+      "random flip rotation translation image augmentation",
+      "deep learning generalisation regularisation",
+      "torchvision transforms augmentation PyTorch",
+      "small CNN architecture MNIST Fashion-MNIST",
+      "training vs test accuracy gap overfitting",
+      "data augmentation empirical evaluation",
+      "image augmentation training regularisation effect",
+      "CNN benchmark reproducibility fixed random seed",
+      "Fashion-MNIST state of the art baseline",
+      "augmentation-induced variance deep learning"
+    ],
+    "compute_resources": "Google Colab GPU instance (T4 or L4) via the GPU job tool for all neural-network training; standard CPU sandbox for data preprocessing, result aggregation, and plotting."
+  },
+  "chosen_gap": {
+    "id": "g2",
+    "risks": [
+      "Very small subsets (500 samples) produce extreme accuracy variance, potentially masking or exaggerating the trend.",
+      "Stratified sampling errors at tiny subset sizes could introduce class imbalance, confounding accuracy estimates.",
+      "The relationship may be non-monotonic if augmentation actively hurts at very small sizes due to label-inconsistent transforms."
+    ],
+    "title": "Training set size modulates augmentation benefit on Fashion-MNIST",
+    "run_id": "0503725dc018",
+    "scores": {
+      "impact": {
+        "why": "Provides concrete guidance on when augmentation is worth applying for practitioners with limited labelled data on Fashion-MNIST-like tasks.",
+        "score": 4
+      },
+      "novelty": {
+        "why": "While 'State-of-the-Art Results with the Fashion-MNIST Dataset' examines a small CNN with data augmentation on Fashion-MNIST, none of the prior works systematically vary training set size to measure how augmentation benefit scales and identify a crossover/negligibility point. The proposed study's core contribution—quantifying Δ accuracy vs. log-training-size across subsampled regimes—remains unaddressed.",
+        "score": 3
+      },
+      "feasibility": {
+        "why": "Stratified subsampling and 28 short GPU runs are straightforward to implement with torchvision Subset and WeightedRandomSampler.",
+        "score": 5
+      },
+      "testability": {
+        "why": "The augmentation benefit vs. training size curve has a clear expected shape and a well-defined crossover point that can be estimated by regression.",
+        "score": 5
+      }
+    },
+    "overall": 4.15,
+    "approach": "Stratify-subsample the Fashion-MNIST training set at sizes 500, 1,000, 2,500, 5,000, 10,000, 30,000, and 60,000 images using balanced class proportions. Train the fixed small CNN with and without augmentation at each size using seeds 42 and 123 for 5 epochs per run. Plot augmentation benefit (Δ test accuracy) versus log-training-size and fit a simple linear regression on the log scale to identify the crossover point.",
+    "gap_type": "generalization",
+    "question": "How does the test accuracy benefit of basic geometric augmentation scale with training set size for a small CNN on Fashion-MNIST, and at what sample count does the benefit become negligible?",
+    "why_open": "(Karadağ et al. 2020) found that 'the contribution of data augmentation is sensitive to the size of the dataset' on CIFAR-10 but this has not been replicated or quantified on Fashion-MNIST. (Kang et al. 2024) shows that MFG Augment 'significantly improves test accuracy when dataset size is small' but for an advanced augmentation method, not basic geometric transforms. (Pham et al. 2018) and (Harun et al. 2024) demonstrate augmentation helps small specialty datasets yet do not characterise the relationship across a systematic range of sample sizes with a fixed architecture and fixed epoch count.",
+    "hypothesis": "Augmentation benefit will be largest at small training set sizes (500–5,000 samples) and will decrease monotonically toward negligibility at the full 60,000-sample dataset within 5 epochs, with a crossover point around 10,000–20,000 samples.",
+    "data_needed": "Stratified random subsamples of Fashion-MNIST's 60,000-image training split; test set remains the full 10,000 images.",
+    "novelty_check": {
+      "status": "novel",
+      "closest": [
+        {
+          "url": "https://www.semanticscholar.org/paper/ef0545e59c2c6aa37039f7cc5fab385dfe0cb97d",
+          "year": 2024,
+          "title": "State-of-the-Art Results with the Fashion-MNIST Dataset",
+          "overlap": "Evaluates a small CNN with data augmentation on the full Fashion-MNIST dataset but does not vary training set size or measure augmentation benefit as a function of sample count.",
+          "in_review": true
+        },
+        {
+          "url": "https://www.semanticscholar.org/paper/c2b67ea26ee864fca0fdb01f8831ecace0ba6b4d",
+          "year": 2026,
+          "title": "Exploring the Effectiveness Boundary of Data Augmentation in Low-Resource Text Classification",
+          "overlap": "Systematically studies the effectiveness boundary of data augmentation as a function of per-category sample size, but for text classification, not image CNNs or Fashion-MNIST.",
+          "in_review": false
+        },
+        {
+          "url": "https://www.semanticscholar.org/paper/3d97e69bc14e5132b8c571ef5062fb07559546c5",
+          "year": 2025,
+          "title": "Iterative Data Distillation and Augmentation for Enhancing Deep Learning Performance With Limited Image Training Data",
+          "overlap": "Addresses augmentation for limited image training data but focuses on a distillation-based augmentation method rather than measuring how basic geometric augmentation benefit scales with training size.",
+          "in_review": false
+        }
+      ],
+      "explanation": "While 'State-of-the-Art Results with the Fashion-MNIST Dataset' examines a small CNN with data augmentation on Fashion-MNIST, none of the prior works systematically vary training set size to measure how augmentation benefit scales and identify a crossover/negligibility point. The proposed study's core contribution—quantifying Δ accuracy vs. log-training-size across subsampled regimes—remains unaddressed."
+    },
+    "compute_needed": "Google Colab T4/L4 GPU; 28 training runs (7 sizes × 2 conditions × 2 seeds × 5 epochs); estimated 2–3 GPU hours.",
+    "novelty_queries": [
+      "data augmentation effectiveness training set size Fashion MNIST",
+      "augmentation benefit sample size scaling image classification CNN",
+      "sample size augmentation interaction accuracy benchmark small CNN"
+    ],
+    "supporting_paper_ids": [
+      "9daca3e27e73",
+      "5d7cecdcc906",
+      "6350fee7a645",
+      "d0d141fc7a67"
+    ]
+  },
+  "plan": {
+    "risks": [
+      {
+        "risk": "High variance in test accuracy at N=500 (only 50 images per class) may make Δ estimates at the smallest size unreliable and inflate or suppress the apparent benefit",
+        "likelihood": "high",
+        "mitigation": "Report both seed values individually (not just mean) at each size; interpret N=500 results with explicit caveats about small-sample noise; if seeds strongly disagree at N=500, note it in the Discussion rather than suppressing the result"
+      },
+      {
+        "risk": "Augmentation may actively hurt accuracy at N=500 if rotations/translations push images toward ambiguous or label-inconsistent appearances, producing non-monotonic Δ",
+        "likelihood": "medium",
+        "mitigation": "Flag negative Δ explicitly as a potentially interesting finding rather than an error; discuss in terms of label-consistency of the augmentation policy; ±10° rotation is mild and horizontal flip is semantically valid for most Fashion-MNIST classes"
+      },
+      {
+        "risk": "5-epoch training budget may be insufficient for the larger subset sizes (10,000–60,000) to converge, causing underfitting that suppresses both augmentation benefit and baseline accuracy at large N",
+        "likelihood": "medium",
+        "mitigation": "Report per-epoch curves to assess convergence; if both conditions are clearly still improving at epoch 5 for large N, note this as a limitation of the fixed-epoch protocol; the study is explicitly scoped to 5 epochs"
+      },
+      {
+        "risk": "Stratified sampling failure at tiny subset sizes (N=500, 50 per class) due to off-by-one errors or rounding could introduce class imbalance",
+        "likelihood": "low",
+        "mitigation": "Explicitly verify and log per-class counts for N=500 and N=1000 in T1.2 before any training; assert balance tolerance of ±1 sample per class"
+      },
+      {
+        "risk": "Google Colab GPU quota interruption between the two seed batches could leave results incomplete",
+        "likelihood": "medium",
+        "mitigation": "Save `results_seedXX.csv` incrementally after each run (append row) so partial results are not lost; T2.1 and T2.2 are independent and can be restarted from the last completed run"
+      }
+    ],
+    "title": "How Augmentation Benefit Scales with Training Set Size for a Small CNN on Fashion-MNIST",
+    "phases": [
+      {
+        "id": "P1",
+        "goal": "Produce a frozen, reproducible training codebase and all stratified subset index arrays before any GPU training begins.",
+        "name": "Environment Setup and Data Preparation",
+        "tasks": [
+          {
+            "id": "T1.1",
+            "kind": "modeling",
+            "title": "Implement and freeze CNN architecture and training utilities",
+            "effort": "M",
+            "inputs": [],
+            "outputs": [
+              "train_fmnist.py",
+              "config.json"
+            ],
+            "depends_on": [],
+            "tools_hint": [
+              "torch",
+              "torchvision",
+              "json"
+            ],
+            "description": "Write a single self-contained PyTorch module file defining: (a) the small CNN (Conv2d(1→32,3×3,pad=1)→BN→ReLU→Conv2d(32→32)→BN→ReLU→MaxPool→Dropout(0.25); second block Conv2d(32→64)→BN→ReLU→Conv2d(64→64)→BN→ReLU→MaxPool→Dropout(0.25); head Flatten→Linear(64×7×7,256)→ReLU→Dropout(0.5)→Linear(256,10)); (b) training loop with Adam lr=0.001, batch_size=64, CrossEntropyLoss, 5 epochs; (c) per-epoch logging of train loss and validation accuracy; (d) final test accuracy computation. Save as `train_fmnist.py`. Record all hyperparameters in `config.json`."
+          },
+          {
+            "id": "T1.2",
+            "kind": "data_processing",
+            "title": "Generate and save stratified subset index arrays",
+            "effort": "S",
+            "inputs": [
+              "Fashion-MNIST training split"
+            ],
+            "outputs": [
+              "subset_indices.npz",
+              "class_balance_check.txt"
+            ],
+            "depends_on": [],
+            "tools_hint": [
+              "numpy",
+              "torchvision",
+              "sklearn"
+            ],
+            "description": "Load Fashion-MNIST training split (60,000 images, 10 classes). For each size N in and each seed in, use stratified sampling (N/10 per class, using numpy RandomState) to select training indices, then randomly allocate 10% of N to a validation split (also stratified). Save all index arrays to `subset_indices.npz` with keys `train_{N}_{seed}` and `val_{N}_{seed}`. Print and save per-class counts for N=500 and N=1000 to `class_balance_check.txt` to confirm balance."
+          }
+        ]
+      },
+      {
+        "id": "P2",
+        "goal": "Execute all 28 training runs on CUDA GPU and persist per-epoch logs and final test accuracies.",
+        "name": "GPU Training Experiments",
+        "tasks": [
+          {
+            "id": "T2.1",
+            "kind": "experiment",
+            "title": "Run 14 training experiments for seed 42 (all sizes × both conditions)",
+            "effort": "M",
+            "inputs": [
+              "train_fmnist.py",
+              "config.json",
+              "subset_indices.npz",
+              "Fashion-MNIST dataset"
+            ],
+            "outputs": [
+              "results_seed42.csv",
+              "gpu_log_seed42.txt"
+            ],
+            "depends_on": [
+              "T1.1",
+              "T1.2"
+            ],
+            "tools_hint": [
+              "torch",
+              "torchvision",
+              "pandas",
+              "csv"
+            ],
+            "description": "On a CUDA GPU instance, call `train_fmnist.py` for seed=42, iterating over all 7 training set sizes and both augmentation conditions (no-aug: ToTensor+Normalize; aug: RandomHorizontalFlip(0.5)+RandomAffine(degrees=10,translate=(0.1,0.1))+ToTensor+Normalize). For each run log torch.cuda.get_device_name(), per-epoch train loss, per-epoch val accuracy, and final test accuracy. Append all rows to `results_seed42.csv` with columns [seed, size, condition, epoch, train_loss, val_acc, test_acc]."
+          },
+          {
+            "id": "T2.2",
+            "kind": "experiment",
+            "title": "Run 14 training experiments for seed 123 (all sizes × both conditions)",
+            "effort": "M",
+            "inputs": [
+              "train_fmnist.py",
+              "config.json",
+              "subset_indices.npz",
+              "Fashion-MNIST dataset"
+            ],
+            "outputs": [
+              "results_seed123.csv",
+              "gpu_log_seed123.txt"
+            ],
+            "depends_on": [
+              "T1.1",
+              "T1.2"
+            ],
+            "tools_hint": [
+              "torch",
+              "torchvision",
+              "pandas",
+              "csv"
+            ],
+            "description": "Identical procedure to T2.1 but with seed=123. Run independently (can be parallelised with T2.1 if a second GPU slot is available). Append all rows to `results_seed123.csv` with the same schema."
+          }
+        ]
+      },
+      {
+        "id": "P3",
+        "goal": "Compute augmentation benefit Δ at each training size, fit log-linear regression, and estimate the crossover sample count N*.",
+        "name": "Result Aggregation and Statistical Analysis",
+        "tasks": [
+          {
+            "id": "T3.1",
+            "kind": "data_processing",
+            "title": "Merge run logs into master results table",
+            "effort": "S",
+            "inputs": [
+              "results_seed42.csv",
+              "results_seed123.csv"
+            ],
+            "outputs": [
+              "results_all.csv",
+              "test_acc_summary.csv"
+            ],
+            "depends_on": [
+              "T2.1",
+              "T2.2"
+            ],
+            "tools_hint": [
+              "pandas",
+              "numpy"
+            ],
+            "description": "Concatenate `results_seed42.csv` and `results_seed123.csv` into `results_all.csv`. Extract the final-epoch test accuracy for each (size, condition, seed) combination and pivot to produce `test_acc_summary.csv` with columns [size, seed, acc_noaug, acc_aug, delta]. Verify that all 28 expected rows are present and flag any missing runs."
+          },
+          {
+            "id": "T3.2",
+            "kind": "analysis",
+            "title": "Compute augmentation benefit Δ and descriptive statistics per training size",
+            "effort": "S",
+            "inputs": [
+              "test_acc_summary.csv"
+            ],
+            "outputs": [
+              "delta_by_size.csv"
+            ],
+            "depends_on": [
+              "T3.1"
+            ],
+            "tools_hint": [
+              "pandas",
+              "numpy"
+            ],
+            "description": "From `test_acc_summary.csv`, for each of the 7 training set sizes compute: mean Δ across seeds, individual Δ per seed (for range reporting), and absolute accuracy for both conditions. Save to `delta_by_size.csv` with columns [size, delta_seed42, delta_seed123, delta_mean, delta_range, acc_noaug_mean, acc_aug_mean]. Also compute Δ in percentage-point units. Note explicitly where Δ is negative (augmentation hurts)."
+          },
+          {
+            "id": "T3.3",
+            "kind": "analysis",
+            "title": "Fit log-linear regression and estimate crossover N*",
+            "effort": "S",
+            "inputs": [
+              "delta_by_size.csv"
+            ],
+            "outputs": [
+              "regression_results.json",
+              "bootstrap_N_star.csv"
+            ],
+            "depends_on": [
+              "T3.2"
+            ],
+            "tools_hint": [
+              "numpy",
+              "scipy",
+              "statsmodels",
+              "pandas"
+            ],
+            "description": "Using `delta_by_size.csv`, fit OLS regression Δ = a + b·log₂(N) using the 7 mean-Δ values. Report R², slope b, intercept a, and 95% CI from the OLS fit. Estimate crossover N* = 2^(−a/b) where Δ=0. Additionally run 5,000-iteration bootstrap (resample with replacement over the 7 size points) to produce a bootstrap 95% CI for N*. Save regression coefficients and bootstrap CIs to `regression_results.json`. Flag if R² < 0.5 or N* falls outside (Pham et al. 2018) as a negative result."
+          },
+          {
+            "id": "T3.4",
+            "kind": "analysis",
+            "title": "Monotonicity and trend diagnostic checks",
+            "effort": "S",
+            "inputs": [
+              "delta_by_size.csv",
+              "results_all.csv"
+            ],
+            "outputs": [
+              "trend_diagnostics.txt"
+            ],
+            "depends_on": [
+              "T3.2"
+            ],
+            "tools_hint": [
+              "scipy",
+              "pandas",
+              "numpy"
+            ],
+            "description": "Test whether Δ values are monotonically decreasing across the 7 sizes using Spearman rank correlation of delta_mean vs size (report ρ and p-value). Also check whether the two seeds agree in direction of Δ at each size point (concordance count). Compute the fraction of epoch-level training loss curves where aug > noaug loss (expected at small sizes due to harder augmented samples). Save diagnostics to `trend_diagnostics.txt`."
+          }
+        ]
+      },
+      {
+        "id": "P4",
+        "goal": "Produce all figures required for the paper.",
+        "name": "Visualization",
+        "tasks": [
+          {
+            "id": "T4.1",
+            "kind": "evaluation",
+            "title": "Plot per-epoch training loss and validation accuracy curves",
+            "effort": "M",
+            "inputs": [
+              "results_all.csv"
+            ],
+            "outputs": [
+              "fig_curves_all.pdf",
+              "curves_size500.pdf",
+              "curves_size1000.pdf",
+              "curves_size2500.pdf",
+              "curves_size5000.pdf",
+              "curves_size10000.pdf",
+              "curves_size30000.pdf",
+              "curves_size60000.pdf"
+            ],
+            "depends_on": [
+              "T3.1"
+            ],
+            "tools_hint": [
+              "matplotlib",
+              "pandas",
+              "seaborn"
+            ],
+            "description": "For each of the 7 training set sizes, generate a 2-panel figure (train loss left, val accuracy right) with separate lines for aug and noaug conditions, both seeds shown as thin lines and mean as thick line. Use a consistent colour scheme (blue=noaug, orange=aug). Save as `curves_size{N}.pdf` and a combined multi-panel `fig_curves_all.pdf` (7 rows × 2 columns)."
+          },
+          {
+            "id": "T4.2",
+            "kind": "evaluation",
+            "title": "Plot augmentation benefit Δ vs log training size with regression",
+            "effort": "S",
+            "inputs": [
+              "delta_by_size.csv",
+              "regression_results.json",
+              "bootstrap_N_star.csv"
+            ],
+            "outputs": [
+              "fig_delta_vs_size.pdf"
+            ],
+            "depends_on": [
+              "T3.3"
+            ],
+            "tools_hint": [
+              "matplotlib",
+              "numpy",
+              "pandas"
+            ],
+            "description": "Create the main result figure: x-axis log₂(N) (with tick labels showing actual N values), y-axis Δ test accuracy in percentage points. Plot individual seed points as scatter (different markers for seed 42 vs 123), mean Δ as connected line, regression line with shaded 95% CI band, horizontal dashed line at Δ=0, and vertical dashed line at estimated N*. Annotate N* value with bootstrap CI. Save as `fig_delta_vs_size.pdf` (primary result figure)."
+          },
+          {
+            "id": "T4.3",
+            "kind": "evaluation",
+            "title": "Generate summary bar chart and results table",
+            "effort": "S",
+            "inputs": [
+              "test_acc_summary.csv",
+              "delta_by_size.csv"
+            ],
+            "outputs": [
+              "fig_test_acc_bars.pdf",
+              "table_results.tex"
+            ],
+            "depends_on": [
+              "T3.2"
+            ],
+            "tools_hint": [
+              "matplotlib",
+              "pandas",
+              "seaborn"
+            ],
+            "description": "Produce a grouped bar chart of final test accuracy by training set size, with hue for augmentation condition; individual seed values overlaid as dots. Save as `fig_test_acc_bars.pdf`. Also render `test_acc_summary.csv` as a LaTeX-formatted table `table_results.tex` with columns: size, noaug seed42, noaug seed123, aug seed42, aug seed123, Δ mean, Δ range."
+          }
+        ]
+      },
+      {
+        "id": "P5",
+        "goal": "Produce a complete conference-style paper draft with all figures and tables embedded.",
+        "name": "Paper Writing",
+        "tasks": [
+          {
+            "id": "T5.1",
+            "kind": "writing",
+            "title": "Write conference-style paper draft",
+            "effort": "L",
+            "inputs": [
+              "config.json",
+              "fig_delta_vs_size.pdf",
+              "fig_curves_all.pdf",
+              "fig_test_acc_bars.pdf",
+              "table_results.tex",
+              "regression_results.json",
+              "trend_diagnostics.txt",
+              "delta_by_size.csv"
+            ],
+            "outputs": [
+              "paper_draft.tex",
+              "paper_draft.pdf"
+            ],
+            "depends_on": [
+              "T4.1",
+              "T4.2",
+              "T4.3",
+              "T3.3",
+              "T3.4"
+            ],
+            "tools_hint": [
+              "latex",
+              "pdflatex",
+              "bibtex"
+            ],
+            "description": "Write a 6–8 page paper in LaTeX following a standard ML venue structure (Abstract, Introduction, Related Work, Methods, Experiments, Results, Discussion, Conclusion). Include: architecture and hyperparameter table from `config.json`; all figures from P4; results table from `table_results.tex`; regression equation and N* estimate with CI from `regression_results.json`; monotonicity diagnostics from `trend_diagnostics.txt`. In Discussion, explicitly address: whether the trend is monotonic, whether augmentation ever hurts (Δ < 0) at N=500, limitations of two seeds (no overclaimed significance), and implications for practitioners. Cite relevant prior work from the provided bibliography. Save as `paper_draft.tex` and compile to `paper_draft.pdf`."
+          }
+        ]
+      }
+    ],
+    "run_id": "f201709e9292",
+    "schema": "openscientist.vague_research_plan/v1",
+    "methods": [
+      {
+        "name": "Stratified random subsampling",
+        "purpose": "Produce class-balanced training subsets at each of 7 sizes to avoid confounding augmentation benefit with class imbalance"
+      },
+      {
+        "name": "Small CNN with batch normalisation and dropout",
+        "purpose": "Fixed model architecture used identically across all conditions to isolate the effect of augmentation and training set size"
+      },
+      {
+        "name": "Basic geometric augmentation",
+        "purpose": "Augmentation condition: RandomHorizontalFlip(p=0.5) + RandomAffine(degrees=10, translate=(0.1,0.1)); applied only during training, not validation or test"
+      },
+      {
+        "name": "Adam optimiser",
+        "purpose": "Fixed optimiser (lr=0.001) used across all conditions; no learning rate scheduling to avoid confounding"
+      },
+      {
+        "name": "Log-linear OLS regression",
+        "purpose": "Fit Δ = a + b·log₂(N) to 7 mean-Δ datapoints to characterise the scaling trend and estimate crossover N*"
+      },
+      {
+        "name": "Bootstrap confidence interval",
+        "purpose": "Quantify uncertainty on the estimated crossover N* by resampling the 7 (size, Δ) pairs 5,000 times"
+      },
+      {
+        "name": "Spearman rank correlation",
+        "purpose": "Test monotonicity of Δ vs training set size non-parametrically as a trend diagnostic"
+      }
+    ],
+    "metrics": [
+      {
+        "name": "Test accuracy",
+        "definition": "Fraction of correctly classified images on the full 10,000-image Fashion-MNIST test set at epoch 5 (final checkpoint)",
+        "success_threshold": "Reported for all 28 runs; no single threshold, but noaug at N=60,000 should be comparable to published ~88–91% range for similar small CNNs (Yee 2026; Meshkini et al. 2019)"
+      },
+      {
+        "name": "Augmentation benefit Δ",
+        "definition": "acc_aug − acc_noaug in percentage points, computed per (size, seed) pair; mean and range across seeds reported for each size",
+        "success_threshold": "Δ > 2 percentage points at N=500 would confirm meaningful benefit at smallest size; Δ < 0.5 percentage points at the crossover and beyond"
+      },
+      {
+        "name": "Log-linear regression R²",
+        "definition": "Coefficient of determination for OLS fit of mean Δ vs log₂(N) across 7 size points",
+        "success_threshold": "R² ≥ 0.5 indicates the log-linear model explains a majority of variance in the trend; R² < 0.5 triggers model-fit discussion"
+      },
+      {
+        "name": "Crossover N*",
+        "definition": "Training set size at which regression predicts Δ = 0, computed as N* = 2^(−a/b) from regression coefficients a and b",
+        "success_threshold": "N* within (Pham et al. 2018) constitutes a detectable crossover; N* outside this range means benefit is always positive or always negative across tested sizes"
+      },
+      {
+        "name": "Spearman ρ (monotonicity)",
+        "definition": "Spearman rank correlation between mean Δ and training set size across 7 size levels",
+        "success_threshold": "ρ < −0.6 supports monotonic decreasing trend; |ρ| < 0.4 indicates no systematic trend"
+      }
+    ],
+    "datasets": [
+      {
+        "name": "Fashion-MNIST",
+        "role": "Primary dataset; training subsets at 7 sizes for both conditions; full test set for evaluation",
+        "access": "public",
+        "source": "https://github.com/zalandoresearch/fashion-mnist",
+        "description": "70,000 grayscale 28×28 images of 10 clothing categories: 60,000 training and 10,000 test. Loaded via torchvision.datasets.FashionMNIST with automatic download (~30 MB). Training set is subsampled at 7 sizes; test set (10,000) is used as-is for all final evaluations."
+      },
+      {
+        "name": "Fashion-MNIST stratified subsets",
+        "role": "Controlled training inputs enabling systematic scaling experiment",
+        "access": "public",
+        "source": "to be located",
+        "description": "Derived from the Fashion-MNIST training split: for each of 7 sizes (500,1000,2500,5000,10000,30000,60000) and 2 seeds (42,123), a stratified balanced subset (N/10 per class) with 90/10 train/val split. Stored as index arrays in subset_indices.npz."
+      }
+    ],
+    "baselines": [
+      "No-augmentation CNN at each of the 7 training set sizes (primary baseline for each augmentation run)",
+      "Augmentation condition at N=60,000 (full dataset) as upper-size reference point",
+      "No-augmentation condition at N=60,000 as lower-bound reference for benefit"
+    ],
+    "background": "Data augmentation is widely used to improve CNN generalisation, but the magnitude of its benefit is expected to depend on dataset size: when real data diversity is low, synthetic diversity from augmentation fills a larger gap relative to the total training signal. Prior work on CIFAR-10 found augmentation contribution to be sensitive to dataset size (Karadağ et al. 2020), and a game-theoretic augmentation method showed significant test accuracy improvements specifically in low-data regimes (Kang et al. 2024). Studies on specialty domains such as ultrasound (Snider et al. 2023) and soil images (Maiyanti et al. 2023) corroborate augmentation utility under limited data, yet none systematically quantify the benefit as a continuous function of sample count on Fashion-MNIST. Fashion-MNIST benchmarks consistently report CNNs achieving 88–94% with the full 60,000-image training set (Mukhamediev 2024; Yee 2026; Meshkini et al. 2019; Xhaferra et al. 2022), but no study characterises how basic geometric augmentation benefit evolves across a controlled range from 500 to 60,000 samples on this dataset with a fixed architecture and fixed epoch budget. Establishing this scaling relationship would provide actionable guidance for practitioners deciding whether to apply augmentation at a given data collection budget and would replicate and extend findings from text classification [not in scope here] to image CNNs on a standard benchmark.",
+    "hypothesis": "Augmentation benefit (Δ test accuracy = acc_aug − acc_noaug) will be largest at small training set sizes (500–5,000 samples), will decrease monotonically as training set size increases on a log scale, and will approach negligibility (Δ < 0.5 percentage points) somewhere between 10,000 and 20,000 samples, consistent with the principle that augmentation provides diminishing returns as real data diversity increases.",
+    "objectives": [
+      "Implement and freeze a small CNN architecture, training loop, and evaluation pipeline in PyTorch that is identical across all conditions except augmentation policy and training subset size.",
+      "Generate stratified, class-balanced subsets of Fashion-MNIST training data at sizes 500, 1,000, 2,500, 5,000, 10,000, 30,000, and 60,000 using seeds 42 and 123, and persist all index arrays.",
+      "Run all 28 training experiments (7 sizes × 2 conditions × 2 seeds × 5 epochs) on a CUDA GPU, recording per-epoch training loss, validation accuracy, and final test accuracy, logging torch.cuda.get_device_name() as evidence.",
+      "Quantify augmentation benefit Δ at each training set size (mean over 2 seeds, range reported) and fit a log-linear regression Δ = a + b·log₂(N) to characterise the monotonicity and slope.",
+      "Estimate the crossover training set size N* where Δ = 0 from the regression with bootstrap 95% confidence intervals, and assess whether the trend is monotonic.",
+      "Produce publication-quality figures and a concise conference-style paper draft reporting descriptive statistics without overstated inferential claims given two seeds."
+    ],
+    "study_type": "empirical",
+    "approved_at": "2026-10-09T22:57:50.969737+00:00",
+    "deliverables": [
+      "subset_indices.npz — all stratified index arrays for reproducibility",
+      "results_all.csv — master table of all 28 runs with per-epoch metrics",
+      "test_acc_summary.csv — final test accuracy per (size, condition, seed)",
+      "delta_by_size.csv — augmentation benefit Δ statistics per training set size",
+      "regression_results.json — log-linear regression coefficients, R², and bootstrap CI for N*",
+      "fig_delta_vs_size.pdf — primary result figure: Δ vs log₂(N) with regression and CI",
+      "fig_curves_all.pdf — training/validation curves for all sizes and conditions",
+      "fig_test_acc_bars.pdf — grouped bar chart of test accuracy by size and condition",
+      "table_results.tex — LaTeX results table for paper",
+      "paper_draft.pdf — compiled conference-style paper draft",
+      "train_fmnist.py + config.json — frozen reproducible training code and hyperparameter record",
+      "gpu_log_seed42.txt + gpu_log_seed123.txt — CUDA device name evidence logs"
+    ],
+    "open_questions": [
+      "Does horizontal flip introduce label noise for any Fashion-MNIST class (e.g., sandals or bags may be asymmetric, but most garments are symmetric)? Should flip be excluded from the augmentation set?",
+      "Is the 90/10 train/validation split appropriate for N=500 (45 train, 5 val per class)? Would a fixed external validation set be more stable? If so, what size?",
+      "Will 5 epochs produce meaningful test accuracy at N=60,000 (expected ~88–90%) or will underfitting make the large-N regime uninformative? Should epoch 5 results be supplemented with a learning-curve extrapolation note?",
+      "Does the choice of Adam vs SGD+momentum materially affect the scaling trend? (Out of scope per constraints, but should be acknowledged as a limitation.)",
+      "Is log-linear (log base 2) the correct functional form, or would a square-root or power-law fit better? Should AIC/BIC comparison of candidate models be included?",
+      "At N=500, are 50 samples per class enough for the CNN to learn any class-discriminative features, or will test accuracy be near chance (10%), making Δ estimates meaningless?"
+    ],
+    "null_hypothesis": "Augmentation benefit Δ does not vary systematically with training set size; the expected value of Δ is equal across all seven training set sizes (500, 1,000, 2,500, 5,000, 10,000, 30,000, 60,000).",
+    "compute_estimate": "Google Colab T4 or L4 GPU. Each run: 5 epochs × ~1 s/epoch for N=500 up to ~20 s/epoch for N=60,000 on T4. Total GPU time estimate: 28 runs × mean ~1.5 min/run ≈ 42 GPU minutes; with overhead, budget 2–3 GPU hours. CPU tasks (data prep, analysis, plotting, writing) require < 30 CPU minutes total.",
+    "success_criteria": [
+      "Δ is positive and ≥ 2 percentage points at N=500 for both seeds, indicating augmentation meaningfully helps in the smallest-data regime",
+      "Δ exhibits a monotonically decreasing trend (Spearman ρ < −0.5) when regressed against log₂(N)",
+      "Log-linear regression achieves R² ≥ 0.5, supporting the log-linear scaling model",
+      "A crossover N* falls within (Pham et al. 2018), indicating a detectable size at which augmentation benefit vanishes",
+      "No-augmentation test accuracy at N=60,000 falls in the 88–92% range, confirming the baseline CNN is well-calibrated for this benchmark",
+      "GPU device name is logged for all runs, confirming CUDA execution"
+    ],
+    "duration_estimate": "4–6 hours wall-clock for autonomous execution (including Colab startup, sequential GPU training, CPU analysis, and paper compilation)",
+    "research_question": "How does the test accuracy benefit of basic geometric augmentation (random horizontal flip, ±10% translation, ±10° rotation) scale with training set size from 500 to 60,000 samples for a fixed small CNN on Fashion-MNIST within 5 training epochs, and at what sample count does the benefit become negligible?",
+    "validation_strategy": "All 28 runs use identical architecture (frozen in `train_fmnist.py`), identical optimizer (Adam, lr=0.001), identical batch size (64), identical epoch count (5), and identical data normalisation statistics (mean=0.2860, std=0.3530 from full training set). Conditions differ only in augmentation policy. Seeds control both subset sampling and model weight initialisation. Validation accuracy is monitored per epoch on a 10%-stratified holdout of each subset (not used for early stopping or model selection — epoch 5 checkpoint always used for test evaluation). The full 10,000-image test set is held out throughout and evaluated only at epoch 5. Robustness checks: (1) class balance of small subsets verified in T1.2; (2) seed concordance on Δ direction reported in T3.4; (3) OLS regression diagnostics (R², residual plot) reported; (4) any negative Δ values explicitly flagged rather than suppressed. Statistical claims are limited to descriptive statistics (mean, range, Spearman ρ) and regression with 95% CI; no p-value-based hypothesis rejection is claimed given only 2 seeds per cell."
+  },
+  "blueprint": {
+    "run_id": "5853e52a54fe",
+    "approved_at": "2026-10-09T23:09:24.823152+00:00"
+  },
+  "created_at": "2026-10-09 22:36:45.418517+00:00",
+  "updated_at": "2026-10-10 02:49:13.516653+00:00",
+  "review": {
+    "enabled": true,
+    "status": "unresolved",
+    "step": null,
+    "stale": false,
+    "attention": null,
+    "session": 1,
+    "iteration": 4,
+    "session_first_iteration": 1,
+    "max_rounds": 3,
+    "max_usd": 12.0,
+    "verify": true,
+    "started_at": "2026-10-09T23:44:27.522262+00:00",
+    "budget_override": null,
+    "preregistration": {
+      "research_question": "How does the test accuracy benefit of basic geometric augmentation (random horizontal flip, ±10% translation, ±10° rotation) scale with training set size from 500 to 60,000 samples for a fixed small CNN on Fashion-MNIST within 5 training epochs, and at what sample count does the benefit become negligible?",
+      "hypothesis": "Augmentation benefit (Δ test accuracy = acc_aug − acc_noaug) will be largest at small training set sizes (500–5,000 samples), will decrease monotonically as training set size increases on a log scale, and will approach negligibility (Δ < 0.5 percentage points) somewhere between 10,000 and 20,000 samples, consistent with the principle that augmentation provides diminishing returns as real data diversity increases.",
+      "null_hypothesis": "Augmentation benefit Δ does not vary systematically with training set size; the expected value of Δ is equal across all seven training set sizes (500, 1,000, 2,500, 5,000, 10,000, 30,000, 60,000).",
+      "objectives": [
+        "Implement and freeze a small CNN architecture, training loop, and evaluation pipeline in PyTorch that is identical across all conditions except augmentation policy and training subset size.",
+        "Generate stratified, class-balanced subsets of Fashion-MNIST training data at sizes 500, 1,000, 2,500, 5,000, 10,000, 30,000, and 60,000 using seeds 42 and 123, and persist all index arrays.",
+        "Run all 28 training experiments (7 sizes × 2 conditions × 2 seeds × 5 epochs) on a CUDA GPU, recording per-epoch training loss, validation accuracy, and final test accuracy, logging torch.cuda.get_device_name() as evidence.",
+        "Quantify augmentation benefit Δ at each training set size (mean over 2 seeds, range reported) and fit a log-linear regression Δ = a + b·log₂(N) to characterise the monotonicity and slope.",
+        "Estimate the crossover training set size N* where Δ = 0 from the regression with bootstrap 95% confidence intervals, and assess whether the trend is monotonic.",
+        "Produce publication-quality figures and a concise conference-style paper draft reporting descriptive statistics without overstated inferential claims given two seeds."
+      ],
+      "metrics": [
+        {
+          "name": "Test accuracy",
+          "definition": "Fraction of correctly classified images on the full 10,000-image Fashion-MNIST test set at epoch 5 (final checkpoint)",
+          "success_threshold": "Reported for all 28 runs; no single threshold, but noaug at N=60,000 should be comparable to published ~88–91% range for similar small CNNs (Yee 2026; Meshkini et al. 2019)"
+        },
+        {
+          "name": "Augmentation benefit Δ",
+          "definition": "acc_aug − acc_noaug in percentage points, computed per (size, seed) pair; mean and range across seeds reported for each size",
+          "success_threshold": "Δ > 2 percentage points at N=500 would confirm meaningful benefit at smallest size; Δ < 0.5 percentage points at the crossover and beyond"
+        },
+        {
+          "name": "Log-linear regression R²",
+          "definition": "Coefficient of determination for OLS fit of mean Δ vs log₂(N) across 7 size points",
+          "success_threshold": "R² ≥ 0.5 indicates the log-linear model explains a majority of variance in the trend; R² < 0.5 triggers model-fit discussion"
+        },
+        {
+          "name": "Crossover N*",
+          "definition": "Training set size at which regression predicts Δ = 0, computed as N* = 2^(−a/b) from regression coefficients a and b",
+          "success_threshold": "N* within (Pham et al. 2018) constitutes a detectable crossover; N* outside this range means benefit is always positive or always negative across tested sizes"
+        },
+        {
+          "name": "Spearman ρ (monotonicity)",
+          "definition": "Spearman rank correlation between mean Δ and training set size across 7 size levels",
+          "success_threshold": "ρ < −0.6 supports monotonic decreasing trend; |ρ| < 0.4 indicates no systematic trend"
+        }
+      ],
+      "baselines": [
+        "No-augmentation CNN at each of the 7 training set sizes (primary baseline for each augmentation run)",
+        "Augmentation condition at N=60,000 (full dataset) as upper-size reference point",
+        "No-augmentation condition at N=60,000 as lower-bound reference for benefit"
+      ],
+      "validation_strategy": "All 28 runs use identical architecture (frozen in `train_fmnist.py`), identical optimizer (Adam, lr=0.001), identical batch size (64), identical epoch count (5), and identical data normalisation statistics (mean=0.2860, std=0.3530 from full training set). Conditions differ only in augmentation policy. Seeds control both subset sampling and model weight initialisation. Validation accuracy is monitored per epoch on a 10%-stratified holdout of each subset (not used for early stopping or model selection — epoch 5 checkpoint always used for test evaluation). The full 10,000-image test set is held out throughout and evaluated only at epoch 5. Robustness checks: (1) class balance of small subsets verified in T1.2; (2) seed concordance on Δ direction reported in T3.4; (3) OLS regression diagnostics (R², residual plot) reported; (4) any negative Δ values explicitly flagged rather than suppressed. Statistical claims are limited to descriptive statistics (mean, range, Spearman ρ) and regression with 95% CI; no p-value-based hypothesis rejection is claimed given only 2 seeds per cell.",
+      "success_criteria": [
+        "Δ is positive and ≥ 2 percentage points at N=500 for both seeds, indicating augmentation meaningfully helps in the smallest-data regime",
+        "Δ exhibits a monotonically decreasing trend (Spearman ρ < −0.5) when regressed against log₂(N)",
+        "Log-linear regression achieves R² ≥ 0.5, supporting the log-linear scaling model",
+        "A crossover N* falls within (Pham et al. 2018), indicating a detectable size at which augmentation benefit vanishes",
+        "No-augmentation test accuracy at N=60,000 falls in the 88–92% range, confirming the baseline CNN is well-calibrated for this benchmark",
+        "GPU device name is logged for all runs, confirming CUDA execution"
+      ]
+    },
+    "tracks": {
+      "T-001": {
+        "title": "kang2024game mischaracterized as using Mixup and CutOut",
+        "category": "literature",
+        "severity": "MAJOR",
+        "first_seen": 1,
+        "fix_attempts": 1,
+        "disputed": false,
+        "open_streak": 0,
+        "refs": [
+          "manuscript l134",
+          "manuscript l404"
+        ],
+        "tokens": [
+          "cutout",
+          "kang2024game",
+          "mischaracterized",
+          "mixup",
+          "using"
+        ],
+        "seen": [
+          1
+        ],
+        "status": "resolved",
+        "last_seen": 1,
+        "issue_ids": [
+          "R1-01"
+        ],
+        "last_disposition": "fix",
+        "needs_human": false,
+        "last_action": "manuscript directive",
+        "resolved_at": 2
+      },
+      "T-002": {
+        "title": "kumar2025enhancing mischaracterized as concluding training budget is a key moderating factor",
+        "category": "literature",
+        "severity": "MAJOR",
+        "first_seen": 1,
+        "fix_attempts": 1,
+        "disputed": false,
+        "open_streak": 0,
+        "refs": [
+          "manuscript l155-l157"
+        ],
+        "tokens": [
+          "budget",
+          "concluding",
+          "factor",
+          "key",
+          "kumar2025enhancing",
+          "mischaracterized",
+          "moderating",
+          "training"
+        ],
+        "seen": [
+          1
+        ],
+        "status": "resolved",
+        "last_seen": 1,
+        "issue_ids": [
+          "R1-02"
+        ],
+        "last_disposition": "fix",
+        "needs_human": false,
+        "last_action": "manuscript directive",
+        "resolved_at": 2
+      },
+      "T-003": {
+        "title": "build_loaders uses test set as validation loader; possible test-set leakage into per-epoch monitoring",
+        "category": "controls_confounds",
+        "severity": "MAJOR",
+        "first_seen": 1,
+        "fix_attempts": 0,
+        "disputed": false,
+        "open_streak": 0,
+        "refs": [
+          "figure:figures/curves_size500.png",
+          "figure:figures/curves_size60000.png",
+          "figure:figures/fig_curves_all.png",
+          "manuscript l169-l171",
+          "t2.1",
+          "t2.2"
+        ],
+        "tokens": [
+          "build",
+          "epoch",
+          "leakage",
+          "loader",
+          "loaders",
+          "monitoring",
+          "per",
+          "possible",
+          "set",
+          "test",
+          "validation"
+        ],
+        "seen": [
+          1
+        ],
+        "status": "refuted",
+        "last_seen": 1,
+        "issue_ids": [
+          "R1-03"
+        ]
+      },
+      "T-004": {
+        "title": "Sub-figure caption for N=60,000 incorrectly reads N=500",
+        "category": "figures_tables",
+        "severity": "MAJOR",
+        "first_seen": 2,
+        "fix_attempts": 2,
+        "disputed": false,
+        "open_streak": 3,
+        "refs": [
+          "fig:curves_extremes",
+          "figure:figures/curves_size60000.png",
+          "manuscript l336",
+          "manuscript l336-l338"
+        ],
+        "tokens": [
+          "000",
+          "500",
+          "caption",
+          "figure",
+          "incorrectly",
+          "reads",
+          "sub"
+        ],
+        "seen": [
+          2,
+          3,
+          4
+        ],
+        "status": "open",
+        "last_seen": 4,
+        "issue_ids": [
+          "R2-01",
+          "R2-01",
+          "R4-01"
+        ],
+        "last_disposition": "fix",
+        "needs_human": false,
+        "last_action": "manuscript directive"
+      },
+      "T-005": {
+        "title": "Training scripts not provided; shown build_loaders code uses test set as validation, contradicting the plan and the numerical record",
+        "category": "reproducibility",
+        "severity": "MAJOR",
+        "first_seen": 4,
+        "fix_attempts": 0,
+        "disputed": false,
+        "open_streak": 0,
+        "refs": [
+          "artifact:results/results_seed123.csv",
+          "artifact:results/results_seed42.csv",
+          "code:src/train_fmnist.py",
+          "execution_record t2.1",
+          "execution_record t2.2",
+          "reproducibility statement in appendix"
+        ],
+        "tokens": [
+          "build",
+          "code",
+          "contradicting",
+          "loaders",
+          "numerical",
+          "plan",
+          "provided",
+          "record",
+          "scripts",
+          "set",
+          "shown",
+          "test",
+          "training",
+          "validation"
+        ],
+        "seen": [
+          4
+        ],
+        "status": "refuted",
+        "last_seen": 4,
+        "issue_ids": [
+          "R4-02"
+        ]
+      }
+    },
+    "iterations": [
+      {
+        "n": 1,
+        "session": 1,
+        "review_run_id": "c2ad03bd135a",
+        "verdict": "major_revision",
+        "judged": true,
+        "decision": "repair",
+        "reason": "0 fatal and 2 major issues to repair.",
+        "blocking": {
+          "FATAL": 0,
+          "MAJOR": 2
+        },
+        "open_concerns": 0,
+        "issues": [
+          {
+            "id": "R1-01",
+            "track_id": "T-001",
+            "severity": "MAJOR",
+            "category": "literature",
+            "title": "kang2024game mischaracterized as using Mixup and CutOut",
+            "blocking": true,
+            "open_concern": false,
+            "verification": "confirmed",
+            "grounding": "absence_contradicted",
+            "tracking": {
+              "status": "new",
+              "previous_ids": []
+            }
+          },
+          {
+            "id": "R1-02",
+            "track_id": "T-002",
+            "severity": "MAJOR",
+            "category": "literature",
+            "title": "kumar2025enhancing mischaracterized as concluding training budget is a key moderating factor",
+            "blocking": true,
+            "open_concern": false,
+            "verification": "confirmed",
+            "grounding": "absence_contradicted",
+            "tracking": {
+              "status": "new",
+              "previous_ids": []
+            }
+          },
+          {
+            "id": "R1-03",
+            "track_id": "T-003",
+            "severity": "MAJOR",
+            "category": "controls_confounds",
+            "title": "build_loaders uses test set as validation loader; possible test-set leakage into per-epoch monitoring",
+            "blocking": false,
+            "open_concern": false,
+            "verification": "refuted",
+            "grounding": "absence_contradicted",
+            "tracking": {
+              "status": "new",
+              "previous_ids": []
+            }
+          },
+          {
+            "id": "R1-04",
+            "track_id": null,
+            "severity": "MINOR",
+            "category": "internal_consistency",
+            "title": "Architecture deviates from research brief without a filed protocol amendment",
+            "blocking": false,
+            "open_concern": false,
+            "verification": "not_needed",
+            "grounding": "partial",
+            "tracking": null
+          },
+          {
+            "id": "R1-05",
+            "track_id": null,
+            "severity": "MINOR",
+            "category": "figures_tables",
+            "title": "SUMMARY.md documents wrong architecture and wrong augmentation description",
+            "blocking": false,
+            "open_concern": false,
+            "verification": "not_needed",
+            "grounding": "verified",
+            "tracking": null
+          },
+          {
+            "id": "R1-06",
+            "track_id": null,
+            "severity": "MINOR",
+            "category": "statistics",
+            "title": "Pre-registered monotonicity success criterion sign reversal not reconciled",
+            "blocking": false,
+            "open_concern": false,
+            "verification": "not_needed",
+            "grounding": "verified",
+            "tracking": null
+          },
+          {
+            "id": "R1-07",
+            "track_id": null,
+            "severity": "MINOR",
+            "category": "literature",
+            "title": "Claim that pham2018deep and harun2024dysgraphia used ≥50 epochs is unverifiable from provided abstracts",
+            "blocking": false,
+            "open_concern": false,
+            "verification": "not_needed",
+            "grounding": "absence_contradicted",
+            "tracking": null
+          }
+        ],
+        "cost_usd": 2.5335,
+        "repair_run_id": "89c1e1cf2123",
+        "level": "report",
+        "plan_run_id": null,
+        "blueprint_run_id": null,
+        "rerun_tasks": [],
+        "carried_over": [],
+        "skipped_unselected": [],
+        "objective_changes": [],
+        "changed": [],
+        "report_run_id": "09a1fad24593"
+      },
+      {
+        "n": 2,
+        "session": 1,
+        "review_run_id": "b62c02d831e1",
+        "verdict": "major_revision",
+        "judged": true,
+        "decision": "repair",
+        "reason": "0 fatal and 1 major issues to repair.",
+        "blocking": {
+          "FATAL": 0,
+          "MAJOR": 1
+        },
+        "open_concerns": 0,
+        "issues": [
+          {
+            "id": "R2-01",
+            "track_id": "T-004",
+            "severity": "MAJOR",
+            "category": "figures_tables",
+            "title": "Sub-figure caption for N=60,000 incorrectly reads N=500",
+            "blocking": true,
+            "open_concern": false,
+            "verification": "confirmed",
+            "grounding": "unverified",
+            "tracking": {
+              "status": "new",
+              "previous_ids": []
+            }
+          },
+          {
+            "id": "R2-02",
+            "track_id": null,
+            "severity": "MINOR",
+            "category": "reproducibility",
+            "title": "Published build_loaders code uses test set as validation set, contradicting preregistered protocol",
+            "blocking": false,
+            "open_concern": false,
+            "verification": "confirmed",
+            "grounding": "partial",
+            "tracking": null
+          },
+          {
+            "id": "R2-03",
+            "track_id": null,
+            "severity": "MINOR",
+            "category": "figures_tables",
+            "title": "SUMMARY.md architecture description does not match implemented model",
+            "blocking": false,
+            "open_concern": false,
+            "verification": "not_needed",
+            "grounding": "verified",
+            "tracking": null
+          },
+          {
+            "id": "R2-04",
+            "track_id": null,
+            "severity": "MINOR",
+            "category": "statistics",
+            "title": "OLS slope p-value described as 'confirming significant decrease' despite only 7 data points",
+            "blocking": false,
+            "open_concern": false,
+            "verification": "not_needed",
+            "grounding": "verified",
+            "tracking": null
+          },
+          {
+            "id": "R2-05",
+            "track_id": null,
+            "severity": "MINOR",
+            "category": "literature",
+            "title": "Citation of kang2024game to support 'canonical geometric transforms are standard practice' is inapt",
+            "blocking": false,
+            "open_concern": false,
+            "verification": "not_needed",
+            "grounding": "partial",
+            "tracking": null
+          },
+          {
+            "id": "R2-06",
+            "track_id": null,
+            "severity": "MINOR",
+            "category": "literature",
+            "title": "Claim that Pham 2018 and Harun 2024 used '50 or more epochs' is unverifiable from their abstracts",
+            "blocking": false,
+            "open_concern": false,
+            "verification": "not_needed",
+            "grounding": "absence_contradicted",
+            "tracking": null
+          },
+          {
+            "id": "R2-07",
+            "track_id": null,
+            "severity": "MINOR",
+            "category": "statistics",
+            "title": "Bootstrap CI upper bound is an artifact of hard clipping at 10^9",
+            "blocking": false,
+            "open_concern": false,
+            "verification": "not_needed",
+            "grounding": "verified",
+            "tracking": null
+          }
+        ],
+        "cost_usd": 1.3223,
+        "repair_run_id": "da152c06f68b",
+        "level": "report",
+        "plan_run_id": null,
+        "blueprint_run_id": null,
+        "rerun_tasks": [],
+        "carried_over": [],
+        "skipped_unselected": [],
+        "objective_changes": [],
+        "changed": [],
+        "report_run_id": "ee6de6d06a67"
+      },
+      {
+        "n": 3,
+        "session": 1,
+        "review_run_id": "d91d94788b31",
+        "verdict": "major_revision",
+        "judged": true,
+        "decision": "repair",
+        "reason": "0 fatal and 1 major issues to repair.",
+        "blocking": {
+          "FATAL": 0,
+          "MAJOR": 1
+        },
+        "open_concerns": 0,
+        "issues": [
+          {
+            "id": "R2-01",
+            "track_id": "T-004",
+            "severity": "MAJOR",
+            "category": "figures_tables",
+            "title": "Sub-figure caption for N=60,000 incorrectly reads N=500",
+            "blocking": true,
+            "open_concern": false,
+            "verification": "confirmed",
+            "grounding": "unverified",
+            "tracking": {
+              "status": "persisting",
+              "previous_ids": [
+                "R2-01"
+              ]
+            }
+          },
+          {
+            "id": "R2-02",
+            "track_id": null,
+            "severity": "MINOR",
+            "category": "reproducibility",
+            "title": "Published build_loaders code uses test set as validation set, contradicting preregistered protocol",
+            "blocking": false,
+            "open_concern": false,
+            "verification": "confirmed",
+            "grounding": "partial",
+            "tracking": null
+          },
+          {
+            "id": "R2-03",
+            "track_id": null,
+            "severity": "MINOR",
+            "category": "figures_tables",
+            "title": "SUMMARY.md architecture description does not match implemented model",
+            "blocking": false,
+            "open_concern": false,
+            "verification": "not_needed",
+            "grounding": "verified",
+            "tracking": null
+          },
+          {
+            "id": "R2-04",
+            "track_id": null,
+            "severity": "MINOR",
+            "category": "statistics",
+            "title": "OLS slope p-value described as 'confirming significant decrease' despite only 7 data points",
+            "blocking": false,
+            "open_concern": false,
+            "verification": "not_needed",
+            "grounding": "verified",
+            "tracking": null
+          },
+          {
+            "id": "R2-05",
+            "track_id": null,
+            "severity": "MINOR",
+            "category": "literature",
+            "title": "Citation of kang2024game to support 'canonical geometric transforms are standard practice' is inapt",
+            "blocking": false,
+            "open_concern": false,
+            "verification": "not_needed",
+            "grounding": "partial",
+            "tracking": null
+          },
+          {
+            "id": "R2-06",
+            "track_id": null,
+            "severity": "MINOR",
+            "category": "literature",
+            "title": "Claim that Pham 2018 and Harun 2024 used '50 or more epochs' is unverifiable from their abstracts",
+            "blocking": false,
+            "open_concern": false,
+            "verification": "not_needed",
+            "grounding": "absence_contradicted",
+            "tracking": null
+          },
+          {
+            "id": "R2-07",
+            "track_id": null,
+            "severity": "MINOR",
+            "category": "statistics",
+            "title": "Bootstrap CI upper bound is an artifact of hard clipping at 10^9",
+            "blocking": false,
+            "open_concern": false,
+            "verification": "not_needed",
+            "grounding": "verified",
+            "tracking": null
+          }
+        ],
+        "cost_usd": 0.0,
+        "repair_run_id": "a59aad54ff78",
+        "level": "report",
+        "plan_run_id": null,
+        "blueprint_run_id": null,
+        "rerun_tasks": [],
+        "carried_over": [],
+        "skipped_unselected": [],
+        "objective_changes": [],
+        "changed": [],
+        "report_run_id": "92849eb1cd91"
+      },
+      {
+        "n": 4,
+        "session": 1,
+        "review_run_id": "c4ae7dd4166b",
+        "verdict": "major_revision",
+        "judged": true,
+        "decision": "unresolved",
+        "reason": "1 blocking issues remain after 3 repair rounds.",
+        "blocking": {
+          "FATAL": 0,
+          "MAJOR": 1
+        },
+        "open_concerns": 0,
+        "issues": [
+          {
+            "id": "R4-01",
+            "track_id": "T-004",
+            "severity": "MAJOR",
+            "category": "figures_tables",
+            "title": "Second subfigure (N=60,000 curves) is captioned '$N{=}500$.' in the manuscript",
+            "blocking": true,
+            "open_concern": false,
+            "verification": "confirmed",
+            "grounding": "unverified",
+            "tracking": {
+              "status": "persisting",
+              "previous_ids": [
+                "R2-01",
+                "R2-01"
+              ]
+            }
+          },
+          {
+            "id": "R4-02",
+            "track_id": "T-005",
+            "severity": "MAJOR",
+            "category": "reproducibility",
+            "title": "Training scripts not provided; shown build_loaders code uses test set as validation, contradicting the plan and the numerical record",
+            "blocking": false,
+            "open_concern": false,
+            "verification": "refuted",
+            "grounding": "verified",
+            "tracking": {
+              "status": "new",
+              "previous_ids": []
+            }
+          },
+          {
+            "id": "R4-03",
+            "track_id": null,
+            "severity": "MINOR",
+            "category": "figures_tables",
+            "title": "Augmentation described as 'crop' in figure title and SUMMARY.md; actual policy uses RandomAffine (rotation + translation)",
+            "blocking": false,
+            "open_concern": false,
+            "verification": "not_needed",
+            "grounding": "absence_contradicted",
+            "tracking": null
+          },
+          {
+            "id": "R4-04",
+            "track_id": null,
+            "severity": "MINOR",
+            "category": "literature",
+            "title": "Fashion-MNIST dataset attributed to a 2024 evaluation paper rather than its original source",
+            "blocking": false,
+            "open_concern": false,
+            "verification": "not_needed",
+            "grounding": "absence_contradicted",
+            "tracking": null
+          },
+          {
+            "id": "R4-05",
+            "track_id": null,
+            "severity": "MINOR",
+            "category": "literature",
+            "title": "Claim that pham2018deep and harun2024dysgraphia used '50 or more epochs' is not verifiable from their abstracts",
+            "blocking": false,
+            "open_concern": false,
+            "verification": "not_needed",
+            "grounding": "absence_contradicted",
+            "tracking": null
+          },
+          {
+            "id": "R4-06",
+            "track_id": null,
+            "severity": "MINOR",
+            "category": "claims_support",
+            "title": "'Significantly' used at L275 for a regression claimed elsewhere to be purely descriptive",
+            "blocking": false,
+            "open_concern": false,
+            "verification": "not_needed",
+            "grounding": "partial",
+            "tracking": null
+          },
+          {
+            "id": "R4-07",
+            "track_id": null,
+            "severity": "MINOR",
+            "category": "data_integrity",
+            "title": "SUMMARY.md describes the wrong architecture (FC=128, two conv layers) instead of the actual architecture (FC=256, four conv layers)",
+            "blocking": false,
+            "open_concern": false,
+            "verification": "not_needed",
+            "grounding": "verified",
+            "tracking": null
+          },
+          {
+            "id": "R4-08",
+            "track_id": null,
+            "severity": "MINOR",
+            "category": "controls_confounds",
+            "title": "Heavy dropout regularization is an unaddressed confound for the convergence overhead mechanism",
+            "blocking": false,
+            "open_concern": false,
+            "verification": "not_needed",
+            "grounding": "verified",
+            "tracking": null
+          }
+        ],
+        "cost_usd": 2.2095
+      }
+    ],
+    "directives": {
+      "D1-1": {
+        "text": "At manuscript L404 (and any corresponding sentence near L134), replace the attribution of Mixup and CutOut to \\citet{kang2024game} with a correct description of their method. The revised sentence should read approximately: '\\citet{kang2024game} demonstrated augmentation benefits with MFG Augment, a Mean-Field Game path-interpolation method that synthesises continuous image distribution transitions, which is substantially more sophisticated than the simple geometric transforms used here.' Remove any claim that kang2024game used Mixup or CutOut. Also verify L134 and correct any similar misattribution there.\n  What the cited papers actually report:\n  [kang2024game] Game Theory Meets Data Augmentation (2024): Data augmentation is a critical component in building modern deep-learning systems. In this paper, we proposeMFG Augment, a novel data augmentation method based on the Mean-Field-Game (MFG) theory, that can synthesize a sequence of data between every two images or features. The central idea is to consider every image as a distribution over its pixel or feature space. Using Mean-field Game theory, we can generate a time-continuous “path” from one distribution to another so that the points along the “path” are augmented images or features. Empirically, the experiment results on MNIST, CIFAR-10,  Contribution: MFG Augment, a data augmentation method based on Mean-Field Game theory that synthesizes continuous paths between image distributions to generate augmented samples. Findings: MFG Augment achieves better generalization and higher classification accuracy than benchmark augmentation methods | MFG Augment significantly improves test accuracy when dataset size is small | MFG Augment consistently shows better affinity and diversity scores",
+        "issues": [
+          "R1-01"
+        ],
+        "tracks": [
+          "T-001"
+        ],
+        "iteration": 1
+      },
+      "D1-2": {
+        "text": "At manuscript L155–L157, remove the characterisation of kumar2025enhancing as a survey and remove the claim that it concluded 'the training budget is a key moderating factor.' Replace with an accurate description of its actual contribution, approximately: '\\citet{kumar2025enhancing} proposed three novel augmentation techniques—pairwise channel transfer, object occlusion, and masking—that improve CNN performance on small datasets, demonstrating that carefully designed augmentation strategies can meaningfully reduce overfitting in limited-data regimes.'\n  What the cited papers actually report:\n  [kumar2025enhancing] Enhancing Image Classification with Augmentation: Data Augmentation Techniques for Improved Image Classification (2025): Convolutional Neural Networks (CNNs) serve as the workhorse of deep learning, finding applications in various fields that rely on images. Given sufficient data, they exhibit the capacity to learn a wide range of concepts across diverse settings. However, a notable limitation of CNNs is their susceptibility to overfitting when trained on small datasets. The augmentation of such datasets can significantly enhance CNN performance by introducing additional data points for learning. In this study, we explore the effectiveness of 11 different sets of data augmentation techniques, which include three Contribution: Proposes three novel data augmentation techniques (pairwise channel transfer, object occlusion, novel masking) and evaluates 11 augmentation sets for improved image classification with CNNs. Findings: An ensemble of diverse augmentation techniques achieves the best performance on Caltech-101. | The three novel augmentation techniques (channel transfer, object occlusion, masking) contribute to improved classification accuracy. | Diverse data augmentation is a viable means of enhancing small datasets to reduce overfitting.",
+        "issues": [
+          "R1-02"
+        ],
+        "tracks": [
+          "T-002"
+        ],
+        "iteration": 1
+      },
+      "D2-1": {
+        "text": "In the LaTeX source, locate the subfigure that includes '../figures/curves_size60000.png' (fig:curves60k, approximately L327–L336). Change its \\caption{} from '$N{=}500$.' to '$N{=}60{,}000$.' and recompile the PDF. Verify in the compiled output that the two subfigures in fig:curves_extremes are labelled N=500 (left) and N=60,000 (right) respectively, consistent with the surrounding text at L345–L349.",
+        "issues": [
+          "R2-01"
+        ],
+        "tracks": [
+          "T-004"
+        ],
+        "iteration": 2
+      },
+      "D3-1": {
+        "text": "In the LaTeX source, locate the \\begin{subfigure} block that contains \\includegraphics{../figures/curves_size60000.png} (label fig:curves60k, near L327–L336). Change its \\caption{} argument from '$N{=}500$.' to '$N{=}60{,}000$.' Recompile the PDF and confirm that the two subfigures in fig:curves_extremes are captioned '$N{=}500$' (left panel) and '$N{=}60{,}000$' (right panel) respectively, matching the surrounding prose at L345–L349.",
+        "issues": [
+          "R2-01"
+        ],
+        "tracks": [
+          "T-004"
+        ],
+        "iteration": 3
+      }
+    },
+    "gate_directives": [],
+    "outcome": {
+      "status": "unresolved",
+      "reason": "1 blocking issues remain after 3 repair rounds.",
+      "at": "2026-10-10T02:49:13.323116+00:00",
+      "iteration": 4,
+      "unresolved": [
+        {
+          "track": "T-004",
+          "title": "Sub-figure caption for N=60,000 incorrectly reads N=500",
+          "severity": "MAJOR"
+        }
+      ],
+      "open_concerns": [],
+      "needs_human": [],
+      "resolved_by": {
+        "resolved": 2,
+        "disclosed": 0,
+        "refuted": 2
+      }
+    }
+  }
+}

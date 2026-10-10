@@ -43,8 +43,11 @@ KEEPALIVE_EVERY = 300
 SKIP = {".venv", ".conda", ".home", ".tmp", "__pycache__", ".pytest_cache", ".sandbox.sb"}
 # Lists remote files as `path<TAB>size<TAB>mtime`; paths start with "./".
 _LIST = ("-printf '%p\\t%s\\t%T@\\n'")
+# All files, plus empty directories as `DIR<TAB>path` (archives carry only files, so a directory an agent
+# created and left empty would otherwise never exist in the host copy that checks and the verifier read).
 _FIND_ALL = (f"find . \\( {' -o '.join(f'-name {shlex.quote(s)}' for s in sorted(SKIP))} \\) -prune -o "
-             f"-type f {_LIST}")
+             f"-type f {_LIST} -o -type d -empty -printf 'DIR\\t%p\\n'")
+_EMPTY_DIR = "DIR\t./"
 TAG = "OPENSCI_TASK"
 # Stops every process whose environment holds argv[1] (exactly, or as a prefix) and all of their
 # descendants (children that cleared their environment, or run via sudo). The whole tree is frozen
@@ -116,6 +119,12 @@ def _parse_listing(text: str) -> dict[str, tuple[int, str]]:
         if len(parts) == 3 and parts[0].startswith("./") and not _skip(parts[0][2:]):
             out[parts[0][2:]] = (int(parts[1]), parts[2])
     return out
+
+
+def _empty_dirs(text: str) -> list[str]:
+    """The empty directories in a _FIND_ALL listing (which _parse_listing ignores)."""
+    return [line[len(_EMPTY_DIR):] for line in text.splitlines()
+            if line.startswith(_EMPTY_DIR) and line[len(_EMPTY_DIR):] and not _skip(line[len(_EMPTY_DIR):])]
 
 
 class E2BSandbox(Sandbox):
@@ -325,7 +334,7 @@ class E2BSandbox(Sandbox):
         res = await self._sh(_FIND_ALL, 300, clip=False)
         if res.exit_code:
             raise RuntimeError(f"Listing the E2B workspace failed: {res.stderr[-500:]}")
-        remote = _parse_listing(res.stdout)
+        remote, empty = _parse_listing(res.stdout), _empty_dirs(res.stdout)
         changed = [r for r, sig in remote.items() if self._remote_seen.get(r) != sig]
         deleted = [r for r in self._remote_seen if r not in remote]
         if changed:
@@ -354,6 +363,11 @@ class E2BSandbox(Sandbox):
                 continue
             if self._host_seen.get(r) == (st.st_size, st.st_mtime_ns):  # never drop unsynced host edits
                 p.unlink()
+        for d in empty:
+            try:
+                self.path(d).mkdir(parents=True, exist_ok=True)
+            except (ValueError, OSError) as exc:  # outside the workspace, or a host file in the way
+                log.warning("Skipped empty directory %s from E2B: %s", d, exc)
         self._remote_seen = remote
         for r in changed + deleted:
             try:

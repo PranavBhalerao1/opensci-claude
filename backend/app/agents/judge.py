@@ -56,6 +56,10 @@ IMAGE_TYPES = {".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg",
 ANALYSIS_KINDS = {"analysis", "modeling", "experiment", "evaluation"}
 DATA_SUFFIXES = {".csv", ".tsv", ".json", ".md", ".txt", ".yaml", ".yml"}
 RETRY_DELAY = 30.0  # one extra retry after the SDK's own retries
+# Output budget (thinking included) of every judge and verifier call: the 64K streamed maximum.
+# At high effort the review's thinking plus its JSON reached the old 32K ceiling in 4 of 5 calls
+# (project 6d8c3c93c209); only generated tokens are billed, so the larger ceiling costs nothing extra.
+JUDGE_MAX_TOKENS = llm.LONG_MAX_TOKENS
 _REVIEW_IDS = re.compile(r"\b(?:R\d+-P?\d+|T-\d{3,})\b")
 
 
@@ -169,6 +173,14 @@ Issues:
 
 verdict: accept (no FATAL/MAJOR issues), minor_revision (MINOR issues only), major_revision
 (MAJOR issues), reject (any FATAL issue)."""
+
+# Added only to the one fresh attempt after a review was cut off by the output limit.
+OUTPUT_LIMIT_NOTE = """
+
+NOTE: an earlier attempt at this review used its entire output budget, reasoning included, before
+it finished, and was discarded. Apply exactly the same criteria and standard of evidence, but
+reason economically: settle each criterion and issue once, do not draft the JSON answer in your
+reasoning, and write the complete review as your answer."""
 
 VERIFY_INSTRUCTIONS = """\
 Another reviewer claims the problems listed below. Verify each one independently against the
@@ -410,6 +422,7 @@ def build_bundle(project_id: str, gates: dict, root: Path | None = None) -> Bund
     # Figures as images (or single-page PDFs), with their captions and the code that names them.
     total = 0
     seen: set[str] = set()
+    figures_shown: dict[tuple, str] = {}  # enclosing figure → the source id that gave its caption
     for g in gates.get("figures", []):
         if not g.path or g.path in seen:
             continue
@@ -426,7 +439,18 @@ def build_bundle(project_id: str, gates: dict, root: Path | None = None) -> Bund
         sid = f"figure:{path.as_posix()}"
         refs = gates.get("figure_code", {}).get(g.path, [])
         header = (f"=== SOURCE id={sid} label={g.label or '(none)'} (manuscript L{g.line}) ===\n"
-                  f"Caption: {g.caption or '(none)'}\nCode naming this file: {', '.join(refs) or '(none found)'}\n")
+                  f"{'Sub-figure caption' if g.panel else 'Caption'}: "
+                  f"{g.caption or (f'(not extracted: {g.note})' if g.note else '(none)')}\n")
+        if g.figure_label or g.figure_caption or (g.panel and g.figure_line):
+            # A panel of a larger figure: that figure's own caption, once per figure.
+            header += f"Part of figure label={g.figure_label or '(none)'} (manuscript L{g.figure_line}): "
+            key = (g.figure_line, g.figure_label, g.figure_caption)
+            if key in figures_shown:
+                header += f"its caption is given with {figures_shown[key]}\n"
+            else:
+                figures_shown[key] = sid
+                header += f"figure caption: {g.figure_caption or '(none)'}\n"
+        header += f"Code naming this file: {', '.join(refs) or '(none found)'}\n"
         b.sources[sid] = Source(sid, path.as_posix(), header)
         if reason:
             b.omitted.append({"path": path.as_posix(), "reason": reason})
@@ -618,35 +642,50 @@ async def _parse(**kw):
 
 
 async def judge_call(bundle: Bundle, h: RunHandle | None = None) -> JudgeReport:
+    """The review: at most two model calls, adaptive thinking on in both, each with the full
+    JUDGE_MAX_TOKENS budget (streamed). A second call is made only when the first was unusable:
+    - cut off by the output limit, or all reasoning and no answer (llm.OutputLimitReached): it is
+      discarded, never parsed, and the one fresh attempt runs at medium effort with a note to reason
+      economically, so it fits; the review's instructions and criteria are unchanged;
+    - invalid, refused or empty, or failing semantic_errors: retried once with the errors fed back.
+    A second failure raises ReviewFailed, which never counts as approval."""
     errors: list[str] = []
-    effort = "high"
+    effort, note = "high", ""
+    problem = "no attempt was made"
     for attempt in range(2):
-        tail = JUDGE_INSTRUCTIONS
+        tail = JUDGE_INSTRUCTIONS + note
         if errors:
             tail += ("\n\nYOUR PREVIOUS OUTPUT WAS INVALID. Fix these problems:\n- " + "\n- ".join(errors))
         try:
-            # max_tokens is pinned to the ceiling regardless of effort: dropping effort after a
+            # max_tokens stays at the full budget whatever the effort: dropping effort after a
             # truncation is meant to free up room for the JSON by thinking less, not to also
             # shrink the total budget available for it.
             report = await _parse(model=settings.model_judge, instructions=JUDGE_SYSTEM, schema=JudgeReport,
                                   messages=[{"role": "user", "content": [*bundle.request_blocks(),
                                                                          {"type": "text", "text": tail}]}],
-                                  reasoning_effort=effort, max_tokens=llm.MAX_TOKENS)
+                                  reasoning_effort=effort, max_tokens=JUDGE_MAX_TOKENS)
         except TRANSIENT_ERRORS as exc:
             raise ReviewFailed(f"Bedrock unavailable: {type(exc).__name__}: {exc}") from exc
-        except RuntimeError as exc:  # invalid, refused, truncated or empty structured output
-            if "max_tokens" in str(exc):
-                effort = "medium"
-            errors = [str(exc)[:600]]
+        except llm.OutputLimitReached as exc:
+            problem = str(exc)
+            effort, note, errors = "medium", OUTPUT_LIMIT_NOTE, []
             if h:
-                h.note(f"Review output rejected ({str(exc)[:120]}); retrying once")
+                h.note(f"Review output hit the output limit and was discarded ({problem[:160]}); "
+                       "retrying once with less reasoning")
+            continue
+        except RuntimeError as exc:  # invalid, refused or empty structured output
+            problem = str(exc)[:600]
+            errors = [problem]
+            if h:
+                h.note(f"Review output rejected ({problem[:120]}); retrying once")
             continue
         errors = semantic_errors(report)
         if not errors:
             return report
+        problem = "; ".join(errors)
         if h:
             h.note(f"Review output incomplete ({errors[0][:120]}); retrying once")
-    raise ReviewFailed("The judge did not return a valid review: " + "; ".join(errors)[:800])
+    raise ReviewFailed("The judge did not return a valid review: " + problem[:800])
 
 
 async def verify_call(bundle: Bundle, claims: list[dict], root: Path) -> VerificationReport:
@@ -664,7 +703,7 @@ async def verify_call(bundle: Bundle, claims: list[dict], root: Path) -> Verific
     tail = VERIFY_INSTRUCTIONS + "\n\nCLAIMED ISSUES:\n" + listing + ("\n\n" + "\n\n".join(requested) if requested else "")
     return await _parse(model=settings.model_judge, instructions=JUDGE_SYSTEM, schema=VerificationReport,
                         messages=[{"role": "user", "content": [*bundle.request_blocks(), {"type": "text", "text": tail}]}],
-                        reasoning_effort="high", max_tokens=llm.MAX_TOKENS)
+                        reasoning_effort="high", max_tokens=JUDGE_MAX_TOKENS)
 
 
 # ── Review ─────────────────────────────────────────────────────────────────

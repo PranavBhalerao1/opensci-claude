@@ -1,0 +1,2464 @@
+[
+  {
+    "id": "9e0941aaa2df",
+    "project_id": "d95fb65c9f7a",
+    "kind": "literature",
+    "status": "done",
+    "phase": "done",
+    "counts": {
+      "found": 516,
+      "included": 45,
+      "screened": 300,
+      "extracted": 45,
+      "candidates": 300,
+      "queries_done": 10,
+      "queries_total": 12
+    },
+    "log": [
+      {
+        "t": "2026-10-09T19:20:52.351018+00:00",
+        "text": "Searching 12 queries on Semantic Scholar"
+      },
+      {
+        "t": "2026-10-09T19:21:36.949464+00:00",
+        "text": "Semantic Scholar failed for “data augmentation convolutional neural network generalization” (HTTPStatusError); will try OpenAlex"
+      },
+      {
+        "t": "2026-10-09T19:22:24.161102+00:00",
+        "text": "Semantic Scholar failed for “Fashion-MNIST benchmark CNN classification” (HTTPStatusError); will try OpenAlex"
+      },
+      {
+        "t": "2026-10-09T19:23:30.312347+00:00",
+        "text": "Semantic Scholar failed for “small CNN image classification PyTorch” (HTTPStatusError); will try OpenAlex"
+      },
+      {
+        "t": "2026-10-09T19:24:22.668693+00:00",
+        "text": "Semantic Scholar failed for “Fashion-MNIST state of the art accuracy” (HTTPStatusError); will try OpenAlex"
+      },
+      {
+        "t": "2026-10-09T19:25:09.567117+00:00",
+        "text": "Semantic Scholar failed for “deep learning regularization techniques image classification” (HTTPStatusError); will try OpenAlex"
+      },
+      {
+        "t": "2026-10-09T19:25:56.831415+00:00",
+        "text": "Semantic Scholar failed for “augmentation vs no augmentation test accuracy comparison” (HTTPStatusError); will try OpenAlex"
+      },
+      {
+        "t": "2026-10-09T19:26:48.299723+00:00",
+        "text": "Semantic Scholar failed for “torchvision transforms augmentation pipeline” (HTTPStatusError); will try OpenAlex"
+      },
+      {
+        "t": "2026-10-09T19:27:35.572828+00:00",
+        "text": "Semantic Scholar failed for “reproducibility random seed deep learning experiments” (HTTPStatusError); will try OpenAlex"
+      },
+      {
+        "t": "2026-10-09T19:27:35.691390+00:00",
+        "text": "Searching OpenAlex for 8 queries"
+      },
+      {
+        "t": "2026-10-09T19:27:59.818523+00:00",
+        "text": "Found 516 unique papers; screening the top 300"
+      },
+      {
+        "t": "2026-10-09T19:28:22.146549+00:00",
+        "text": "45 papers passed screening"
+      },
+      {
+        "t": "2026-10-09T19:28:53.467716+00:00",
+        "text": "Reading 45 papers"
+      },
+      {
+        "t": "2026-10-09T19:29:36.521963+00:00",
+        "text": "Linking citations between 17 papers"
+      },
+      {
+        "t": "2026-10-09T19:29:37.225527+00:00",
+        "text": "Writing the literature overview"
+      },
+      {
+        "t": "2026-10-09T19:30:00.589714+00:00",
+        "text": "Literature review complete"
+      }
+    ],
+    "result": {
+      "overview": {
+        "themes": [
+          {
+            "name": "CNN Architectures and Baselines on Fashion-MNIST",
+            "paper_ids": [
+              "0f1f5f52211a",
+              "fc420bf8b599",
+              "4547edfd3536",
+              "30dbb26f0428",
+              "2444783adaac",
+              "dd9a710202db",
+              "d9811187e7b0",
+              "09eb24b1fdfe",
+              "e01935a9b771",
+              "73d82654377c",
+              "3bf5f5d90522",
+              "a99921e56ae2"
+            ],
+            "description": "A large body of work benchmarks various CNN designs on Fashion-MNIST, from simple sequential CNNs to deeper multi-block architectures. These papers establish the performance landscape against which augmentation gains can be measured."
+          },
+          {
+            "name": "Effect of Data Augmentation on CNN Generalization",
+            "paper_ids": [
+              "44e58448bd5c",
+              "d7efaef3652c",
+              "d28ad320549d",
+              "310b05d6a070",
+              "286274c89da9",
+              "86c2fcac8831",
+              "8bfc13b8f54e",
+              "da4d9dbf9edd",
+              "5e7fbe0a1102",
+              "88564ebc71d9",
+              "c5d1eeccc9a6",
+              "c991bd15d11a",
+              "b3188440a034"
+            ],
+            "description": "These papers directly study how standard image augmentations (flips, rotations, translations, crops) affect CNN training and test performance. They provide empirical evidence that even simple augmentations meaningfully reduce overfitting and improve accuracy."
+          },
+          {
+            "name": "Augmentation Techniques: Surveys and Taxonomy",
+            "paper_ids": [
+              "e5cd16d4dfbf",
+              "a9ccd647daf8",
+              "b5823c4be657",
+              "ed122d07d46c",
+              "61a39a30a513",
+              "5661879f1565"
+            ],
+            "description": "Comprehensive surveys cataloguing the breadth of augmentation strategies, from classical geometric transforms to GAN-based and meta-learning approaches. These papers contextualize the three simple augmentations used in this experiment within the wider space of options."
+          },
+          {
+            "name": "Optimizer, Regularization, and Hyperparameter Interactions",
+            "paper_ids": [
+              "0f1f5f52211a",
+              "4fdf3425e9fd",
+              "82fabaf7cebb",
+              "de536f09d77d",
+              "97da22b2a365",
+              "8e99c357da72"
+            ],
+            "description": "These papers examine how optimizer choice (Adam, SGD), dropout, batch normalization, and hyperparameter tuning interact with augmentation to affect CNN performance. Relevant because the experiment fixes optimizer and hyperparameters to isolate augmentation effects."
+          },
+          {
+            "name": "Fashion-MNIST Augmentation and High-Accuracy Results",
+            "paper_ids": [
+              "2444783adaac",
+              "4fdf3425e9fd",
+              "0f1f5f52211a",
+              "a99921e56ae2"
+            ],
+            "description": "Papers that specifically combine augmentation with CNN training on Fashion-MNIST and report high accuracy results, directly relevant as upper-bound benchmarks and as evidence that augmentation helps on this exact dataset."
+          },
+          {
+            "name": "Augmentation Effects Across Domains and Datasets",
+            "paper_ids": [
+              "835e64d40497",
+              "3e0448b22b43",
+              "6d913913eccc",
+              "b3188440a034",
+              "8bfc13b8f54e",
+              "c5d1eeccc9a6",
+              "c991bd15d11a",
+              "e6e95e4de057"
+            ],
+            "description": "Papers applying augmentation to diverse domains (medical, satellite, plant, defect detection) that collectively reinforce the generality of augmentation benefits while also showing dataset-specific variation in what augmentations help most."
+          },
+          {
+            "name": "Lightweight CNN Design and Reproducibility in PyTorch",
+            "paper_ids": [
+              "7bf8d9723b33",
+              "504159c8693d",
+              "5d5bb54373af",
+              "d9811187e7b0",
+              "30dbb26f0428",
+              "8e99c357da72",
+              "c1612ea7e879"
+            ],
+            "description": "Papers focusing on building and evaluating small, efficient CNN models in frameworks like PyTorch, addressing practical concerns of training speed, reproducibility across seeds, and controlled experimental design."
+          }
+        ],
+        "summary": "The field of CNN-based image classification on Fashion-MNIST is well-established, with reported test accuracies ranging from ~88% for simple architectures to near 99.65% for optimized, augmented models. Data augmentation — including flips, translations, rotations, and more exotic methods — is broadly shown to improve generalization, reduce overfitting, and push accuracy higher, particularly when training data is limited or the model is small. The literature consistently demonstrates that even basic geometric augmentations (the focus of this experiment) provide measurable accuracy gains over unaugmented baselines.\n\nHowever, the field increasingly moves beyond simple augmentations toward advanced strategies (Mixup, CutMix, AutoAugment) and larger architectures (ResNets, ViTs), making it harder to isolate the specific contribution of simple augmentation on small CNNs. Most published work does not run controlled two-condition experiments with fixed seeds, making direct comparisons across studies difficult. This experiment's controlled design — holding architecture, optimizer, and hyperparameters fixed while varying only augmentation — directly addresses a gap in reproducible, minimal-footprint benchmarking on Fashion-MNIST.",
+        "open_problems": [
+          "Isolating the contribution of individual augmentation types (e.g., flips vs. rotations vs. translations) without confounding from other design choices",
+          "Determining how augmentation benefits scale with model size — whether small CNNs benefit more or less than larger architectures",
+          "Lack of standardized controlled experiments: most papers vary multiple factors simultaneously, making attribution of accuracy gains to augmentation alone difficult",
+          "Reproducibility across random seeds is rarely reported with more than one or two seeds, leaving statistical reliability of results unclear",
+          "Optimal augmentation magnitude (degree of rotation, translation range) is dataset- and architecture-dependent and rarely systematically searched for simple CNNs",
+          "Generalization from benchmark datasets like Fashion-MNIST to real-world fashion images remains a persistent gap",
+          "Whether gains from simple augmentations plateau quickly with more training epochs, and whether 5 epochs is sufficient to observe the full effect"
+        ],
+        "common_methods": [
+          "Convolutional Neural Networks (CNN)",
+          "Data augmentation (random flips, rotations, translations)",
+          "Adam and SGD optimizers",
+          "Dropout regularization",
+          "Batch normalization",
+          "ReLU activation",
+          "Max pooling",
+          "Softmax classification head",
+          "PyTorch / TensorFlow / Keras",
+          "Train/validation/test splits with fixed random seeds"
+        ],
+        "common_datasets": [
+          "Fashion-MNIST",
+          "MNIST",
+          "CIFAR-10",
+          "ImageNet / Imagenette",
+          "CIFAR-100"
+        ]
+      }
+    },
+    "error": null,
+    "started_at": "2026-10-09 19:20:51.648413+00:00",
+    "finished_at": "2026-10-09 19:30:00.711596+00:00"
+  },
+  {
+    "id": "5d17777bf628",
+    "project_id": "d95fb65c9f7a",
+    "kind": "gaps",
+    "status": "done",
+    "phase": "done",
+    "counts": {
+      "checked": 6,
+      "proposed": 6
+    },
+    "log": [
+      {
+        "t": "2026-10-09T19:30:01.748600+00:00",
+        "text": "Reading 45 papers' notes for gaps"
+      },
+      {
+        "t": "2026-10-09T19:34:05.901514+00:00",
+        "text": "Proposed 6 candidate gaps"
+      },
+      {
+        "t": "2026-10-09T19:34:06.021268+00:00",
+        "text": "Searching for prior work that already answers each gap"
+      },
+      {
+        "t": "2026-10-09T19:39:41.872257+00:00",
+        "text": "Novelty check failed for “Training epoch horizon for augmentation benefit plateau on Fashion-MNIST” (RuntimeError)"
+      },
+      {
+        "t": "2026-10-09T19:39:42.110432+00:00",
+        "text": "Scoring and ranking"
+      },
+      {
+        "t": "2026-10-09T19:39:42.235700+00:00",
+        "text": "Gap analysis complete"
+      }
+    ],
+    "result": {
+      "gaps": [
+        {
+          "id": "g5",
+          "risks": [
+            "With only 2 seeds, per-class accuracy differences may fall within random seed noise and be unreproducible with additional seeds.",
+            "Conclusions must be framed as exploratory because permutation inference is not valid with only 2 seeds, limiting publishability.",
+            "Fashion-MNIST's 1,000-image per class test set means per-class accuracy estimates have standard errors of approximately 0.6–0.9 percentage points."
+          ],
+          "title": "Per-class accuracy impact of augmentation on Fashion-MNIST garments",
+          "scores": {
+            "impact": {
+              "why": "Explains the mechanism behind aggregate accuracy changes and provides actionable guidance about which garment classes benefit from each augmentation type.",
+              "score": 4
+            },
+            "novelty": {
+              "why": "None of the prior works examine per-class accuracy deltas from basic image augmentation specifically on Fashion-MNIST, nor do they analyze how horizontal-flip augmentation differentially affects morphologically similar or asymmetric garment classes (e.g., shirt vs. T-shirt/top). The closest works address class-wise augmentation effects in other domains (batik motifs, liver lesions) but not this specific dataset or hypothesis about flip-induced label ambiguity.",
+              "score": 4
+            },
+            "feasibility": {
+              "why": "Analysis is derived entirely from models already trained in the core experiment, requiring only CPU-based inference and plotting with no additional GPU runs.",
+              "score": 5
+            },
+            "testability": {
+              "why": "Per-class accuracy delta is directly measurable from stored predictions, though with 2 seeds significance assessment is limited to exploratory framing.",
+              "score": 4
+            }
+          },
+          "overall": 4.3,
+          "approach": "Extract per-class precision, recall, F1, and full confusion matrices from augmented and non-augmented trained models across seeds 42 and 123 (four models total). Compute Δaccuracy and Δconfusion-cell for each of the 10 classes and each of the 100 class pairs, then visualize as a per-class accuracy delta bar chart and annotated delta confusion matrix; all analysis runs on CPU using stored model predictions from the core experiment's GPU runs.",
+          "gap_type": "missing_evaluation",
+          "question": "Does basic image augmentation disproportionately improve or reduce accuracy on specific Fashion-MNIST garment classes, particularly for morphologically similar or asymmetric classes?",
+          "why_open": "(Yee 2026) notes that morphologically distinctive categories such as trousers, bags, and footwear show high discriminative performance but does not study how augmentation changes per-class accuracy. All papers reporting augmentation effects on Fashion-MNIST (Greeshma et al. 2019; Mukhamediev 2024; Hassan et al. 2025; Kayed et al. 2020) aggregate accuracy into a single number, obscuring which garment classes drive gains or losses. (Agarwal et al. 2025) found that augmentation did not consistently improve accuracy for the best-performing model on CIFAR-10, suggesting class-level heterogeneity, but no analogous per-class study exists for Fashion-MNIST. Fashion-MNIST has known confusable class pairs such as T-shirt versus shirt versus pullover where flip-induced distortions might introduce label-ambiguous training examples and hurt recognition.",
+          "hypothesis": "Augmentation will disproportionately help symmetric garment classes (trousers, pullovers, coats) for which horizontal flips are valid invariances, while potentially reducing accuracy for fine-grained confusable classes such as shirt versus T-shirt/top where flipped images introduce label ambiguity.",
+          "data_needed": "Fashion-MNIST test set (10,000 images, 10 balanced classes); predictions from the four trained models produced in the core experiment.",
+          "novelty_check": {
+            "status": "novel",
+            "closest": [
+              {
+                "url": "https://www.semanticscholar.org/paper/ecbdca6ae97132b46ee9c6c52949fa7addd4465d",
+                "year": 2025,
+                "title": "Optimizing nitik batik classification through comparative analysis of image augmentation",
+                "overlap": "Analyzes how different augmentation techniques including flips affect per-class classification performance, but on batik motifs with a random forest rather than Fashion-MNIST CNNs.",
+                "in_review": false
+              },
+              {
+                "url": "https://www.semanticscholar.org/paper/be883e7cdc0cc99f4f0d504aaa9b2a37e962c507",
+                "year": 2025,
+                "title": "Class-Wise Combination of Mixture-Based Data Augmentation for Class Imbalance Learning of Focal Liver Lesions in Abdominal CT Images",
+                "overlap": "Applies class-wise augmentation strategies and evaluates per-class outcomes via confusion matrices, but on focal liver lesions in CT images rather than fashion garment categories.",
+                "in_review": false
+              },
+              {
+                "url": "https://www.semanticscholar.org/paper/bc2efedca7d28b3b390da32b75f9b5a8d948c082",
+                "year": 2025,
+                "title": "Compositional feature augmentation for improving multi-class classification",
+                "overlap": "Addresses class-specific feature representation and multi-class classification accuracy, but proposes a compositional feature augmentation framework unrelated to image flips or Fashion-MNIST.",
+                "in_review": false
+              }
+            ],
+            "explanation": "None of the prior works examine per-class accuracy deltas from basic image augmentation specifically on Fashion-MNIST, nor do they analyze how horizontal-flip augmentation differentially affects morphologically similar or asymmetric garment classes (e.g., shirt vs. T-shirt/top). The closest works address class-wise augmentation effects in other domains (batik motifs, liver lesions) but not this specific dataset or hypothesis about flip-induced label ambiguity."
+          },
+          "compute_needed": "Inference of four trained models on 10,000 test images runs in seconds on CPU; no additional GPU time required beyond the core experiment's four runs.",
+          "novelty_queries": [
+            "per-class augmentation effect Fashion-MNIST CNN",
+            "class-wise accuracy augmentation flip garment classification",
+            "augmentation impact individual class Fashion-MNIST analysis"
+          ],
+          "supporting_paper_ids": [
+            "d9811187e7b0",
+            "286274c89da9",
+            "4547edfd3536",
+            "0f1f5f52211a",
+            "e5cd16d4dfbf",
+            "2444783adaac"
+          ]
+        },
+        {
+          "id": "g1",
+          "risks": [
+            "With only 2 seeds and 5 training epochs, per-condition accuracy differences may fall within random seed noise, making attribution unreliable.",
+            "14 sequential Colab GPU runs risk session timeout, requiring checkpointing or batching across sessions.",
+            "Results may be specific to the chosen small CNN architecture and not generalize to deeper or wider models."
+          ],
+          "title": "Individual augmentation type ablation on Fashion-MNIST CNN",
+          "scores": {
+            "impact": {
+              "why": "Directly answers a practitioner question about which cheap augmentation to prioritize and fills an explicitly identified open problem in the brief.",
+              "score": 4
+            },
+            "novelty": {
+              "why": "The prior work applies augmentation broadly to improve Fashion-MNIST accuracy but none isolates and compares the individual contributions of horizontal flip, translation, and rotation via ablation or Shapley-style decomposition on a small CNN; the closest papers (e.g., 'State-of-the-Art Results' and 'Optimized Neural Networks') use augmentation as a bundle without disaggregating per-type effects.",
+              "score": 3
+            },
+            "feasibility": {
+              "why": "14 short GPU runs using infrastructure identical to the core experiment are completable in one Colab session with minimal code changes.",
+              "score": 5
+            },
+            "testability": {
+              "why": "Test accuracy per condition provides a clear, quantitative outcome that unambiguously distinguishes each augmentation type's contribution.",
+              "score": 5
+            }
+          },
+          "overall": 4.15,
+          "approach": "Train the identical small CNN under seven augmentation conditions: no augmentation, flip-only, translate-only, rotate-only, flip+translate, flip+rotate, and all-three combined; use seeds 42 and 123 for each, yielding 14 GPU runs of 5 epochs each on Fashion-MNIST. Compute per-condition test accuracy and a Shapley-style additive decomposition of accuracy gains attributable to each augmentation type. Produce a bar chart of accuracy by condition and a delta table relative to the no-augmentation baseline.",
+          "gap_type": "untested_combination",
+          "question": "Which individual augmentation type — horizontal flip, random translation, or random rotation — contributes most to small-CNN test accuracy gains on Fashion-MNIST?",
+          "why_open": "Surveys of augmentation (Shorten et al. 2019) and (Zeng 2024) catalog many techniques but provide no ablation isolating each geometric transform's individual contribution for small CNNs on Fashion-MNIST. (Hnatushenko et al. 2023) found that single augmentation types did not yield significant improvements for satellite imagery while combinations helped, but this finding has not been replicated on Fashion-MNIST. (Kurban et al. 2026) performs architecture-specific augmentation grid searches on CIFAR-10 but not on Fashion-MNIST, leaving unclear which transform drives any accuracy gains in the core experiment. The open problems section explicitly identifies isolating individual augmentation contributions as an unresolved question in the field.",
+          "hypothesis": "Horizontal flip augmentation will contribute the largest individual accuracy gain because Fashion-MNIST garment classes have strong left-right symmetry invariance, making flipped images valid additional training examples, whereas small rotations and translations provide weaker or noisier signal for symmetric garment classes.",
+          "data_needed": "Fashion-MNIST via torchvision (60,000 train / 10,000 test); no additional data required.",
+          "novelty_check": {
+            "status": "novel",
+            "closest": [
+              {
+                "url": "https://www.semanticscholar.org/paper/ef0545e59c2c6aa37039f7cc5fab385dfe0cb97d",
+                "year": 2024,
+                "title": "State-of-the-Art Results with the Fashion-MNIST Dataset",
+                "overlap": "Uses a simple CNN with data augmentation on Fashion-MNIST but does not isolate individual augmentation types or quantify their separate contributions.",
+                "in_review": true
+              },
+              {
+                "url": "https://www.semanticscholar.org/paper/88a0ca89f883c012845e621a93af668079c9b56e",
+                "year": 2025,
+                "title": "Optimized Neural Networks for Fashion-MNIST: A High-Accuracy Approach Using Augmentation and Tuning",
+                "overlap": "Applies augmentation alongside architecture tuning on Fashion-MNIST but treats augmentation as a whole rather than ablating flip, translate, and rotate individually.",
+                "in_review": true
+              },
+              {
+                "url": "https://www.semanticscholar.org/paper/6ab1a8dac9024def667ae0a957deda89567aa6a7",
+                "year": 2026,
+                "title": "Multi-Class Image Classification on Fashion-MNIST Using a Custom CNN",
+                "overlap": "Employs data augmentation in a lightweight CNN on Fashion-MNIST but does not perform per-augmentation ablation or additive decomposition.",
+                "in_review": false
+              }
+            ],
+            "explanation": "The prior work applies augmentation broadly to improve Fashion-MNIST accuracy but none isolates and compares the individual contributions of horizontal flip, translation, and rotation via ablation or Shapley-style decomposition on a small CNN; the closest papers (e.g., 'State-of-the-Art Results' and 'Optimized Neural Networks') use augmentation as a bundle without disaggregating per-type effects."
+          },
+          "compute_needed": "14 GPU runs × approximately 5 min each ≈ 70 min total on Colab T4; completable in a single session.",
+          "novelty_queries": [
+            "augmentation type ablation Fashion-MNIST CNN",
+            "flip rotation translation isolation small CNN",
+            "individual augmentation contribution Fashion-MNIST generalization"
+          ],
+          "supporting_paper_ids": [
+            "e5cd16d4dfbf",
+            "a9ccd647daf8",
+            "61a39a30a513",
+            "86c2fcac8831",
+            "da4d9dbf9edd",
+            "286274c89da9"
+          ]
+        },
+        {
+          "id": "g2",
+          "risks": [
+            "Forty runs may exceed a single Colab session time limit, requiring careful checkpointing and session management.",
+            "The accuracy landscape may be flat across magnitudes within noise at 2 seeds and 5 epochs, preventing reliable identification of an optimum.",
+            "Results are specific to Fashion-MNIST's 28×28 resolution and small CNN scale and may not generalize to other datasets or image sizes."
+          ],
+          "title": "Augmentation magnitude sensitivity grid search on Fashion-MNIST",
+          "scores": {
+            "impact": {
+              "why": "Provides practical, dataset-specific augmentation guidance absent from all surveyed papers and validates or challenges the core experiment's unjustified default magnitudes.",
+              "score": 4
+            },
+            "novelty": {
+              "why": "Targeted searches returned no related papers.",
+              "score": 4
+            },
+            "feasibility": {
+              "why": "40 GPU runs are feasible on Colab but require session management and approximately 3.5 total GPU hours, introducing scheduling overhead.",
+              "score": 4
+            },
+            "testability": {
+              "why": "The 5×4 accuracy matrix yields a clear 2D landscape with an identifiable optimum and direct comparison against the no-augmentation baseline.",
+              "score": 5
+            }
+          },
+          "overall": 4.15,
+          "approach": "Perform a 5×4 grid search over rotation magnitudes {0°, 5°, 10°, 20°, 30°} × translation ranges {0%, 5%, 10%, 20%} with all conditions including horizontal flip; train each combination with seeds 42 and 123 for 5 epochs on Fashion-MNIST, yielding 40 GPU runs. Report accuracy as a 2D heat map, fit a quadratic response surface to identify the empirical optimum, and note where the core experiment's defaults fall relative to that optimum.",
+          "gap_type": "methodological",
+          "question": "How sensitive is small-CNN generalization on Fashion-MNIST to the specific magnitude of rotation angle and translation range used during training?",
+          "why_open": "(Kurban et al. 2026) provides systematic augmentation hyperparameter grid search for CNN architectures on CIFAR-10 but not on Fashion-MNIST. (Lopes et al. 2021) introduces the Affinity/Diversity framework predicting a tradeoff at excessive augmentation magnitudes, but does not empirically validate it for Fashion-MNIST with small CNNs. The core experiment fixes rotation at ≤10° and translation at ≤10% without empirical justification, and (Greeshma et al. 2019) uses cropping, rotation, and flipping without reporting which magnitudes were tested. No paper in the corpus performs a controlled search over rotation and translation magnitudes for a small CNN on Fashion-MNIST, leaving optimal augmentation parameters unknown for this dataset.",
+          "hypothesis": "There is an inverted-U relationship between augmentation magnitude and test accuracy, with peak accuracy at moderate magnitudes around 10–15° rotation and 10–15% translation, and declining performance at larger magnitudes where augmented images no longer resemble realistic garment images.",
+          "data_needed": "Fashion-MNIST via torchvision; no additional data required.",
+          "novelty_check": {
+            "status": "novel",
+            "closest": [],
+            "explanation": "Targeted searches returned no related papers."
+          },
+          "compute_needed": "40 GPU runs × approximately 5 min each ≈ 3.5 hours on Colab T4; split across two sessions or use Colab Pro.",
+          "novelty_queries": [
+            "augmentation magnitude grid search Fashion-MNIST CNN",
+            "rotation angle sensitivity data augmentation Fashion-MNIST",
+            "optimal augmentation parameters small CNN classification"
+          ],
+          "supporting_paper_ids": [
+            "e5cd16d4dfbf",
+            "d28ad320549d",
+            "da4d9dbf9edd",
+            "0f1f5f52211a",
+            "a9ccd647daf8"
+          ]
+        },
+        {
+          "id": "g3",
+          "risks": [
+            "Designing architectures at different scales that differ only in depth and not width or other factors requires careful architectural discipline to avoid confounds.",
+            "At only 5 training epochs, shallower models may not have converged, making the augmentation benefit comparison across depths unfair.",
+            "With 2 seeds per condition, the differences in Δaccuracy across architectures may be within seed noise, yielding inconclusive results."
+          ],
+          "title": "CNN depth scaling of augmentation benefit on Fashion-MNIST",
+          "scores": {
+            "impact": {
+              "why": "Directly addresses the explicitly stated open problem about augmentation scaling with model size with practical implications for architecture selection.",
+              "score": 4
+            },
+            "novelty": {
+              "why": "None of the prior works systematically compare augmentation benefit (Δaccuracy) as a function of CNN depth/parameter count on Fashion-MNIST; the closest work ('Building Efficient Lightweight CNN Models') uses augmentation with lightweight CNNs on Fashion-MNIST but does not isolate the interaction between model depth and augmentation gain as the primary research question.",
+              "score": 3
+            },
+            "feasibility": {
+              "why": "12 GPU runs using existing training infrastructure require only architectural variations in one code file and fit in one Colab session.",
+              "score": 5
+            },
+            "testability": {
+              "why": "Augmentation benefit Δaccuracy per architecture is directly measurable, though with 2 seeds the confidence intervals will be wide.",
+              "score": 4
+            }
+          },
+          "overall": 4.0,
+          "approach": "Construct three small CNN variants with increasing depth: 1-block (~20K parameters), 2-block (~80K parameters), and 3-block (~250K parameters), holding optimizer, learning rate, and batch size fixed. Train each with and without full augmentation using seeds 42 and 123 for 5 epochs on Fashion-MNIST (12 GPU runs total), then plot augmentation benefit Δaccuracy versus parameter count and report the interaction between model depth and augmentation condition.",
+          "gap_type": "generalization",
+          "question": "Does the absolute accuracy gain from basic image augmentation on Fashion-MNIST differ systematically between 1-block, 2-block, and 3-block small CNNs?",
+          "why_open": "(Mohammadagha et al. 2025) compares augmentation and dropout effects in a baseline CNN versus ResNet-18 on Imagenette but does not isolate the augmentation gain (Δaccuracy) as a function of model depth on Fashion-MNIST. (Hassan et al. 2025) achieves 98.30% with a deep ResCNN with augmentation but provides no no-augmentation baseline for the same architecture, preventing measurement of augmentation benefit. (Isong 2025) builds lightweight CNNs of different sizes on Fashion-MNIST but does not vary augmentation as a factor. The open problems section explicitly states that whether small CNNs benefit more or less from augmentation than larger architectures is unresolved.",
+          "hypothesis": "The absolute accuracy gain from augmentation will be larger for shallower CNNs because capacity-limited models are more prone to underfitting the augmented distribution, leaving more room for the augmentation's implicit regularization to improve generalization.",
+          "data_needed": "Fashion-MNIST via torchvision; no additional data required.",
+          "novelty_check": {
+            "status": "novel",
+            "closest": [
+              {
+                "url": "https://www.semanticscholar.org/paper/ff72ca0f93a1b8d351cda1a7f3df3f875b06f62e",
+                "year": 2025,
+                "title": "Building Efficient Lightweight CNN Models",
+                "overlap": "Trains lightweight CNNs on Fashion-MNIST with and without augmentation but focuses on a dual-input training methodology rather than measuring how augmentation benefit varies with model depth.",
+                "in_review": true
+              },
+              {
+                "url": "https://www.semanticscholar.org/paper/22b86b724eb3ab4cfc19a741fe0905ae398b6fb2",
+                "year": 2026,
+                "title": "Convolutional Neural Networks for Image Classification",
+                "overlap": "Applies a 3-block CNN with data augmentation on Fashion-MNIST but uses only a single architecture and does not compare augmentation gains across depth variants.",
+                "in_review": false
+              },
+              {
+                "url": "https://www.semanticscholar.org/paper/a8b20efb1aa56e550bc5767f1c08d310826c2525",
+                "year": 2025,
+                "title": "Adaptive Kernel Selection: Performance Pattern Analysis Across Network Depth Hierarchies and Dataset Complexities",
+                "overlap": "Systematically evaluates CNN variants on Fashion-MNIST across multiple seeds but focuses on kernel selection strategies rather than the interaction between model depth and augmentation benefit.",
+                "in_review": false
+              }
+            ],
+            "explanation": "None of the prior works systematically compare augmentation benefit (Δaccuracy) as a function of CNN depth/parameter count on Fashion-MNIST; the closest work ('Building Efficient Lightweight CNN Models') uses augmentation with lightweight CNNs on Fashion-MNIST but does not isolate the interaction between model depth and augmentation gain as the primary research question."
+          },
+          "compute_needed": "12 GPU runs × approximately 5 min each ≈ 60 min on Colab T4; completable in one session.",
+          "novelty_queries": [
+            "augmentation benefit CNN depth Fashion-MNIST scaling",
+            "model capacity augmentation gain comparison shallow deep",
+            "CNN depth augmentation regularization Fashion-MNIST"
+          ],
+          "supporting_paper_ids": [
+            "d7efaef3652c",
+            "4fdf3425e9fd",
+            "7bf8d9723b33",
+            "a99921e56ae2",
+            "4547edfd3536"
+          ]
+        },
+        {
+          "id": "g4",
+          "risks": [
+            "Long runs up to 50 epochs risk Colab session disconnection, requiring checkpoint saving and mid-run resumption logic.",
+            "With only 2 seeds, the benefit trajectory may be too noisy to identify a reliable plateau point.",
+            "Overfitting may emerge even with augmentation at 50 epochs for a small model, complicating interpretation of the plateau."
+          ],
+          "title": "Training epoch horizon for augmentation benefit plateau on Fashion-MNIST",
+          "scores": {
+            "impact": {
+              "why": "Primarily a methodological contribution validating or challenging the 5-epoch assumption; useful but narrower than architectural or per-class findings.",
+              "score": 3
+            },
+            "novelty": {
+              "why": "No paper in the corpus plots augmentation benefit as a function of training epoch count specifically for small CNNs on Fashion-MNIST.",
+              "score": 4
+            },
+            "feasibility": {
+              "why": "Longer runs up to 50 epochs are straightforward to implement but require session management and checkpoint infrastructure to avoid data loss.",
+              "score": 4
+            },
+            "testability": {
+              "why": "The augmentation benefit curve against epoch count provides a clear, quantitative answer about the plateau point and asymptotic gain.",
+              "score": 5
+            }
+          },
+          "overall": 3.9,
+          "approach": "Train the same small CNN with and without full augmentation for epoch counts {5, 15, 30, 50} using seeds 42 and 123 on Fashion-MNIST (16 GPU runs total). For each epoch count, compute the augmentation benefit Δtest accuracy and plot a benefit-versus-epochs curve; fit a saturation curve to estimate the plateau epoch and extrapolate the asymptotic benefit.",
+          "gap_type": "untested_assumption",
+          "question": "At what number of training epochs does the test accuracy benefit of basic image augmentation plateau when training a small CNN on Fashion-MNIST?",
+          "why_open": "The open problems section explicitly flags whether augmentation gains plateau quickly with more training epochs and whether 5 epochs is sufficient to observe the full effect as an unresolved question. (Thanapol et al. 2020) studies augmentation injection timing on CIFAR-10 at epoch 30 but does not measure the benefit growth curve as a function of total epochs. (Kurban et al. 2026) trains architectures to a fixed epoch count without studying the augmentation benefit trajectory over time. No paper in the corpus reports an accuracy-gap-versus-epochs curve for simple augmentations on Fashion-MNIST, making the 5-epoch assumption in the core experiment potentially premature.",
+          "hypothesis": "Augmentation benefit will grow monotonically for at least 20–30 epochs and will not have plateaued at 5 epochs, meaning the core experiment underestimates the full accuracy gain that augmentation would deliver with longer training.",
+          "data_needed": "Fashion-MNIST via torchvision; no additional data required.",
+          "novelty_check": {
+            "status": "unchecked",
+            "closest": [],
+            "explanation": "Novelty check failed."
+          },
+          "compute_needed": "16 GPU runs with varying epoch counts; 50-epoch runs take approximately 20–25 min each on Colab T4, totaling roughly 3 hours; feasible with session management and checkpoint saving.",
+          "novelty_queries": [
+            "augmentation benefit epoch plateau CNN Fashion-MNIST",
+            "training duration augmentation effect small CNN",
+            "data augmentation gain saturation training epochs"
+          ],
+          "supporting_paper_ids": [
+            "310b05d6a070",
+            "da4d9dbf9edd",
+            "e5cd16d4dfbf",
+            "0f1f5f52211a",
+            "97da22b2a365"
+          ]
+        },
+        {
+          "id": "g6",
+          "risks": [
+            "Fair comparison of Adam and SGD requires careful learning-rate matching, which may require calibration runs beyond the stated scope.",
+            "At only 5 epochs, neither optimizer may have reached a stable regime, making the interaction estimate sensitive to early-training dynamics.",
+            "The interaction effect size may be too small to detect reliably with only 2 seeds per cell, yielding an inconclusive result."
+          ],
+          "title": "Optimizer-augmentation interaction for Fashion-MNIST small CNN",
+          "scores": {
+            "impact": {
+              "why": "A useful practical finding for practitioners choosing optimizers alongside augmentation, but narrower in scope than architectural depth or per-class insights.",
+              "score": 3
+            },
+            "novelty": {
+              "why": "The prior work compares Adam vs. SGD on various image classification tasks, but none isolates the interaction effect between optimizer choice and data augmentation on Fashion-MNIST, which is the core question here.",
+              "score": 3
+            },
+            "feasibility": {
+              "why": "8 GPU runs in a 2×2 factorial fit easily in one Colab session using identical architecture and training code with only the optimizer parameter changed.",
+              "score": 5
+            },
+            "testability": {
+              "why": "The interaction effect is directly computable from four accuracy values, but confidence is limited by only 2 seeds per cell and short 5-epoch training.",
+              "score": 4
+            }
+          },
+          "overall": 3.75,
+          "approach": "Run a 2×2 factorial experiment crossing {Adam, SGD with matched initial learning rate} × {no augmentation, full augmentation} with seeds 42 and 123 for 5 epochs on Fashion-MNIST, yielding 8 GPU runs total. Report test accuracy for each cell, compute the interaction effect as the difference in augmentation benefit between optimizers, and visualize as a 2×2 interaction plot with an effect size estimate rather than a formal significance test given only 2 seeds.",
+          "gap_type": "untested_combination",
+          "question": "Does the accuracy benefit of basic image augmentation on Fashion-MNIST differ significantly depending on whether Adam or SGD is used as the optimizer?",
+          "why_open": "(Sayın et al. 2025) systematically benchmarks 8 optimizers across Fashion-MNIST in CNNs but does not cross optimizer choice with augmentation as an independent variable. (Marin et al. 2020) compares Adam and SGD with regularization techniques on Fashion-MNIST but does not test augmentation as a separate factorial factor. (S et al. 2024) evaluates multiple optimizers on Fashion-MNIST without varying augmentation. The core experiment fixes the optimizer to isolate augmentation effects, but this means the measured augmentation benefit may be optimizer-specific, limiting the generalizability of its conclusions.",
+          "hypothesis": "Adam will show a smaller augmentation benefit than SGD because Adam's adaptive per-parameter learning rates provide implicit regularization that partially overlaps with augmentation's anti-overfitting function, leaving less room for augmentation to further improve generalization under Adam.",
+          "data_needed": "Fashion-MNIST via torchvision; no additional data required.",
+          "novelty_check": {
+            "status": "novel",
+            "closest": [
+              {
+                "url": "https://www.semanticscholar.org/paper/11898a7526796b4f80e1be64331207d0f21a5412",
+                "year": 2025,
+                "title": "Performance Comparison of EfficientNetB0 in Potato Leaf Disease Classification with Adam and SGD",
+                "overlap": "Compares Adam and SGD with data augmentation on an image classification task but uses a different dataset/architecture and does not measure the augmentation benefit as a function of optimizer.",
+                "in_review": false
+              },
+              {
+                "url": "https://www.semanticscholar.org/paper/ebf4dc27d97ee84a54d96e8ce05c25ae31edfa0d",
+                "year": 2026,
+                "title": "Comparison Of Adam and SGD For The Classfication Of Palm Tree Leaf Diseases With ResNet50",
+                "overlap": "Directly compares Adam and SGD on image classification with ResNet50 but does not factor out augmentation as an independent variable to study the interaction.",
+                "in_review": false
+              },
+              {
+                "url": "https://www.semanticscholar.org/paper/263fafb44fd7c32634c233fd5057b297f3a80aa3",
+                "year": 2026,
+                "title": "Performance Comparison of Adam and SGD Optimizers in Transfer Learning Based CNN for Banana Leaf Disease Classification",
+                "overlap": "Compares Adam and SGD in transfer learning CNNs with small datasets but does not isolate or measure the differential benefit of augmentation per optimizer.",
+                "in_review": false
+              }
+            ],
+            "explanation": "The prior work compares Adam vs. SGD on various image classification tasks, but none isolates the interaction effect between optimizer choice and data augmentation on Fashion-MNIST, which is the core question here."
+          },
+          "compute_needed": "8 GPU runs × approximately 5 min each ≈ 40 min on Colab T4; completable in one short session.",
+          "novelty_queries": [
+            "optimizer augmentation interaction CNN Fashion-MNIST",
+            "Adam SGD augmentation benefit comparison classification",
+            "optimizer data augmentation factorial design small CNN"
+          ],
+          "supporting_paper_ids": [
+            "82fabaf7cebb",
+            "97da22b2a365",
+            "8e99c357da72",
+            "0f1f5f52211a",
+            "e5cd16d4dfbf"
+          ]
+        }
+      ],
+      "feedback": null,
+      "recommended": "g5"
+    },
+    "error": null,
+    "started_at": "2026-10-09 19:30:00.966814+00:00",
+    "finished_at": "2026-10-09 19:39:42.357240+00:00"
+  },
+  {
+    "id": "dee907afa9ad",
+    "project_id": "d95fb65c9f7a",
+    "kind": "plan",
+    "status": "done",
+    "phase": "done",
+    "counts": {
+      "tasks": 15,
+      "phases": 6
+    },
+    "log": [
+      {
+        "t": "2026-10-09T19:39:43.796739+00:00",
+        "text": "Drafting the research plan for the chosen gap"
+      },
+      {
+        "t": "2026-10-09T19:45:57.381245+00:00",
+        "text": "Checking the task graph"
+      },
+      {
+        "t": "2026-10-09T19:45:57.617142+00:00",
+        "text": "Plan ready for review"
+      }
+    ],
+    "result": {
+      "plan": {
+        "risks": [
+          {
+            "risk": "With only 2 seeds, per-class accuracy differences may fall within random seed noise and the symmetry hypothesis cannot be confirmed or rejected with confidence.",
+            "likelihood": "medium",
+            "mitigation": "Explicitly frame all per-class findings as exploratory throughout the paper; focus interpretation only on effects exceeding 1.5x the binomial standard error (~1.5pp at p=0.90); report the full seed-level range alongside the mean for every class; recommend additional seeds as future work in the Discussion section."
+          },
+          {
+            "risk": "SmallCNN trained for only 5 epochs may not converge to sufficient accuracy to reveal differential class-level augmentation effects above the noise floor.",
+            "likelihood": "low",
+            "mitigation": "The specified architecture (3 conv blocks, BatchNorm, Dropout) is well-validated for Fashion-MNIST and expected to achieve 88-93% overall in 5 epochs; if overall accuracy is below 85%, add a dedicated caveat paragraph in Results noting that class-level conclusions may be confounded by under-training."
+          },
+          {
+            "risk": "Fashion-MNIST product images may already be horizontally standardized, making horizontal flip a valid invariance for all 10 classes including hypothesized asymmetric items (shirts, ankle boots), rendering the symmetry hypothesis untestable.",
+            "likelihood": "medium",
+            "mitigation": "Inspect sample_augmented_images.png from T1.2 to characterize actual flip effects on asymmetric classes; report empirical confusion matrix findings regardless of whether they confirm or refute the morphological hypothesis; the delta confusion matrix will reveal augmentation effects even if the symmetry annotation is imprecise."
+          },
+          {
+            "risk": "GPU training run crashes or produces corrupted checkpoints, requiring re-execution and wasting GPU time.",
+            "likelihood": "low",
+            "mitigation": "Save checkpoints after every epoch (not just the best) to enable recovery from any epoch; validate checkpoint integrity in T3.1 by cross-checking test accuracy against the corresponding training log final-epoch val_acc within a 3pp tolerance."
+          }
+        ],
+        "title": "Per-Class Accuracy Impact of Basic Image Augmentation on Fashion-MNIST Garment Categories",
+        "phases": [
+          {
+            "id": "P1",
+            "goal": "Prepare the computational environment with verified CUDA GPU access, load Fashion-MNIST with both transform pipelines, and implement the SmallCNN architecture with full training and evaluation loops.",
+            "name": "Environment Setup and Code Implementation",
+            "tasks": [
+              {
+                "id": "T1.1",
+                "kind": "data_processing",
+                "title": "Verify CUDA GPU and install Python dependencies",
+                "effort": "S",
+                "inputs": [],
+                "outputs": [
+                  "environment_report.txt"
+                ],
+                "depends_on": [],
+                "tools_hint": [
+                  "PyTorch",
+                  "torchvision",
+                  "pip",
+                  "subprocess"
+                ],
+                "description": "Install PyTorch with CUDA, torchvision, scikit-learn, matplotlib, seaborn, pandas, numpy, and scipy in the GPU runtime. Programmatically assert torch.cuda.is_available() returns True, log the GPU device name and memory, and write this information to environment_report.txt. This file will be cited in the paper as evidence that all training ran on GPU as required by the experimental constraints."
+              },
+              {
+                "id": "T1.2",
+                "kind": "data_acquisition",
+                "title": "Download Fashion-MNIST and configure transform pipelines and data loaders",
+                "effort": "S",
+                "inputs": [],
+                "outputs": [
+                  "fashion_mnist_data/",
+                  "dataset_stats.json",
+                  "sample_augmented_images.png"
+                ],
+                "depends_on": [
+                  "T1.1"
+                ],
+                "tools_hint": [
+                  "torchvision",
+                  "PyTorch",
+                  "matplotlib",
+                  "numpy"
+                ],
+                "description": "Download Fashion-MNIST train (60,000) and test (10,000) splits via torchvision.datasets.FashionMNIST. Define two transform pipelines: (1) no_aug using ToTensor and Normalize(mean=0.2860, std=0.3530); (2) aug using RandomHorizontalFlip(p=0.5), RandomAffine(degrees=10, translate=(0.1,0.1)), ToTensor, and Normalize(mean=0.2860, std=0.3530). Create a 90/10 train/val split (54,000/6,000) using torch.utils.data.random_split with a generator seeded per run. Save dataset statistics to dataset_stats.json and save a grid of sample images under both pipelines for visual verification."
+              },
+              {
+                "id": "T1.3",
+                "kind": "modeling",
+                "title": "Implement SmallCNN architecture and set_seed utility",
+                "effort": "S",
+                "inputs": [],
+                "outputs": [
+                  "model.py",
+                  "model_summary.txt"
+                ],
+                "depends_on": [
+                  "T1.1"
+                ],
+                "tools_hint": [
+                  "PyTorch",
+                  "torchinfo"
+                ],
+                "description": "Implement a SmallCNN class in PyTorch with three convolutional blocks (Conv2d->BatchNorm2d->ReLU->MaxPool2d(2,2)) with channel progression 1->32->64->128 using 3x3 kernels and padding=1, followed by Flatten->Linear(128*3*3, 256)->ReLU->Dropout(0.5)->Linear(256, 10). Implement a set_seed(seed) function that seeds Python random, numpy, torch, and torch.cuda.manual_seed_all for full reproducibility, and sets torch.backends.cudnn.deterministic=True. Save the implementation to model.py and print total parameter count to model_summary.txt."
+              },
+              {
+                "id": "T1.4",
+                "kind": "modeling",
+                "title": "Implement training loop, evaluation function, and logging utilities",
+                "effort": "M",
+                "inputs": [
+                  "model.py"
+                ],
+                "outputs": [
+                  "train.py"
+                ],
+                "depends_on": [
+                  "T1.3"
+                ],
+                "tools_hint": [
+                  "PyTorch",
+                  "pandas",
+                  "csv"
+                ],
+                "description": "Implement a train_epoch() function using Adam(lr=0.001, betas=(0.9,0.999)) and CrossEntropyLoss with batch_size=128 that returns per-epoch train loss and accuracy. Implement an evaluate() function that returns loss, overall accuracy, and a DataFrame of (sample_idx, true_label, pred_label, prob_0..prob_9) for any DataLoader. Implement a run_training() wrapper that executes exactly 5 epochs, logs per-epoch metrics (epoch, train_loss, train_acc, val_loss, val_acc) to a CSV, saves the best checkpoint by val_acc, and also saves epoch-wise checkpoints for crash recovery. Save all code to train.py."
+              }
+            ]
+          },
+          {
+            "id": "P2",
+            "goal": "Execute all four training configurations (seeds 42 and 123 times no-augmentation and augmentation) on GPU for exactly 5 epochs each, saving model checkpoints, per-epoch training logs, and full test-set predictions.",
+            "name": "GPU Training Runs",
+            "tasks": [
+              {
+                "id": "T2.1",
+                "kind": "experiment",
+                "title": "Execute all four training configurations on CUDA GPU",
+                "effort": "M",
+                "inputs": [
+                  "model.py",
+                  "train.py",
+                  "fashion_mnist_data/",
+                  "dataset_stats.json"
+                ],
+                "outputs": [
+                  "checkpoints/model_seed42_noaug.pt",
+                  "checkpoints/model_seed42_aug.pt",
+                  "checkpoints/model_seed123_noaug.pt",
+                  "checkpoints/model_seed123_aug.pt",
+                  "logs/train_seed42_noaug.csv",
+                  "logs/train_seed42_aug.csv",
+                  "logs/train_seed123_noaug.csv",
+                  "logs/train_seed123_aug.csv",
+                  "predictions/preds_seed42_noaug.csv",
+                  "predictions/preds_seed42_aug.csv",
+                  "predictions/preds_seed123_noaug.csv",
+                  "predictions/preds_seed123_aug.csv"
+                ],
+                "depends_on": [
+                  "T1.2",
+                  "T1.4"
+                ],
+                "tools_hint": [
+                  "PyTorch",
+                  "CUDA",
+                  "pandas"
+                ],
+                "description": "Sequentially run four training configurations on the CUDA GPU: (seed=42, no_aug), (seed=42, aug), (seed=123, no_aug), (seed=123, aug). For each run, call set_seed() before model and DataLoader initialization, train for exactly 5 epochs with Adam(lr=0.001, batch_size=128), and log the CUDA device name and per-epoch wall-clock time as execution evidence. Save four best-val-acc model checkpoints, four training log CSVs with columns (epoch, train_loss, train_acc, val_loss, val_acc), and four test prediction CSVs with columns (sample_idx, true_label, pred_label, prob_0..prob_9) produced by running evaluate() on the best checkpoint."
+              }
+            ]
+          },
+          {
+            "id": "P3",
+            "goal": "Validate completeness of all prediction files, confirm test accuracy consistency with training logs, and collate per-epoch learning curves into a unified dataset for downstream plotting.",
+            "name": "Inference Validation and Curve Extraction",
+            "tasks": [
+              {
+                "id": "T3.1",
+                "kind": "data_processing",
+                "title": "Validate prediction files and compute overall test accuracy",
+                "effort": "S",
+                "inputs": [
+                  "predictions/preds_seed42_noaug.csv",
+                  "predictions/preds_seed42_aug.csv",
+                  "predictions/preds_seed123_noaug.csv",
+                  "predictions/preds_seed123_aug.csv",
+                  "logs/train_seed42_noaug.csv",
+                  "logs/train_seed42_aug.csv",
+                  "logs/train_seed123_noaug.csv",
+                  "logs/train_seed123_aug.csv"
+                ],
+                "outputs": [
+                  "validation_summary.txt",
+                  "overall_accuracy.csv"
+                ],
+                "depends_on": [
+                  "T2.1"
+                ],
+                "tools_hint": [
+                  "pandas",
+                  "numpy"
+                ],
+                "description": "Load all four prediction CSV files, verify each has exactly 10,000 rows with no missing values, confirm all 10 class labels are represented, and compute overall test accuracy (correct/10000) for each model. Cross-check each model's test accuracy against the final-epoch val_acc in its training log, flagging discrepancies greater than 3 percentage points as potential data integrity issues. Save the validation report and overall accuracy values to overall_accuracy.csv with columns (seed, condition, test_accuracy, final_val_acc, discrepancy_flag)."
+              },
+              {
+                "id": "T3.2",
+                "kind": "data_processing",
+                "title": "Merge training and validation learning curves into unified format",
+                "effort": "S",
+                "inputs": [
+                  "logs/train_seed42_noaug.csv",
+                  "logs/train_seed42_aug.csv",
+                  "logs/train_seed123_noaug.csv",
+                  "logs/train_seed123_aug.csv"
+                ],
+                "outputs": [
+                  "learning_curves_merged.csv"
+                ],
+                "depends_on": [
+                  "T2.1"
+                ],
+                "tools_hint": [
+                  "pandas"
+                ],
+                "description": "Load the four training log CSV files and concatenate them into a single long-format DataFrame with columns (seed, condition, epoch, train_loss, train_acc, val_loss, val_acc). Verify that each run has exactly 5 rows and that val_acc is monotonically non-decreasing for at least 3 of 5 epochs. Save the merged dataset to learning_curves_merged.csv for use in the learning curve figure."
+              }
+            ]
+          },
+          {
+            "id": "P4",
+            "goal": "Compute per-class precision, recall, F1, and accuracy for all four models; derive delta metrics comparing augmented to no-augmentation conditions; compute confusion matrices and the delta confusion matrix; and test the symmetry-benefit hypothesis via annotated correlation.",
+            "name": "Per-Class Metric Analysis",
+            "tasks": [
+              {
+                "id": "T4.1",
+                "kind": "analysis",
+                "title": "Compute per-class metrics for all four models and derive delta metrics",
+                "effort": "S",
+                "inputs": [
+                  "predictions/preds_seed42_noaug.csv",
+                  "predictions/preds_seed42_aug.csv",
+                  "predictions/preds_seed123_noaug.csv",
+                  "predictions/preds_seed123_aug.csv"
+                ],
+                "outputs": [
+                  "per_class_metrics_all_models.csv",
+                  "per_class_metrics_by_condition.csv",
+                  "per_class_delta_metrics.csv"
+                ],
+                "depends_on": [
+                  "T3.1"
+                ],
+                "tools_hint": [
+                  "scikit-learn",
+                  "pandas",
+                  "numpy"
+                ],
+                "description": "Using scikit-learn precision_recall_fscore_support and a custom per-class accuracy computation (correct_count/1000 per class), extract precision, recall, F1, and accuracy for each of the 10 Fashion-MNIST classes from each of the four prediction CSVs. Compute mean and seed-level range (min, max across seeds 42 and 123) for each metric per condition (no_aug, aug). Compute delta metrics as (aug_mean - no_aug_mean) for accuracy, precision, recall, and F1 per class. Save three CSVs: per_class_metrics_all_models.csv (all four models), per_class_metrics_by_condition.csv (condition averages), and per_class_delta_metrics.csv (deltas with seed ranges)."
+              },
+              {
+                "id": "T4.2",
+                "kind": "analysis",
+                "title": "Compute confusion matrices and annotated delta confusion matrix",
+                "effort": "S",
+                "inputs": [
+                  "predictions/preds_seed42_noaug.csv",
+                  "predictions/preds_seed42_aug.csv",
+                  "predictions/preds_seed123_noaug.csv",
+                  "predictions/preds_seed123_aug.csv"
+                ],
+                "outputs": [
+                  "confusion_matrices.npz",
+                  "delta_confusion_matrix.csv",
+                  "confusion_stats_summary.csv"
+                ],
+                "depends_on": [
+                  "T3.1"
+                ],
+                "tools_hint": [
+                  "scikit-learn",
+                  "numpy",
+                  "pandas"
+                ],
+                "description": "Using scikit-learn confusion_matrix, compute 10x10 raw count matrices for each of the four prediction CSVs. Row-normalize each matrix by dividing by true-class counts (1000 per class) to obtain confusion rate matrices. Average the two no_aug rate matrices and the two aug rate matrices across seeds to produce condition-average matrices. Compute the delta confusion matrix as (aug_avg_rate - no_aug_avg_rate). Save all matrices as confusion_matrices.npz (keys: seed42_noaug, seed42_aug, seed123_noaug, seed123_aug, avg_noaug, avg_aug, delta) and export the delta matrix as delta_confusion_matrix.csv with Fashion-MNIST class names as row/column headers."
+              },
+              {
+                "id": "T4.3",
+                "kind": "analysis",
+                "title": "Morphological annotation and symmetry versus delta-accuracy correlation",
+                "effort": "M",
+                "inputs": [
+                  "per_class_delta_metrics.csv"
+                ],
+                "outputs": [
+                  "class_morphology.csv",
+                  "morphology_correlation_results.txt"
+                ],
+                "depends_on": [
+                  "T4.1"
+                ],
+                "tools_hint": [
+                  "pandas",
+                  "scipy",
+                  "numpy"
+                ],
+                "description": "Create class_morphology.csv encoding all 10 Fashion-MNIST classes with: (a) binary symmetry label (symmetric=1: Trouser, Pullover, Dress, Coat, Bag; asymmetric=0: T-shirt/top, Shirt, Sandal, Sneaker, Ankle boot), (b) morphological group (tops: T-shirt/top, Pullover, Coat, Shirt; bottoms: Trouser, Dress; footwear: Sandal, Sneaker, Ankle boot; accessories: Bag), and (c) confusability group (confusable_tops, confusable_footwear, unique). Merge with per_class_delta_metrics.csv and compute Spearman rank correlation between symmetry label and delta-accuracy across all 10 classes. Compute bootstrapped 95% CI for rho using 5,000 resamples of the 10 class data points. Save all results and a plain-text interpretation to morphology_correlation_results.txt."
+              }
+            ]
+          },
+          {
+            "id": "P5",
+            "goal": "Produce all publication-quality figures and LaTeX-formatted summary tables required for the conference paper.",
+            "name": "Visualization and Summary Tables",
+            "tasks": [
+              {
+                "id": "T5.1",
+                "kind": "analysis",
+                "title": "Per-class delta-accuracy bar chart with seed-level error bars",
+                "effort": "S",
+                "inputs": [
+                  "per_class_delta_metrics.csv",
+                  "class_morphology.csv"
+                ],
+                "outputs": [
+                  "figures/fig1_per_class_delta_accuracy.png"
+                ],
+                "depends_on": [
+                  "T4.1",
+                  "T4.3"
+                ],
+                "tools_hint": [
+                  "matplotlib",
+                  "pandas",
+                  "numpy"
+                ],
+                "description": "Create a horizontal bar chart (matplotlib) showing mean delta-accuracy (aug minus no_aug) for each of the 10 Fashion-MNIST classes sorted by delta value. Add asymmetric error bars spanning the seed-level range (min to max across seeds 42 and 123). Color bars by morphological group (tops=coral, bottoms=steelblue, footwear=seagreen, accessories=gold) and annotate each bar with the class symmetry label (S or A). Add a vertical zero line and annotate the binomial noise threshold (1.5pp) as a dashed reference line. Export at 300 dpi."
+              },
+              {
+                "id": "T5.2",
+                "kind": "analysis",
+                "title": "Annotated delta confusion matrix heatmap",
+                "effort": "S",
+                "inputs": [
+                  "delta_confusion_matrix.csv",
+                  "class_morphology.csv"
+                ],
+                "outputs": [
+                  "figures/fig2_delta_confusion_matrix.png"
+                ],
+                "depends_on": [
+                  "T4.2"
+                ],
+                "tools_hint": [
+                  "seaborn",
+                  "matplotlib",
+                  "pandas"
+                ],
+                "description": "Create an annotated 10x10 heatmap (seaborn) of the delta confusion matrix using a diverging colormap (RdBu_r) centered at zero, with red indicating increased confusion under augmentation and blue indicating decreased confusion. Annotate each cell with its numeric delta value in percentage points if |value| > 0.5pp, otherwise leave blank. Highlight diagonal cells (per-class accuracy change) with a black border. Label axes with full Fashion-MNIST class names and add a colorbar labeled 'Delta confusion rate (pp)'. Export at 300 dpi."
+              },
+              {
+                "id": "T5.3",
+                "kind": "analysis",
+                "title": "Learning curves figure for all four training runs",
+                "effort": "S",
+                "inputs": [
+                  "learning_curves_merged.csv"
+                ],
+                "outputs": [
+                  "figures/fig3_learning_curves.png"
+                ],
+                "depends_on": [
+                  "T3.2"
+                ],
+                "tools_hint": [
+                  "matplotlib",
+                  "pandas"
+                ],
+                "description": "Create a 2x2 subplot figure with panels arranged as (no_aug seed 42, no_aug seed 123, aug seed 42, aug seed 123). In each panel plot training loss (left y-axis, solid line) and validation accuracy (right y-axis, dashed line) across 5 epochs. Use consistent colors: no_aug=blue, aug=orange; label each panel with its condition and seed. Add a shared title 'Training Dynamics: No Augmentation vs. Augmentation'. Export at 300 dpi."
+              },
+              {
+                "id": "T5.4",
+                "kind": "analysis",
+                "title": "Generate summary tables in CSV and LaTeX booktabs format",
+                "effort": "S",
+                "inputs": [
+                  "overall_accuracy.csv",
+                  "per_class_metrics_by_condition.csv",
+                  "per_class_delta_metrics.csv"
+                ],
+                "outputs": [
+                  "tables/table1_overall_accuracy.csv",
+                  "tables/table1_overall_accuracy.tex",
+                  "tables/table2_per_class_metrics.csv",
+                  "tables/table2_per_class_metrics.tex"
+                ],
+                "depends_on": [
+                  "T4.1",
+                  "T3.1"
+                ],
+                "tools_hint": [
+                  "pandas",
+                  "tabulate"
+                ],
+                "description": "Generate two summary tables: Table 1 — a 4-row table (seed x condition) showing test accuracy for each run plus condition means and seed ranges, with an added row for the random-classifier baseline (10%); Table 2 — a 10-row x 8-column table showing per-class accuracy, precision, recall, and F1 for both conditions (condition means) and the delta-accuracy with seed range, sorted by delta-accuracy. Export each table as both a CSV and a LaTeX file using the booktabs style (toprule, midrule, bottomrule) suitable for direct inclusion in the paper."
+              }
+            ]
+          },
+          {
+            "id": "P6",
+            "goal": "Produce a complete, self-contained conference-style paper draft synthesizing all results into a coherent narrative with appropriate exploratory framing.",
+            "name": "Paper Writing",
+            "tasks": [
+              {
+                "id": "T6.1",
+                "kind": "writing",
+                "title": "Draft conference-style paper with all figures, tables, and analysis",
+                "effort": "L",
+                "inputs": [
+                  "figures/fig1_per_class_delta_accuracy.png",
+                  "figures/fig2_delta_confusion_matrix.png",
+                  "figures/fig3_learning_curves.png",
+                  "tables/table1_overall_accuracy.tex",
+                  "tables/table2_per_class_metrics.tex",
+                  "morphology_correlation_results.txt",
+                  "environment_report.txt",
+                  "model_summary.txt",
+                  "dataset_stats.json"
+                ],
+                "outputs": [
+                  "paper_draft.md"
+                ],
+                "depends_on": [
+                  "T5.1",
+                  "T5.2",
+                  "T5.3",
+                  "T5.4",
+                  "T4.3"
+                ],
+                "tools_hint": [
+                  "markdown",
+                  "pandoc"
+                ],
+                "description": "Write a complete 4-6 page paper draft in Markdown (ACL/ICML format) with sections: Abstract (key finding on per-class heterogeneity, overall accuracy comparison, and symmetry correlation result), Introduction (gap in aggregate-only reporting on Fashion-MNIST), Related Work (augmentation surveys, Fashion-MNIST benchmarks, per-class augmentation studies), Methods (CNN architecture, training protocol, augmentation pipeline, metric definitions), Results (Table 1 overall accuracy, Figure 1 per-class delta bar chart, Figure 2 delta confusion matrix, Figure 3 learning curves, Table 2 per-class metrics, morphology correlation), Discussion (two-seed exploratory limitation, binomial noise floor, interpretation of asymmetric class findings, implications for targeted augmentation design), and Conclusion. Explicitly label all per-class findings as exploratory with the rationale that two seeds are insufficient for confirmatory inference, and cite the binomial standard error as the noise floor. Reference all figures and tables by filename."
+              }
+            ]
+          }
+        ],
+        "methods": [
+          {
+            "name": "SmallCNN",
+            "purpose": "Three-block convolutional neural network with channels 1->32->64->128 (3x3 kernels, BatchNorm, ReLU, MaxPool), followed by a fully connected head (256 hidden units, 0.5 dropout, 10-class softmax) serving as the identical classifier under both training conditions."
+          },
+          {
+            "name": "Basic image augmentation pipeline",
+            "purpose": "Random horizontal flip (p=0.5) plus RandomAffine(degrees=10, translate=(0.1,0.1)) applied only at training time in the augmentation condition to test whether simple geometric invariances improve generalization."
+          },
+          {
+            "name": "Adam optimizer with fixed hyperparameters",
+            "purpose": "Optimization of all four training runs with lr=0.001, default betas (0.9, 0.999), batch_size=128, for exactly 5 epochs, kept identical across seeds and conditions to isolate augmentation effects."
+          },
+          {
+            "name": "Per-class classification metrics via scikit-learn",
+            "purpose": "Computation of per-class precision, recall, F1, support, and accuracy (correct/1000) to decompose aggregate accuracy into class-level signals revealing which garment categories drive gains or losses."
+          },
+          {
+            "name": "Confusion matrix delta analysis",
+            "purpose": "Row-normalized 10x10 confusion matrices averaged across seeds per condition; delta matrix (aug minus no_aug) identifies class-pair confusions that are amplified or reduced by augmentation."
+          },
+          {
+            "name": "Spearman rank correlation with bootstrap CI",
+            "purpose": "Correlation between binary morphological symmetry label and per-class delta-accuracy across all 10 garment classes (5,000-resample bootstrap 95% CI) to test the symmetry-benefit directional hypothesis."
+          }
+        ],
+        "metrics": [
+          {
+            "name": "Per-class test accuracy",
+            "definition": "For each of the 10 Fashion-MNIST classes c: accuracy_c = (number of test images of class c correctly classified) / 1000, where 1000 is the balanced per-class test set size.",
+            "success_threshold": "All four models achieve per-class accuracy above 70% on at least 8 of 10 classes; no-augmentation condition achieves overall test accuracy >= 88% for at least one seed."
+          },
+          {
+            "name": "Per-class delta-accuracy",
+            "definition": "For each class c: delta_accuracy_c = mean_accuracy_c(aug) - mean_accuracy_c(no_aug), where mean is taken across seeds 42 and 123. Reported alongside the seed-level range [min, max] as an uncertainty measure.",
+            "success_threshold": "At least one class shows |delta_accuracy| > 1.5 percentage points (approximately 2.5x the binomial standard error of ~0.6pp at accuracy=0.90), indicating a non-trivial class-level effect detectable above the noise floor."
+          },
+          {
+            "name": "Per-class F1 score and delta-F1",
+            "definition": "Harmonic mean of per-class precision and recall from scikit-learn for each of the four models; delta-F1 = aug_mean_F1 - no_aug_mean_F1 per class across seeds.",
+            "success_threshold": "Direction of delta-F1 is consistent with direction of delta-accuracy for at least 8 of 10 classes, confirming metric coherence."
+          },
+          {
+            "name": "Delta confusion cell magnitude",
+            "definition": "For each of the 100 class-pair cells (i,j) in the 10x10 row-normalized confusion matrix: delta_rate(i,j) = avg_rate_aug[i,j] - avg_rate_no_aug[i,j], where averages are taken across seeds. Diagonal cells represent per-class accuracy; off-diagonal cells represent inter-class confusion rates.",
+            "success_threshold": "At least one off-diagonal cell within the confusable-tops group (T-shirt/top, Pullover, Coat, Shirt) shows |delta_rate| > 1 percentage point, consistent with the flip-induced inter-class confusion hypothesis."
+          },
+          {
+            "name": "Spearman rho: symmetry label vs. delta-accuracy",
+            "definition": "Spearman rank correlation coefficient rho between the binary morphological symmetry label (1=symmetric, 0=asymmetric) and delta-accuracy across the 10 Fashion-MNIST classes, with bootstrapped 95% CI from 5,000 resamples of the 10 class data points.",
+            "success_threshold": "rho > 0.2 with the bootstrapped 95% CI lower bound above -0.3, providing directional evidence for the symmetry-benefit hypothesis (noted as exploratory given n=10 classes)."
+          }
+        ],
+        "datasets": [
+          {
+            "name": "Fashion-MNIST",
+            "role": "Primary training, validation, and evaluation dataset. The 10,000-image test set with balanced 1,000-per-class structure is used for all per-class metric computation.",
+            "access": "public",
+            "source": "https://github.com/zalandoresearch/fashion-mnist (accessed via torchvision.datasets.FashionMNIST)",
+            "description": "70,000 grayscale 28x28 images of 10 balanced garment categories (T-shirt/top, Trouser, Pullover, Dress, Coat, Sandal, Shirt, Sneaker, Bag, Ankle boot): 60,000 training images split into 54,000 train and 6,000 validation, plus 10,000 test images with exactly 1,000 per class."
+          }
+        ],
+        "baselines": [
+          "No-augmentation condition: SmallCNN trained with identity transforms (ToTensor and Normalize only), seeds 42 and 123, 5 epochs — primary comparator for all per-class delta computations and the pre-stated baseline for the main comparison.",
+          "Random classifier: 10% uniform per-class accuracy on the 10-class balanced Fashion-MNIST test set — lower bound for contextualising absolute per-class accuracy values.",
+          "Published SmallCNN reference accuracy: approximately 88.85% test accuracy reported for a comparable sequential CNN on Fashion-MNIST (Yee 2026) — used to contextualise whether the trained models reach expected performance levels."
+        ],
+        "background": "Fashion-MNIST provides ten balanced classes of 28x28 grayscale garment images as a drop-in MNIST replacement (Yee 2026), yet nearly all published CNN studies on this benchmark report only aggregate test accuracy, obscuring potentially heterogeneous per-class dynamics (Nocentini et al. 2022; Mukhamediev 2024; Xhaferra et al. 2022). Basic data augmentation — random horizontal flips, small translations, and minor rotations — is widely applied to improve CNN generalization (Greeshma et al. 2019; Shorten et al. 2019; Thanapol et al. 2020), with Fashion-MNIST state-of-the-art reaching 99.65% when augmentation and architecture optimizations are combined (Mukhamediev 2024). Fashion-MNIST contains well-documented confusable class groups (T-shirt/top, pullover, coat, and shirt share similar silhouettes (Bouzidi et al. 2026)) alongside bilaterally symmetric garments (trousers, dresses) and subtly asymmetric ones (shirts with one-sided button plackets, ankle boots with asymmetric tongues) (Yee 2026). Horizontal flip is a valid invariance for symmetric garments but may introduce label-ambiguous training examples for asymmetric items, a concern raised in augmentation theory (Lopes et al. 2021) and in flip-specific algorithmic work (Ito 2021). An analogous per-category analysis on CIFAR-10 found heterogeneous augmentation effects across classes (Agarwal et al. 2025), and class-wise augmentation studies in medical imaging demonstrate that per-class confusion patterns shift substantially depending on augmentation policy. Despite broad usage of Fashion-MNIST as a CNN benchmark (Greeshma et al. 2019; Bhatnagar et al. 2017; Kayed et al. 2020), no published work systematically decomposes augmentation impact at the per-class level, leaving it unclear whether aggregate accuracy gains mask compensating per-class losses for specific garment categories.",
+        "hypothesis": "Augmentation will disproportionately benefit morphologically symmetric garment classes (trousers, pullovers, dresses, coats) for which horizontal flips constitute valid invariances, while per-class accuracy may decrease for fine-grained confusable classes such as shirt versus T-shirt/top versus pullover, where flipped training images deepen inter-class confusion in the small CNN.",
+        "objectives": [
+          "Train a small CNN on Fashion-MNIST under no-augmentation and augmentation conditions using seeds 42 and 123, producing four model checkpoints with complete per-sample test-set predictions saved.",
+          "Compute per-class accuracy, precision, recall, and F1 for all four models and derive mean delta-metrics (augmented minus no-augmentation) across seeds with seed-level range as an uncertainty estimate.",
+          "Compute 10x10 confusion matrices for all four models, average per condition, and produce an annotated delta confusion matrix identifying which class-pair confusions are most amplified or reduced by augmentation.",
+          "Annotate all 10 Fashion-MNIST classes by morphological symmetry and inter-class confusability; assess whether symmetry correlates with sign and magnitude of per-class delta-accuracy via Spearman rank correlation with bootstrapped confidence intervals.",
+          "Produce publication-quality figures (per-class delta-accuracy bar chart, delta confusion matrix heatmap, learning curves) and a conference-style paper draft with all results framed as exploratory given the two-seed design."
+        ],
+        "study_type": "empirical",
+        "deliverables": [
+          "environment_report.txt: CUDA GPU device verification log with device name and memory",
+          "sample_augmented_images.png: grid of Fashion-MNIST samples under both transform pipelines for visual verification",
+          "checkpoints/model_seed{42,123}_{noaug,aug}.pt: four trained SmallCNN model checkpoints",
+          "logs/train_seed{42,123}_{noaug,aug}.csv: four per-epoch training logs with train_loss, train_acc, val_loss, val_acc",
+          "predictions/preds_seed{42,123}_{noaug,aug}.csv: four test-set prediction files with per-sample true labels, predicted labels, and class probabilities",
+          "per_class_metrics_all_models.csv, per_class_metrics_by_condition.csv, per_class_delta_metrics.csv: complete per-class metric tables",
+          "confusion_matrices.npz, delta_confusion_matrix.csv: full confusion matrix dataset and annotated delta matrix",
+          "class_morphology.csv: morphological annotation table for all 10 Fashion-MNIST classes",
+          "morphology_correlation_results.txt: Spearman rho between symmetry label and delta-accuracy with bootstrapped 95% CI",
+          "figures/fig1_per_class_delta_accuracy.png: per-class delta-accuracy bar chart at 300 dpi",
+          "figures/fig2_delta_confusion_matrix.png: annotated delta confusion matrix heatmap at 300 dpi",
+          "figures/fig3_learning_curves.png: 2x2 learning curve panel for all four training runs at 300 dpi",
+          "tables/table1_overall_accuracy.{csv,tex}: overall accuracy summary table in CSV and LaTeX booktabs format",
+          "tables/table2_per_class_metrics.{csv,tex}: per-class metrics comparison table in CSV and LaTeX booktabs format",
+          "paper_draft.md: complete conference-style paper draft with all figures, tables, and exploratory framing"
+        ],
+        "open_questions": [
+          "Are Fashion-MNIST product images already normalized to face a canonical direction, making horizontal flip a valid invariance for all 10 classes including hypothesized asymmetric items (shirts with button plackets, ankle boots with tongues), or does the 28x28 resolution preserve visible asymmetry?",
+          "Will the SmallCNN with 3 conv blocks and 5 training epochs achieve per-class accuracy high enough (>80% for most classes) to detect class-level augmentation differences above the approximately 0.6-0.9pp binomial noise floor?",
+          "Should the train/val split use the same seed as model weight initialization (current plan) or an independent fixed split seed? The current plan maximizes within-seed consistency but conflates data-split and weight-initialization randomness.",
+          "Is the normalization Normalize(mean=0.2860, std=0.3530) the accepted standard for Fashion-MNIST, or should it be recomputed from the 54,000-sample training split to avoid slight distribution shift from the validation holdout?",
+          "Is the binary symmetric/asymmetric morphological annotation subjective enough to require independent verification, or can the agent-assigned labels be treated as ground truth for the exploratory correlation analysis?"
+        ],
+        "null_hypothesis": "Augmentation produces no differential per-class accuracy change across the 10 Fashion-MNIST garment categories; all per-class mean delta-accuracy values are zero after averaging across seeds 42 and 123.",
+        "compute_estimate": "GPU (CUDA T4 or L4): approximately 20-30 minutes for 4 training runs x 5 epochs x approximately 422 batches/epoch (54,000 samples / 128 batch size) = approximately 8,440 gradient steps total. CPU analysis and plotting: less than 10 minutes. Total GPU time: approximately 25 GPU-minutes. Total wall-clock including setup and writing: approximately 2-3 hours.",
+        "success_criteria": [
+          "All four SmallCNN models successfully trained on a CUDA GPU for exactly 5 epochs with GPU device name logged in environment_report.txt and no-augmentation test accuracy >= 88% for at least one seed.",
+          "All four prediction CSV files contain exactly 10,000 rows with all 10 class labels represented and pass the T3.1 integrity check.",
+          "Per-class accuracy, precision, recall, and F1 computed for all 10 classes under both conditions with mean and seed-level range reported.",
+          "At least one class shows |delta-accuracy| > 1.5 percentage points (above the binomial noise floor).",
+          "Delta confusion matrix computed and contains at least one off-diagonal cell with |delta_rate| > 1pp in the confusable-tops group (T-shirt/top, Pullover, Coat, Shirt).",
+          "Spearman correlation between symmetry annotation and delta-accuracy computed with bootstrapped 95% CI and directional interpretation reported.",
+          "All three figures (fig1_per_class_delta_accuracy.png, fig2_delta_confusion_matrix.png, fig3_learning_curves.png) and both summary tables produced as named artifacts at 300 dpi.",
+          "Complete conference-style paper draft (paper_draft.md) produced covering all results with explicit exploratory framing for per-class findings."
+        ],
+        "duration_estimate": "2-3 hours wall-clock for full autonomous execution from environment setup through paper draft generation.",
+        "research_question": "Does basic image augmentation (random horizontal flip, translation up to 10%, rotation up to 10°) disproportionately improve or reduce per-class test accuracy across the 10 Fashion-MNIST garment categories, and does morphological symmetry of a garment class predict the direction and magnitude of its augmentation benefit?",
+        "validation_strategy": "Fixed 90/10 train/val split generated deterministically from each seed's torch.Generator before model initialization (54,000 train / 6,000 val / 10,000 test). Two independent seeds (42 and 123) provide modest reproducibility evidence; all per-class results are reported as mean plus seed-level range with no p-value claims, and findings are explicitly framed as exploratory throughout. Per-class accuracy estimates carry a binomial standard error of approximately sqrt(p*(1-p)/1000) ≈ 0.6-0.9pp at p=0.90, establishing an approximately 1.5pp detection threshold for meaningful class-level effects. The primary pre-stated comparison is overall test accuracy (augmented versus no-augmentation condition), and per-class analysis is a secondary exploratory decomposition. Spearman correlation across 10 class points is treated as directional evidence only. GPU execution is verified by logging the CUDA device name in environment_report.txt before any training begins."
+      },
+      "gap_id": "g5",
+      "gaps_run_id": "5d17777bf628"
+    },
+    "error": null,
+    "started_at": "2026-10-09 19:39:43.040114+00:00",
+    "finished_at": "2026-10-09 19:45:57.732429+00:00"
+  },
+  {
+    "id": "f41c36a86530",
+    "project_id": "d95fb65c9f7a",
+    "kind": "blueprint",
+    "status": "error",
+    "phase": "compiling",
+    "counts": {},
+    "log": [
+      {
+        "t": "2026-10-09T19:45:59.603472+00:00",
+        "text": "Locating sources for 1 datasets"
+      },
+      {
+        "t": "2026-10-09T19:46:44.679274+00:00",
+        "text": "Found sources for 1 of 1 datasets"
+      },
+      {
+        "t": "2026-10-09T19:46:44.799343+00:00",
+        "text": "Designing the agent team and executable tasks"
+      }
+    ],
+    "result": null,
+    "error": "Model returned no structured output (stop reason: max_tokens)",
+    "started_at": "2026-10-09 19:45:58.995624+00:00",
+    "finished_at": "2026-10-09 19:52:30.739091+00:00"
+  },
+  {
+    "id": "629eb62da8a3",
+    "project_id": "d95fb65c9f7a",
+    "kind": "blueprint",
+    "status": "done",
+    "phase": "done",
+    "counts": {
+      "tasks": 15,
+      "agents": 6,
+      "warnings": 0
+    },
+    "log": [
+      {
+        "t": "2026-10-09T20:57:22.692091+00:00",
+        "text": "Locating sources for 1 datasets"
+      },
+      {
+        "t": "2026-10-09T20:57:40.861856+00:00",
+        "text": "Found sources for 1 of 1 datasets"
+      },
+      {
+        "t": "2026-10-09T20:57:40.970392+00:00",
+        "text": "Designing the agent team and executable tasks"
+      },
+      {
+        "t": "2026-10-09T21:08:51.177855+00:00",
+        "text": "Checking tools, inputs/outputs, dependencies and budget"
+      },
+      {
+        "t": "2026-10-09T21:08:52.214894+00:00",
+        "text": "Blueprint ready for review"
+      }
+    ],
+    "result": {
+      "budget": {
+        "llm_usd": 15.0,
+        "gpu_hours": 5.0
+      },
+      "warnings": [],
+      "master_plan": {
+        "tasks": [
+          {
+            "id": "T1.1",
+            "agent": "A1",
+            "steps": [
+              "Install packages via install_packages: torch>=2.0, torchvision>=0.15, scikit-learn>=1.3, matplotlib>=3.7, seaborn>=0.12, pandas>=2.0, numpy>=1.24, scipy>=1.10, tabulate>=0.9, torchinfo>=1.8, tqdm>=4.65.",
+              "Run python asserting torch.cuda.is_available()==True; if False raise RuntimeError immediately; log GPU device name, total memory in GB, PyTorch version, CUDA version, and Python version.",
+              "Create workspace directories: src/, data/, data/checkpoints/, data/logs/, data/predictions/, analysis/, figures/, tables/, results/, scripts/.",
+              "Write data/environment_report.txt with a timestamp header followed by all environment details."
+            ],
+            "title": "Verify environment and install Python dependencies",
+            "tools": [
+              "install_packages",
+              "run_python",
+              "run_shell",
+              "write_file"
+            ],
+            "inputs": [],
+            "compute": {
+              "kind": "cpu",
+              "est_minutes": 5,
+              "timeout_minutes": 15
+            },
+            "outputs": [
+              {
+                "path": "data/environment_report.txt",
+                "format": "text",
+                "description": "GPU device name, memory, PyTorch and CUDA versions confirming GPU runtime is ready"
+              }
+            ],
+            "retries": 1,
+            "objective": "Install all required packages, assert CUDA GPU is available, create workspace directories, and write data/environment_report.txt.",
+            "resources": [],
+            "depends_on": [],
+            "max_cost_usd": 0.05,
+            "human_required": false,
+            "acceptance_checks": [
+              "data/environment_report.txt exists and contains 'cuda' (case-insensitive) and a GPU device name string.",
+              "Directories src/, data/checkpoints/, data/logs/, data/predictions/, analysis/, figures/, tables/, results/, scripts/ all exist."
+            ]
+          },
+          {
+            "id": "T1.2",
+            "agent": "A2",
+            "steps": [
+              "Download via torchvision.datasets.FashionMNIST(root='data/fashion_mnist', download=True) for train=True and train=False.",
+              "Define no_aug=Compose([ToTensor(),Normalize((0.2860,),(0.3530,))]) and aug=Compose([RandomHorizontalFlip(0.5),RandomAffine(degrees=10,translate=(0.1,0.1)),ToTensor(),Normalize((0.2860,),(0.3530,))]).",
+              "Save data/dataset_stats.json with fields: train_count, test_count, class_names (list of 10), per_class_train_counts, normalization_mean, normalization_std.",
+              "Sample 5 images per class; render each under no_aug and aug side-by-side in a 10-row grid; save figures/sample_augmented_images.png at 100 dpi; post class-name-to-label mapping to team notes."
+            ],
+            "title": "Download Fashion-MNIST and configure transform pipelines",
+            "tools": [
+              "run_python",
+              "write_file",
+              "post_note"
+            ],
+            "inputs": [
+              {
+                "path": "data/environment_report.txt",
+                "source": "task:T1.1"
+              }
+            ],
+            "compute": {
+              "kind": "cpu",
+              "est_minutes": 10,
+              "timeout_minutes": 20
+            },
+            "outputs": [
+              {
+                "path": "data/fashion_mnist/",
+                "format": "directory",
+                "description": "Raw Fashion-MNIST IDX files cached by torchvision"
+              },
+              {
+                "path": "data/dataset_stats.json",
+                "format": "JSON",
+                "description": "Dataset counts, class names, and normalization constants"
+              },
+              {
+                "path": "figures/sample_augmented_images.png",
+                "format": "PNG",
+                "description": "Visual grid of samples under both transform pipelines for qualitative inspection"
+              }
+            ],
+            "retries": 2,
+            "objective": "Download both dataset splits, define both transform pipelines, compute dataset statistics, and produce a visual augmentation check grid.",
+            "resources": [
+              "D1"
+            ],
+            "depends_on": [
+              "T1.1"
+            ],
+            "max_cost_usd": 0.1,
+            "human_required": false,
+            "acceptance_checks": [
+              "data/dataset_stats.json has train_count=60000, test_count=10000, and class_names list of length 10.",
+              "figures/sample_augmented_images.png exists and is larger than 50 KB."
+            ]
+          },
+          {
+            "id": "T1.3",
+            "agent": "A1",
+            "steps": [
+              "Write src/model.py: SmallCNN with three conv blocks 1→32→64→128 (Conv2d 3×3 padding=1, BatchNorm2d, ReLU, MaxPool2d(2,2)) then Flatten→Linear(128*3*3,256)→ReLU→Dropout(0.5)→Linear(256,10).",
+              "Implement set_seed(seed) setting random.seed, np.random.seed, torch.manual_seed, torch.cuda.manual_seed_all, cudnn.deterministic=True, cudnn.benchmark=False.",
+              "Add __main__ guard: instantiate SmallCNN, run forward pass on torch.zeros(2,1,28,28), print output shape and total params via torchinfo.summary; write printed output to data/model_summary.txt.",
+              "Verify python src/model.py runs without error and output shape is (2,10)."
+            ],
+            "title": "Implement SmallCNN architecture and set_seed utility",
+            "tools": [
+              "run_python",
+              "write_file"
+            ],
+            "inputs": [
+              {
+                "path": "data/environment_report.txt",
+                "source": "task:T1.1"
+              }
+            ],
+            "compute": {
+              "kind": "cpu",
+              "est_minutes": 5,
+              "timeout_minutes": 10
+            },
+            "outputs": [
+              {
+                "path": "src/model.py",
+                "format": "Python source",
+                "description": "SmallCNN class and set_seed utility, fully importable"
+              },
+              {
+                "path": "data/model_summary.txt",
+                "format": "text",
+                "description": "torchinfo summary with total trainable parameters and layer shapes"
+              }
+            ],
+            "retries": 1,
+            "objective": "Write src/model.py with the exact SmallCNN architecture and a fully deterministic set_seed function.",
+            "resources": [],
+            "depends_on": [
+              "T1.1"
+            ],
+            "max_cost_usd": 0.12,
+            "human_required": false,
+            "acceptance_checks": [
+              "src/model.py imports without error and forward pass on input (2,1,28,28) yields output shape (2,10).",
+              "data/model_summary.txt contains 'Trainable params' with a value between 100000 and 1000000."
+            ]
+          },
+          {
+            "id": "T1.4",
+            "agent": "A1",
+            "steps": [
+              "Write train_epoch(model, loader, optimizer, criterion, device) returning (train_loss, train_acc) using Adam(lr=0.001,betas=(0.9,0.999)) and CrossEntropyLoss with batch_size=128.",
+              "Write evaluate(model, loader, device) returning (loss, overall_acc, preds_df) with columns [sample_idx, true_label, pred_label, prob_0..prob_9] using softmax over raw logits without gradient computation.",
+              "Write run_training(seed, condition, data_dir, ckpt_dir, log_dir, pred_dir, epochs=5): calls set_seed, builds 90/10 random_split DataLoaders (batch=128, num_workers=2, pin_memory=True) using a Generator(seed) for reproducibility, applies the appropriate transform (no_aug or aug based on condition string), trains for epochs epochs logging (epoch,train_loss,train_acc,val_loss,val_acc,elapsed_s) to CSV per epoch, saves best-val-acc checkpoint and per-epoch epoch-N checkpoints, evaluates test set with best checkpoint and saves preds_df.",
+              "Smoke-test with epochs=1 on CPU-only data; verify no import errors, shape mismatches, or CSV write failures."
+            ],
+            "title": "Implement training loop, evaluation function, and logging utilities",
+            "tools": [
+              "run_python",
+              "write_file",
+              "read_file"
+            ],
+            "inputs": [
+              {
+                "path": "src/model.py",
+                "source": "task:T1.3"
+              }
+            ],
+            "compute": {
+              "kind": "cpu",
+              "est_minutes": 10,
+              "timeout_minutes": 20
+            },
+            "outputs": [
+              {
+                "path": "src/train.py",
+                "format": "Python source",
+                "description": "Full training and evaluation utilities with logging, checkpointing, and crash recovery"
+              }
+            ],
+            "retries": 1,
+            "objective": "Write src/train.py with train_epoch(), evaluate(), and run_training() covering all four experimental configurations with full logging and crash-recovery checkpoints.",
+            "resources": [],
+            "depends_on": [
+              "T1.3"
+            ],
+            "max_cost_usd": 0.18,
+            "human_required": false,
+            "acceptance_checks": [
+              "src/train.py imports without error; run_training, train_epoch, evaluate are all defined as callables.",
+              "Smoke-test (epochs=1) completes without RuntimeError and writes a checkpoint file to data/checkpoints/."
+            ]
+          },
+          {
+            "id": "T2.1",
+            "agent": "A3",
+            "steps": [
+              "Write scripts/gpu_train.py: insert workspace root into sys.path, import run_training from src.train, define configs=[(42,'noaug'),(42,'aug'),(123,'noaug'),(123,'aug')], loop calling run_training(seed,condition,'data/fashion_mnist','data/checkpoints','data/logs','data/predictions',epochs=5) for each config, print GPU device name and per-run elapsed seconds.",
+              "Submit via run_gpu_jobs with job script 'python scripts/gpu_train.py', name='fashion_mnist_train', timeout_minutes=90; all four runs are sequential in one GPU session.",
+              "Monitor logs/gpu/fashion_mnist_train.log; wait up to 90 minutes for all four runs to finish.",
+              "After completion, verify all 12 output files (4 checkpoints, 4 log CSVs, 4 prediction CSVs) exist and are non-empty; post GPU device name and per-run test accuracies to team notes."
+            ],
+            "title": "Execute all four training configurations on CUDA GPU",
+            "tools": [
+              "run_gpu_jobs",
+              "write_file",
+              "read_file",
+              "run_python",
+              "run_shell",
+              "post_note"
+            ],
+            "inputs": [
+              {
+                "path": "src/model.py",
+                "source": "task:T1.3"
+              },
+              {
+                "path": "src/train.py",
+                "source": "task:T1.4"
+              },
+              {
+                "path": "data/fashion_mnist/",
+                "source": "task:T1.2"
+              },
+              {
+                "path": "data/dataset_stats.json",
+                "source": "task:T1.2"
+              }
+            ],
+            "compute": {
+              "kind": "cuda_gpu",
+              "est_minutes": 50,
+              "timeout_minutes": 90
+            },
+            "outputs": [
+              {
+                "path": "data/checkpoints/model_seed42_noaug.pt",
+                "format": "PyTorch checkpoint",
+                "description": "Best-val-acc checkpoint, seed=42, no augmentation"
+              },
+              {
+                "path": "data/checkpoints/model_seed42_aug.pt",
+                "format": "PyTorch checkpoint",
+                "description": "Best-val-acc checkpoint, seed=42, augmentation"
+              },
+              {
+                "path": "data/checkpoints/model_seed123_noaug.pt",
+                "format": "PyTorch checkpoint",
+                "description": "Best-val-acc checkpoint, seed=123, no augmentation"
+              },
+              {
+                "path": "data/checkpoints/model_seed123_aug.pt",
+                "format": "PyTorch checkpoint",
+                "description": "Best-val-acc checkpoint, seed=123, augmentation"
+              },
+              {
+                "path": "data/logs/train_seed42_noaug.csv",
+                "format": "CSV",
+                "description": "Per-epoch training log: epoch,train_loss,train_acc,val_loss,val_acc,elapsed_s"
+              },
+              {
+                "path": "data/logs/train_seed42_aug.csv",
+                "format": "CSV",
+                "description": "Per-epoch training log, seed=42, augmentation"
+              },
+              {
+                "path": "data/logs/train_seed123_noaug.csv",
+                "format": "CSV",
+                "description": "Per-epoch training log, seed=123, no augmentation"
+              },
+              {
+                "path": "data/logs/train_seed123_aug.csv",
+                "format": "CSV",
+                "description": "Per-epoch training log, seed=123, augmentation"
+              },
+              {
+                "path": "data/predictions/preds_seed42_noaug.csv",
+                "format": "CSV",
+                "description": "Test predictions: sample_idx,true_label,pred_label,prob_0..prob_9"
+              },
+              {
+                "path": "data/predictions/preds_seed42_aug.csv",
+                "format": "CSV",
+                "description": "Test predictions, seed=42, augmentation"
+              },
+              {
+                "path": "data/predictions/preds_seed123_noaug.csv",
+                "format": "CSV",
+                "description": "Test predictions, seed=123, no augmentation"
+              },
+              {
+                "path": "data/predictions/preds_seed123_aug.csv",
+                "format": "CSV",
+                "description": "Test predictions, seed=123, augmentation"
+              }
+            ],
+            "retries": 2,
+            "objective": "Train SmallCNN under (seed=42,noaug), (seed=42,aug), (seed=123,noaug), (seed=123,aug) for exactly 5 epochs each on a cloud CUDA GPU, saving checkpoints, logs, and test predictions.",
+            "resources": [
+              "D1"
+            ],
+            "depends_on": [
+              "T1.2",
+              "T1.3",
+              "T1.4"
+            ],
+            "max_cost_usd": 2.0,
+            "human_required": false,
+            "acceptance_checks": [
+              "All 12 output files exist and are non-empty (prediction CSVs >500 KB, checkpoints >100 KB).",
+              "Each training log CSV has exactly 5 rows with numeric val_acc values.",
+              "Each prediction CSV has exactly 10000 rows with columns true_label and pred_label."
+            ]
+          },
+          {
+            "id": "T3.1",
+            "agent": "A4",
+            "steps": [
+              "Load all four prediction CSVs; verify each has exactly 10000 rows, no missing values, and all 10 class labels present in true_label.",
+              "Compute overall test accuracy (correct/10000) for each model; cross-check against final-epoch val_acc in the corresponding training log CSV, flagging discrepancies greater than 3pp.",
+              "Save analysis/validation_summary.txt with per-file integrity results and any flags.",
+              "Save analysis/overall_accuracy.csv with columns: seed, condition, test_accuracy, final_val_acc, discrepancy_flag."
+            ],
+            "title": "Validate prediction files and compute overall test accuracy",
+            "tools": [
+              "run_python",
+              "write_file",
+              "read_file"
+            ],
+            "inputs": [
+              {
+                "path": "data/predictions/preds_seed42_noaug.csv",
+                "source": "task:T2.1"
+              },
+              {
+                "path": "data/predictions/preds_seed42_aug.csv",
+                "source": "task:T2.1"
+              },
+              {
+                "path": "data/predictions/preds_seed123_noaug.csv",
+                "source": "task:T2.1"
+              },
+              {
+                "path": "data/predictions/preds_seed123_aug.csv",
+                "source": "task:T2.1"
+              },
+              {
+                "path": "data/logs/train_seed42_noaug.csv",
+                "source": "task:T2.1"
+              },
+              {
+                "path": "data/logs/train_seed42_aug.csv",
+                "source": "task:T2.1"
+              },
+              {
+                "path": "data/logs/train_seed123_noaug.csv",
+                "source": "task:T2.1"
+              },
+              {
+                "path": "data/logs/train_seed123_aug.csv",
+                "source": "task:T2.1"
+              }
+            ],
+            "compute": {
+              "kind": "cpu",
+              "est_minutes": 5,
+              "timeout_minutes": 15
+            },
+            "outputs": [
+              {
+                "path": "analysis/validation_summary.txt",
+                "format": "text",
+                "description": "Integrity check results and any discrepancy flags per model"
+              },
+              {
+                "path": "analysis/overall_accuracy.csv",
+                "format": "CSV",
+                "description": "seed, condition, test_accuracy, final_val_acc, discrepancy_flag for all four models"
+              }
+            ],
+            "retries": 1,
+            "objective": "Verify prediction file integrity and cross-check computed test accuracies against training log final-epoch val_acc.",
+            "resources": [],
+            "depends_on": [
+              "T2.1"
+            ],
+            "max_cost_usd": 0.15,
+            "human_required": false,
+            "acceptance_checks": [
+              "analysis/overall_accuracy.csv has exactly 4 rows with numeric test_accuracy values between 0 and 1.",
+              "analysis/validation_summary.txt exists and contains confirmation that all four files have 10000 rows."
+            ]
+          },
+          {
+            "id": "T3.2",
+            "agent": "A5",
+            "steps": [
+              "Load data/logs/train_seed{42,123}_{noaug,aug}.csv; add columns seed (int) and condition (str) to each before concatenation.",
+              "Verify each run contributes exactly 5 rows and val_acc is non-decreasing for at least 3 of 5 epochs in each run.",
+              "Save analysis/learning_curves_merged.csv with columns: seed, condition, epoch, train_loss, train_acc, val_loss, val_acc."
+            ],
+            "title": "Merge training logs into unified learning curves dataset",
+            "tools": [
+              "run_python",
+              "write_file",
+              "read_file"
+            ],
+            "inputs": [
+              {
+                "path": "data/logs/train_seed42_noaug.csv",
+                "source": "task:T2.1"
+              },
+              {
+                "path": "data/logs/train_seed42_aug.csv",
+                "source": "task:T2.1"
+              },
+              {
+                "path": "data/logs/train_seed123_noaug.csv",
+                "source": "task:T2.1"
+              },
+              {
+                "path": "data/logs/train_seed123_aug.csv",
+                "source": "task:T2.1"
+              }
+            ],
+            "compute": {
+              "kind": "cpu",
+              "est_minutes": 3,
+              "timeout_minutes": 10
+            },
+            "outputs": [
+              {
+                "path": "analysis/learning_curves_merged.csv",
+                "format": "CSV",
+                "description": "Long-format learning curves: seed, condition, epoch, train_loss, train_acc, val_loss, val_acc for all four runs"
+              }
+            ],
+            "retries": 1,
+            "objective": "Concatenate the four training log CSVs into a single long-format file with seed and condition columns for the learning curves figure.",
+            "resources": [],
+            "depends_on": [
+              "T2.1"
+            ],
+            "max_cost_usd": 0.05,
+            "human_required": false,
+            "acceptance_checks": [
+              "analysis/learning_curves_merged.csv has exactly 20 rows (4 runs times 5 epochs).",
+              "Columns seed, condition, epoch, val_acc are all present."
+            ]
+          },
+          {
+            "id": "T4.1",
+            "agent": "A4",
+            "steps": [
+              "For each of the four prediction CSVs compute per-class accuracy as (correct_count/1000) per class (1000 = balanced test size per class) and use sklearn.metrics.precision_recall_fscore_support(average=None) to get per-class precision, recall, F1.",
+              "Assemble analysis/per_class_metrics_all_models.csv (40 rows: 4 models times 10 classes) with columns: seed, condition, class_idx, class_name, accuracy, precision, recall, f1.",
+              "Average across seeds per condition; save analysis/per_class_metrics_by_condition.csv (20 rows: 2 conditions times 10 classes) with mean and seed-range (min,max) columns.",
+              "Compute delta = aug_mean minus noaug_mean per class for accuracy, precision, recall, f1; save analysis/per_class_delta_metrics.csv with columns: class_idx, class_name, delta_accuracy, delta_accuracy_min, delta_accuracy_max, delta_precision, delta_recall, delta_f1."
+            ],
+            "title": "Compute per-class metrics and delta metrics across conditions",
+            "tools": [
+              "run_python",
+              "write_file",
+              "read_file",
+              "install_packages"
+            ],
+            "inputs": [
+              {
+                "path": "data/predictions/preds_seed42_noaug.csv",
+                "source": "task:T2.1"
+              },
+              {
+                "path": "data/predictions/preds_seed42_aug.csv",
+                "source": "task:T2.1"
+              },
+              {
+                "path": "data/predictions/preds_seed123_noaug.csv",
+                "source": "task:T2.1"
+              },
+              {
+                "path": "data/predictions/preds_seed123_aug.csv",
+                "source": "task:T2.1"
+              },
+              {
+                "path": "analysis/overall_accuracy.csv",
+                "source": "task:T3.1"
+              }
+            ],
+            "compute": {
+              "kind": "cpu",
+              "est_minutes": 5,
+              "timeout_minutes": 15
+            },
+            "outputs": [
+              {
+                "path": "analysis/per_class_metrics_all_models.csv",
+                "format": "CSV",
+                "description": "Per-class metrics for all four models: seed, condition, class, accuracy, precision, recall, f1"
+              },
+              {
+                "path": "analysis/per_class_metrics_by_condition.csv",
+                "format": "CSV",
+                "description": "Condition-averaged per-class metrics with seed-level ranges"
+              },
+              {
+                "path": "analysis/per_class_delta_metrics.csv",
+                "format": "CSV",
+                "description": "Delta metrics (aug minus noaug) per class with seed-level min/max range for accuracy, precision, recall, f1"
+              }
+            ],
+            "retries": 1,
+            "objective": "Extract per-class precision, recall, F1, and accuracy for all four models; compute condition-mean deltas with seed-level ranges.",
+            "resources": [],
+            "depends_on": [
+              "T2.1",
+              "T3.1"
+            ],
+            "max_cost_usd": 0.2,
+            "human_required": false,
+            "acceptance_checks": [
+              "analysis/per_class_metrics_all_models.csv has exactly 40 rows with numeric accuracy values between 0 and 1.",
+              "analysis/per_class_delta_metrics.csv has exactly 10 rows with columns delta_accuracy, delta_accuracy_min, delta_accuracy_max."
+            ]
+          },
+          {
+            "id": "T4.2",
+            "agent": "A5",
+            "steps": [
+              "For each prediction CSV compute 10x10 confusion matrix via sklearn.metrics.confusion_matrix; row-normalise by dividing each row by 1000.",
+              "Average the two noaug and two aug normalised matrices across seeds to produce condition-average matrices avg_noaug and avg_aug.",
+              "Compute delta = avg_aug minus avg_noaug; save all matrices to analysis/confusion_matrices.npz with keys: seed42_noaug, seed42_aug, seed123_noaug, seed123_aug, avg_noaug, avg_aug, delta.",
+              "Export delta as analysis/delta_confusion_matrix.csv with Fashion-MNIST class names as row and column headers; save analysis/confusion_stats_summary.csv with max absolute delta on diagonal, max absolute delta in confusable-tops off-diagonal cells (T-shirt/top, Pullover, Coat, Shirt pairwise), and the corresponding class-pair labels."
+            ],
+            "title": "Compute confusion matrices and annotated delta confusion matrix",
+            "tools": [
+              "run_python",
+              "write_file",
+              "read_file"
+            ],
+            "inputs": [
+              {
+                "path": "data/predictions/preds_seed42_noaug.csv",
+                "source": "task:T2.1"
+              },
+              {
+                "path": "data/predictions/preds_seed42_aug.csv",
+                "source": "task:T2.1"
+              },
+              {
+                "path": "data/predictions/preds_seed123_noaug.csv",
+                "source": "task:T2.1"
+              },
+              {
+                "path": "data/predictions/preds_seed123_aug.csv",
+                "source": "task:T2.1"
+              },
+              {
+                "path": "analysis/validation_summary.txt",
+                "source": "task:T3.1"
+              }
+            ],
+            "compute": {
+              "kind": "cpu",
+              "est_minutes": 5,
+              "timeout_minutes": 15
+            },
+            "outputs": [
+              {
+                "path": "analysis/confusion_matrices.npz",
+                "format": "NumPy archive",
+                "description": "All confusion matrices: per-model raw and normalised, condition averages, and delta"
+              },
+              {
+                "path": "analysis/delta_confusion_matrix.csv",
+                "format": "CSV",
+                "description": "10x10 delta confusion matrix with Fashion-MNIST class names as row and column headers"
+              },
+              {
+                "path": "analysis/confusion_stats_summary.csv",
+                "format": "CSV",
+                "description": "Summary statistics: max diagonal delta, max confusable-tops off-diagonal delta, corresponding class pairs"
+              }
+            ],
+            "retries": 1,
+            "objective": "Compute row-normalised 10x10 confusion matrices for all four models, average per condition, and derive the delta confusion matrix.",
+            "resources": [],
+            "depends_on": [
+              "T2.1",
+              "T3.1"
+            ],
+            "max_cost_usd": 0.15,
+            "human_required": false,
+            "acceptance_checks": [
+              "analysis/confusion_matrices.npz contains key 'delta' loadable as a (10,10) numpy array.",
+              "analysis/delta_confusion_matrix.csv is 10 rows by 10 columns with class names as headers."
+            ]
+          },
+          {
+            "id": "T4.3",
+            "agent": "A4",
+            "steps": [
+              "Create analysis/class_morphology.csv with columns class_idx, class_name, symmetric (1=Trouser,Pullover,Dress,Coat,Bag; 0=T-shirt/top,Shirt,Sandal,Sneaker,Ankle boot), morphological_group (tops/bottoms/footwear/accessories), confusability_group (confusable_tops/confusable_footwear/unique).",
+              "Merge with analysis/per_class_delta_metrics.csv on class_idx.",
+              "Compute Spearman rank correlation between symmetric and delta_accuracy across 10 classes using scipy.stats.spearmanr.",
+              "Bootstrap 95% CI: resample 10 class data points with replacement 5000 times, compute rho each time, take 2.5th and 97.5th percentiles; write rho, p-value, lower_ci, upper_ci, and plain-text directional interpretation with explicit exploratory caveat to analysis/morphology_correlation_results.txt."
+            ],
+            "title": "Morphological annotation and symmetry versus delta-accuracy correlation",
+            "tools": [
+              "run_python",
+              "write_file",
+              "read_file"
+            ],
+            "inputs": [
+              {
+                "path": "analysis/per_class_delta_metrics.csv",
+                "source": "task:T4.1"
+              }
+            ],
+            "compute": {
+              "kind": "cpu",
+              "est_minutes": 5,
+              "timeout_minutes": 15
+            },
+            "outputs": [
+              {
+                "path": "analysis/class_morphology.csv",
+                "format": "CSV",
+                "description": "Morphological annotations for all 10 Fashion-MNIST classes: symmetric, morphological_group, confusability_group"
+              },
+              {
+                "path": "analysis/morphology_correlation_results.txt",
+                "format": "text",
+                "description": "Spearman rho, p-value, bootstrap 95% CI, and exploratory directional interpretation"
+              }
+            ],
+            "retries": 1,
+            "objective": "Annotate all 10 garment classes by morphological symmetry and group, then compute Spearman rho with bootstrapped 95% CI.",
+            "resources": [],
+            "depends_on": [
+              "T4.1"
+            ],
+            "max_cost_usd": 0.2,
+            "human_required": false,
+            "acceptance_checks": [
+              "analysis/class_morphology.csv has exactly 10 rows and columns symmetric, morphological_group, confusability_group.",
+              "analysis/morphology_correlation_results.txt contains numeric values for rho, lower_ci, and upper_ci."
+            ]
+          },
+          {
+            "id": "T5.1",
+            "agent": "A5",
+            "steps": [
+              "Load analysis/per_class_delta_metrics.csv and analysis/class_morphology.csv; merge on class_idx.",
+              "Create horizontal bar chart sorted by delta_accuracy; color by morphological_group (tops=coral, bottoms=steelblue, footwear=seagreen, accessories=gold); annotate each bar with S or A for symmetry.",
+              "Add asymmetric error bars spanning (delta_accuracy_min, delta_accuracy_max); add vertical zero line and dashed reference lines at +1.5pp and -1.5pp labeled 'binomial noise floor'.",
+              "Save as figures/fig1_per_class_delta_accuracy.png at 300 dpi with tight_layout."
+            ],
+            "title": "Per-class delta-accuracy bar chart with seed-level error bars",
+            "tools": [
+              "run_python",
+              "write_file"
+            ],
+            "inputs": [
+              {
+                "path": "analysis/per_class_delta_metrics.csv",
+                "source": "task:T4.1"
+              },
+              {
+                "path": "analysis/class_morphology.csv",
+                "source": "task:T4.3"
+              }
+            ],
+            "compute": {
+              "kind": "cpu",
+              "est_minutes": 5,
+              "timeout_minutes": 15
+            },
+            "outputs": [
+              {
+                "path": "figures/fig1_per_class_delta_accuracy.png",
+                "format": "PNG 300 dpi",
+                "description": "Horizontal bar chart of per-class delta-accuracy with seed error bars, morphological group colors, and symmetry labels"
+              }
+            ],
+            "retries": 1,
+            "objective": "Produce figures/fig1_per_class_delta_accuracy.png at 300 dpi showing per-class delta-accuracy sorted by magnitude.",
+            "resources": [],
+            "depends_on": [
+              "T4.1",
+              "T4.3"
+            ],
+            "max_cost_usd": 0.15,
+            "human_required": false,
+            "acceptance_checks": [
+              "figures/fig1_per_class_delta_accuracy.png exists and is larger than 50 KB.",
+              "File is a valid PNG (can be opened by PIL without error)."
+            ]
+          },
+          {
+            "id": "T5.2",
+            "agent": "A5",
+            "steps": [
+              "Load analysis/delta_confusion_matrix.csv; parse class names from row/column headers.",
+              "Create annotated seaborn heatmap with diverging RdBu_r colormap centered at 0; annotate cells where absolute value exceeds 0.005 (0.5pp) with the numeric delta formatted as a percentage point; add black borders to diagonal cells.",
+              "Label both axes with full class names; add colorbar labeled 'Delta confusion rate (pp)'; set figure title 'Delta Confusion Matrix: Augmentation minus No Augmentation'.",
+              "Save as figures/fig2_delta_confusion_matrix.png at 300 dpi with tight_layout."
+            ],
+            "title": "Annotated delta confusion matrix heatmap",
+            "tools": [
+              "run_python",
+              "write_file"
+            ],
+            "inputs": [
+              {
+                "path": "analysis/delta_confusion_matrix.csv",
+                "source": "task:T4.2"
+              },
+              {
+                "path": "analysis/class_morphology.csv",
+                "source": "task:T4.3"
+              }
+            ],
+            "compute": {
+              "kind": "cpu",
+              "est_minutes": 5,
+              "timeout_minutes": 15
+            },
+            "outputs": [
+              {
+                "path": "figures/fig2_delta_confusion_matrix.png",
+                "format": "PNG 300 dpi",
+                "description": "Annotated 10x10 delta confusion matrix heatmap with RdBu_r colormap centred at zero"
+              }
+            ],
+            "retries": 1,
+            "objective": "Produce figures/fig2_delta_confusion_matrix.png at 300 dpi with RdBu_r diverging colormap.",
+            "resources": [],
+            "depends_on": [
+              "T4.2",
+              "T4.3"
+            ],
+            "max_cost_usd": 0.15,
+            "human_required": false,
+            "acceptance_checks": [
+              "figures/fig2_delta_confusion_matrix.png exists and is larger than 100 KB.",
+              "File is a valid PNG."
+            ]
+          },
+          {
+            "id": "T5.3",
+            "agent": "A5",
+            "steps": [
+              "Load analysis/learning_curves_merged.csv.",
+              "Create 2x2 matplotlib subplots arranged as (noaug/seed42, noaug/seed123, aug/seed42, aug/seed123); in each panel plot training loss on left y-axis (solid line) and val accuracy on right y-axis (dashed line) across epochs 1-5; use blue for noaug panels and orange for aug panels.",
+              "Label each panel with its condition and seed; add shared supertitle 'Training Dynamics: No Augmentation vs. Augmentation'.",
+              "Save as figures/fig3_learning_curves.png at 300 dpi with tight_layout."
+            ],
+            "title": "Learning curves figure for all four training runs",
+            "tools": [
+              "run_python",
+              "write_file"
+            ],
+            "inputs": [
+              {
+                "path": "analysis/learning_curves_merged.csv",
+                "source": "task:T3.2"
+              }
+            ],
+            "compute": {
+              "kind": "cpu",
+              "est_minutes": 5,
+              "timeout_minutes": 10
+            },
+            "outputs": [
+              {
+                "path": "figures/fig3_learning_curves.png",
+                "format": "PNG 300 dpi",
+                "description": "2x2 panel learning curves: training loss and validation accuracy across 5 epochs for all four runs"
+              }
+            ],
+            "retries": 1,
+            "objective": "Produce figures/fig3_learning_curves.png with 2x2 panels showing training loss and validation accuracy across 5 epochs.",
+            "resources": [],
+            "depends_on": [
+              "T3.2"
+            ],
+            "max_cost_usd": 0.1,
+            "human_required": false,
+            "acceptance_checks": [
+              "figures/fig3_learning_curves.png exists and is larger than 50 KB.",
+              "File is a valid PNG."
+            ]
+          },
+          {
+            "id": "T5.4",
+            "agent": "A5",
+            "steps": [
+              "Table 1: load analysis/overall_accuracy.csv; build table with 4 data rows (seed x condition), added rows for condition means and random-classifier baseline (10%); include columns seed, condition, test_accuracy, final_val_acc; save tables/table1_overall_accuracy.csv and tables/table1_overall_accuracy.tex with toprule, midrule, bottomrule from tabulate or manually formatted.",
+              "Table 2: load analysis/per_class_metrics_by_condition.csv and analysis/per_class_delta_metrics.csv; build 10-row table sorted ascending by delta_accuracy with columns class_name, noaug_accuracy, aug_accuracy, noaug_f1, aug_f1, delta_accuracy, delta_range; save tables/table2_per_class_metrics.csv and tables/table2_per_class_metrics.tex with booktabs style.",
+              "Verify both .tex files contain toprule and bottomrule and do not contain bare hline commands."
+            ],
+            "title": "Generate summary tables in CSV and LaTeX booktabs format",
+            "tools": [
+              "run_python",
+              "write_file",
+              "read_file"
+            ],
+            "inputs": [
+              {
+                "path": "analysis/overall_accuracy.csv",
+                "source": "task:T3.1"
+              },
+              {
+                "path": "analysis/per_class_metrics_by_condition.csv",
+                "source": "task:T4.1"
+              },
+              {
+                "path": "analysis/per_class_delta_metrics.csv",
+                "source": "task:T4.1"
+              }
+            ],
+            "compute": {
+              "kind": "cpu",
+              "est_minutes": 5,
+              "timeout_minutes": 15
+            },
+            "outputs": [
+              {
+                "path": "tables/table1_overall_accuracy.csv",
+                "format": "CSV",
+                "description": "Overall accuracy summary: 4 runs plus baseline row"
+              },
+              {
+                "path": "tables/table1_overall_accuracy.tex",
+                "format": "LaTeX",
+                "description": "Table 1 in booktabs format ready for paper inclusion"
+              },
+              {
+                "path": "tables/table2_per_class_metrics.csv",
+                "format": "CSV",
+                "description": "Per-class metrics comparison: 10 classes, both conditions, delta with seed range"
+              },
+              {
+                "path": "tables/table2_per_class_metrics.tex",
+                "format": "LaTeX",
+                "description": "Table 2 in booktabs format ready for paper inclusion"
+              }
+            ],
+            "retries": 1,
+            "objective": "Produce Table 1 (overall accuracy) and Table 2 (per-class metrics) as CSV and LaTeX booktabs files.",
+            "resources": [],
+            "depends_on": [
+              "T3.1",
+              "T4.1"
+            ],
+            "max_cost_usd": 0.15,
+            "human_required": false,
+            "acceptance_checks": [
+              "tables/table1_overall_accuracy.csv has at least 5 rows; tables/table2_per_class_metrics.csv has exactly 10 rows.",
+              "Both .tex files contain 'toprule' and 'bottomrule'."
+            ]
+          },
+          {
+            "id": "T6.1",
+            "agent": "A6",
+            "steps": [
+              "Read analysis/overall_accuracy.csv, analysis/per_class_delta_metrics.csv, analysis/morphology_correlation_results.txt, and analysis/confusion_stats_summary.csv.",
+              "Write results/SUMMARY.md with sections: (1) Overall accuracy table for all 4 runs with condition means and 10% baseline; (2) Per-class delta-accuracy for all 10 classes with seed ranges, highlighting classes where absolute delta exceeds 1.5pp; (3) Spearman rho with bootstrap 95% CI and directional interpretation; (4) Max off-diagonal delta in confusable-tops group with class-pair label; (5) Artifact index listing paths to fig1, fig2, fig3, table1 csv/tex, table2 csv/tex.",
+              "Add explicit exploratory caveat section: all per-class findings are exploratory given n=2 seeds; binomial SE approximately 0.6-0.9pp; effects exceeding 1.5pp are above the noise floor.",
+              "Verify every numeric claim can be traced to a specific row or value in an upstream analysis file."
+            ],
+            "title": "Compile results summary with all key numbers and artifact index",
+            "tools": [
+              "read_file",
+              "write_file",
+              "run_python",
+              "post_note"
+            ],
+            "inputs": [
+              {
+                "path": "analysis/overall_accuracy.csv",
+                "source": "task:T3.1"
+              },
+              {
+                "path": "analysis/per_class_delta_metrics.csv",
+                "source": "task:T4.1"
+              },
+              {
+                "path": "analysis/morphology_correlation_results.txt",
+                "source": "task:T4.3"
+              },
+              {
+                "path": "analysis/confusion_stats_summary.csv",
+                "source": "task:T4.2"
+              },
+              {
+                "path": "figures/fig1_per_class_delta_accuracy.png",
+                "source": "task:T5.1"
+              },
+              {
+                "path": "figures/fig2_delta_confusion_matrix.png",
+                "source": "task:T5.2"
+              },
+              {
+                "path": "figures/fig3_learning_curves.png",
+                "source": "task:T5.3"
+              },
+              {
+                "path": "tables/table1_overall_accuracy.tex",
+                "source": "task:T5.4"
+              },
+              {
+                "path": "tables/table2_per_class_metrics.tex",
+                "source": "task:T5.4"
+              }
+            ],
+            "compute": {
+              "kind": "cpu",
+              "est_minutes": 5,
+              "timeout_minutes": 15
+            },
+            "outputs": [
+              {
+                "path": "results/SUMMARY.md",
+                "format": "Markdown",
+                "description": "Self-contained results summary with all key numbers, exploratory framing, and full artifact index"
+              }
+            ],
+            "retries": 1,
+            "objective": "Produce results/SUMMARY.md containing every key metric, the exploratory framing, and paths to all figures and tables.",
+            "resources": [],
+            "depends_on": [
+              "T3.1",
+              "T4.1",
+              "T4.2",
+              "T4.3",
+              "T5.1",
+              "T5.2",
+              "T5.3",
+              "T5.4"
+            ],
+            "max_cost_usd": 0.2,
+            "human_required": false,
+            "acceptance_checks": [
+              "results/SUMMARY.md exists and is larger than 500 characters.",
+              "SUMMARY.md contains numeric values for overall test accuracy, Spearman rho, and at least one per-class delta-accuracy value.",
+              "SUMMARY.md lists paths to all three figure files and both LaTeX table files."
+            ]
+          }
+        ],
+        "title": "Per-Class Accuracy Impact of Basic Image Augmentation on Fashion-MNIST Garment Categories",
+        "agents": [
+          {
+            "id": "A1",
+            "name": "Code Engineer",
+            "tools": [
+              "install_packages",
+              "run_python",
+              "run_shell",
+              "write_file",
+              "read_file",
+              "post_note"
+            ],
+            "model_tier": "standard",
+            "instructions": "Set up the Python environment and implement all model and training code. Write SmallCNN in src/model.py with exactly three conv blocks 1→32→64→128 (3×3 kernels, padding=1, BatchNorm, ReLU, MaxPool) plus FC head (256 units, 0.5 dropout, 10-class output) and a set_seed() covering random/numpy/torch/cuda/cudnn. Implement src/train.py with train_epoch(), evaluate(), and run_training() including epoch-level checkpoints for crash recovery and CSV logging. Validate all code with dummy forward passes and a one-epoch smoke test before marking tasks complete."
+          },
+          {
+            "id": "A2",
+            "name": "Data Engineer",
+            "tools": [
+              "run_python",
+              "run_shell",
+              "write_file",
+              "install_packages",
+              "post_note"
+            ],
+            "model_tier": "standard",
+            "instructions": "Download Fashion-MNIST via torchvision and configure both transform pipelines. Define no_aug as ToTensor+Normalize(0.2860,0.3530) and aug as RandomHorizontalFlip(p=0.5)+RandomAffine(degrees=10,translate=(0.1,0.1))+ToTensor+Normalize. Save dataset statistics to JSON and produce a visual grid of sample images under both pipelines. Post class-name-to-label mapping and dataset split sizes to team notes."
+          },
+          {
+            "id": "A3",
+            "name": "GPU Training Engineer",
+            "tools": [
+              "run_gpu_jobs",
+              "write_file",
+              "read_file",
+              "run_python",
+              "run_shell",
+              "post_note"
+            ],
+            "model_tier": "standard",
+            "instructions": "Write scripts/gpu_train.py to run all four training configurations sequentially on CUDA, then submit via run_gpu_jobs as a single job to minimise queue overhead. After job completion verify all 12 output files exist and are non-empty. Post GPU device name, CUDA version, and per-run test accuracies to team notes as execution evidence."
+          },
+          {
+            "id": "A4",
+            "name": "Statistical Analyst",
+            "tools": [
+              "run_python",
+              "write_file",
+              "read_file",
+              "install_packages",
+              "post_note"
+            ],
+            "model_tier": "reasoning",
+            "instructions": "Validate prediction files for completeness and accuracy consistency, compute per-class precision/recall/F1/accuracy using scikit-learn, derive delta metrics with seed-level ranges, and run Spearman rank correlation between morphological symmetry labels and delta-accuracy with 5000-resample bootstrap CIs. Frame all per-class findings as exploratory relative to the approximately 1.5pp binomial noise floor and flag any model with overall accuracy below 85% with an explicit caveat."
+          },
+          {
+            "id": "A5",
+            "name": "Visualization Engineer",
+            "tools": [
+              "run_python",
+              "write_file",
+              "read_file",
+              "install_packages",
+              "post_note"
+            ],
+            "model_tier": "standard",
+            "instructions": "Merge learning curves into long-format CSV, compute row-normalised confusion matrices and the delta confusion matrix, then produce all three publication-quality figures (300 dpi) and two LaTeX booktabs tables. Use matplotlib/seaborn with exact color and format specifications from the plan. T5.3 can start as soon as T3.2 completes independently of T4.x work."
+          },
+          {
+            "id": "A6",
+            "name": "Results Compiler",
+            "tools": [
+              "read_file",
+              "write_file",
+              "run_python",
+              "post_note"
+            ],
+            "model_tier": "bulk",
+            "instructions": "Read all analysis outputs and compile results/SUMMARY.md with every key number: overall test accuracy per seed and condition, delta-accuracy per class with seed ranges, Spearman rho with 95% CI, max off-diagonal delta in confusable-tops group, and paths to all figures and tables. Every claim must cite a specific numeric value traceable to an upstream analysis file."
+          }
+        ],
+        "summary": "Six agents cooperate to train SmallCNN on Fashion-MNIST under no-augmentation and augmentation conditions (seeds 42/123) and decompose accuracy by garment class. A1 implements model and training code (T1.1, T1.3, T1.4) while A2 configures data pipelines (T1.2) concurrently; A3 submits all four GPU training runs in a single run_gpu_jobs call (T2.1); A4 validates outputs and computes per-class metrics and Spearman symmetry correlation (T3.1, T4.1, T4.3); A5 merges learning curves, computes confusion matrices, and produces all figures and tables (T3.2, T4.2, T5.1–T5.4); A6 compiles all key numbers into results/SUMMARY.md (T6.1). Parallelism is maximised at three points: T1.2 and T1.3 after T1.1, T3.1 and T3.2 after T2.1, and T4.1 and T4.2 after T3.1.",
+        "datasets": [
+          {
+            "id": "D1",
+            "url": "https://github.com/zalandoresearch/fashion-mnist",
+            "name": "Fashion-MNIST",
+            "notes": "70,000 grayscale 28×28 images: 60,000 train plus 10,000 test, balanced 1,000 per class across 10 garment categories. Use torch.utils.data.random_split on the 60k training set with a seeded Generator for 54k/6k train/val split. Normalization constants mean=0.2860, std=0.3530 are accepted dataset-wide values.",
+            "format": "IDX binary (ubyte); torchvision returns tensors of shape (1,28,28) with integer labels 0–9",
+            "license": "MIT License — Copyright Zalando SE",
+            "verified": true,
+            "access_method": "torchvision.datasets.FashionMNIST(root='data/fashion_mnist', download=True) — no authentication required; torchvision fetches IDX gzip files from Zalando S3 mirror automatically"
+          }
+        ],
+        "checkpoints": [
+          {
+            "reason": "Human review of GPU training outputs: verify all 12 files are present, overall test accuracy is plausible (>=85% for no_aug condition on at least one seed), and training logs show convergence. Gate before expensive per-class analysis.",
+            "after_task": "T2.1"
+          },
+          {
+            "reason": "Human review of all publication figures and tables before final summary: confirm figures are publication-quality, per-class delta values are interpretable, and LaTeX tables render correctly with booktabs style.",
+            "after_task": "T5.4"
+          }
+        ],
+        "execution_notes": [
+          "T1.2 and T1.3 run concurrently after T1.1 (A2 and A1 in parallel) with no dependency between them.",
+          "T3.1 and T3.2 run concurrently after T2.1 (A4 and A5 in parallel); T4.1 and T4.2 run concurrently after T3.1.",
+          "T5.3 depends only on T3.2 and can proceed independently of T4.x tasks; T5.1 requires T4.3 which requires T4.1.",
+          "All four training runs are packed into a single run_gpu_jobs call to avoid repeated queue delays; sequential execution within one GPU session is expected to take 40-50 minutes total.",
+          "The plan's T6.1 paper-draft task is replaced with a results/SUMMARY.md compilation task per blueprint rules; the Report stage handles full paper writing from this summary and the figure and table artifacts.",
+          "If torch.cuda.is_available() returns False during T2.1 GPU job execution, the script raises RuntimeError before any training begins so the job fails fast; A3 should check the log and retry.",
+          "Fashion-MNIST normalization constants mean=0.2860 and std=0.3530 are dataset-wide standard values; the slight distribution shift from the 6k validation holdout is negligible and does not require recomputation from the 54k split.",
+          "No MATLAB or non-pip tools are required; all methods are implemented with PyTorch, scikit-learn, matplotlib, seaborn, scipy, and pandas."
+        ],
+        "python_packages": [
+          "torch>=2.0",
+          "torchvision>=0.15",
+          "scikit-learn>=1.3",
+          "matplotlib>=3.7",
+          "seaborn>=0.12",
+          "pandas>=2.0",
+          "numpy>=1.24",
+          "scipy>=1.10",
+          "tabulate>=0.9",
+          "torchinfo>=1.8",
+          "tqdm>=4.65"
+        ],
+        "llm_usd_estimate": 7.5,
+        "system_requirements": [],
+        "compute_hours_estimate": 0.85
+      },
+      "plan_run_id": "dee907afa9ad",
+      "capabilities": [
+        "background",
+        "conda",
+        "cpu",
+        "cuda_gpu",
+        "files",
+        "internet",
+        "python",
+        "shell"
+      ]
+    },
+    "error": null,
+    "started_at": "2026-10-09 20:57:22.063960+00:00",
+    "finished_at": "2026-10-09 21:08:52.327698+00:00"
+  },
+  {
+    "id": "c4ef9d1388b7",
+    "project_id": "d95fb65c9f7a",
+    "kind": "execute",
+    "status": "done",
+    "phase": "done",
+    "counts": {
+      "done": 0,
+      "human": 0,
+      "failed": 1,
+      "blocked": 14,
+      "pending": 0,
+      "running": 0,
+      "skipped": 0,
+      "spent_cents": 140
+    },
+    "log": [
+      {
+        "t": "2026-10-09T21:08:53.955322+00:00",
+        "text": "Setting up the workspace environment"
+      },
+      {
+        "t": "2026-10-09T21:09:32.742626+00:00",
+        "text": "Installed packages"
+      },
+      {
+        "t": "2026-10-09T21:09:32.850714+00:00",
+        "text": "Executing tasks"
+      },
+      {
+        "t": "2026-10-09T21:25:31.777879+00:00",
+        "text": "Finished: 0 of 15 tasks done"
+      }
+    ],
+    "result": {
+      "spent": 1.395133245,
+      "counts": {
+        "done": 0,
+        "human": 0,
+        "failed": 1,
+        "blocked": 14,
+        "skipped": 0,
+        "cancelled": 0
+      },
+      "cancelled": false
+    },
+    "error": null,
+    "started_at": "2026-10-09 21:08:52.993575+00:00",
+    "finished_at": "2026-10-09 21:25:31.993436+00:00"
+  }
+]

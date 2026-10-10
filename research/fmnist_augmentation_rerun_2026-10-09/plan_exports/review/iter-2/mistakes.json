@@ -1,0 +1,724 @@
+{
+  "schema": "openscientist.mistakes/v1",
+  "project_id": "6d8c3c93c209",
+  "iteration": 2,
+  "review_run_id": "b62c02d831e1",
+  "created_at": "2026-10-10T00:12:57.273644+00:00",
+  "model": "us.anthropic.claude-sonnet-4-6",
+  "inputs": {
+    "report_run_id": "09a1fad24593",
+    "plan_run_id": "f201709e9292",
+    "blueprint_run_id": "5853e52a54fe",
+    "manuscript_sha256": "9752bf7c9c1119a69fe96179401611736c0d7735a9d8e9793b6515dcfa79561b",
+    "pdf_sha256": "a575743f3d27be6eb3b0fe9338eb393296ed71c89f5ee092af2f603c589c86ec",
+    "bundle_sha256": "eb3c3ea8d5cdb0a3389607ab20c49bf503aa371e1e40861e6efe35b841395fcc",
+    "sources": [
+      {
+        "id": "objective",
+        "path": null,
+        "sha256": "4e5739ec6de81e22bb74f5e62c5290623b6aa500b5f2d019f675f295891a216d",
+        "chars": 6626,
+        "truncated": false
+      },
+      {
+        "id": "preregistration",
+        "path": "backend/data/projects/<id>/vague_research_plan.json",
+        "sha256": "94344ce645fb628d91e5e8cadee85e198d9acee85a02fca9f4075f533b4b059d",
+        "chars": 5922,
+        "truncated": false
+      },
+      {
+        "id": "plan_current",
+        "path": null,
+        "sha256": "5ca219faa2ba2e2b3b6709ab0669f7126a2658a43b660d55aefb08b108e62fb6",
+        "chars": 8244,
+        "truncated": false
+      },
+      {
+        "id": "protocol_amendments",
+        "path": "context/AMENDMENTS.md",
+        "sha256": "552e423045fcbd949252397b4bee754f0b8f99b1bbbe41edc9b25dbfc81b146a",
+        "chars": 6,
+        "truncated": false
+      },
+      {
+        "id": "execution_record",
+        "path": null,
+        "sha256": "64436dfd788ffc0d36fe761ff6e4db6d34cc78b7ca487978afbacefc31333621",
+        "chars": 6656,
+        "truncated": false
+      },
+      {
+        "id": "manuscript",
+        "path": "paper/paper.tex",
+        "sha256": "87bc315cdff2991476f321d11b8d509bb659e7183fdd0754a1c8cc8ebf16e412",
+        "chars": 30090,
+        "truncated": false
+      },
+      {
+        "id": "figure:figures/fig_delta_vs_size.png",
+        "path": "figures/fig_delta_vs_size.png",
+        "sha256": "53846fedd6708495895714bb418b01c8eb36c6658f013e13453e90e465654876",
+        "chars": 838,
+        "truncated": false
+      },
+      {
+        "id": "figure:figures/fig_test_acc_bars.png",
+        "path": "figures/fig_test_acc_bars.png",
+        "sha256": "82c0b34280844a2549eb87e645f2066c377776d10d81e5e91baf8088dd28b8b3",
+        "chars": 567,
+        "truncated": false
+      },
+      {
+        "id": "figure:figures/fig_curves_all.png",
+        "path": "figures/fig_curves_all.png",
+        "sha256": "56e0646d1243c9279b802f49a2fbcb4a4f3b8ca58146ca035e01786721ee4e7b",
+        "chars": 590,
+        "truncated": false
+      },
+      {
+        "id": "figure:figures/curves_size500.png",
+        "path": "figures/curves_size500.png",
+        "sha256": "fe6dd20b456129ae342a229a49d70d3959eadb679afb82e2647259abe538c0b6",
+        "chars": 146,
+        "truncated": false
+      },
+      {
+        "id": "figure:figures/curves_size60000.png",
+        "path": "figures/curves_size60000.png",
+        "sha256": "04436f2eb0c790e3f80704e514efce131e4566356e98216c5e2063f8d73f3525",
+        "chars": 148,
+        "truncated": false
+      },
+      {
+        "id": "artifact:results/SUMMARY.md",
+        "path": "results/SUMMARY.md",
+        "sha256": "d7c167bac9602414a125143e147840f84f0f6cd6833f68ceb48022d096c91298",
+        "chars": 5285,
+        "truncated": false
+      },
+      {
+        "id": "literature:harun2024dysgraphia",
+        "path": null,
+        "sha256": "f07cb5e4fe02880daf35ae09664fead273086159461deec1b633427b83ce7ce3",
+        "chars": 2012,
+        "truncated": false
+      },
+      {
+        "id": "literature:kang2024game",
+        "path": null,
+        "sha256": "6f9b78fdbc219d3adc65e702c7921b798d822e9fd5ff35cf2093440b0525c33f",
+        "chars": 2528,
+        "truncated": false
+      },
+      {
+        "id": "literature:karada2020empirical",
+        "path": null,
+        "sha256": "87b6e2997cabd73bc3d0180c9b043d3ee5a247aef356a6f823d45fb5d1c102b0",
+        "chars": 2847,
+        "truncated": false
+      },
+      {
+        "id": "literature:kumar2025enhancing",
+        "path": null,
+        "sha256": "f884cff23c8270d48f569ace8cc242da53bfa2078ceca6eb2ece25d7831548a1",
+        "chars": 2562,
+        "truncated": false
+      },
+      {
+        "id": "literature:meshkini2019analysis",
+        "path": null,
+        "sha256": "d4c3c2adbebe050626b3132a52702e774ae828735a3e3289608c5d0e67f20a16",
+        "chars": 974,
+        "truncated": false
+      },
+      {
+        "id": "literature:mukhamediev2024state",
+        "path": null,
+        "sha256": "0b3da3f58768e7abcdc2938dd1afd2b11c6841f1b63d36816af24975eec98226",
+        "chars": 2410,
+        "truncated": false
+      },
+      {
+        "id": "literature:pham2018deep",
+        "path": null,
+        "sha256": "f4a2cfab06d55824217402c00e087c704c652e71a693c73847772e80c24dc4aa",
+        "chars": 1040,
+        "truncated": false
+      },
+      {
+        "id": "literature:poojary2021effect",
+        "path": null,
+        "sha256": "d160558ab8d2c14a209f91fc621ef55402d0a62e16a3b9780ebcafaf4d69a25e",
+        "chars": 2056,
+        "truncated": false
+      },
+      {
+        "id": "literature:snider2023using",
+        "path": null,
+        "sha256": "bf1fb8f6e1b974f3e93f5f9114d463c4e615f23002d6b3ac6f7990e424b77929",
+        "chars": 2105,
+        "truncated": false
+      },
+      {
+        "id": "literature:xhaferra2022classification",
+        "path": null,
+        "sha256": "b70312e54a9accc03239790720a606d731edc9799d523448f4d386de5f209182",
+        "chars": 1984,
+        "truncated": false
+      },
+      {
+        "id": "literature:yee2026based",
+        "path": null,
+        "sha256": "947a51e1ff1b88ce4bb4f260ac29d141e9a17d4c41b27502fa4fff3eca0853f4",
+        "chars": 2033,
+        "truncated": false
+      },
+      {
+        "id": "literature:zhang2020circular",
+        "path": null,
+        "sha256": "87f5eec614d8ade449ff8d7a7c98ce21034831cd818c78f5b7bee3ccad92dcc1",
+        "chars": 2058,
+        "truncated": false
+      },
+      {
+        "id": "code:scripts/t4_3_produce_outputs.py",
+        "path": "scripts/t4_3_produce_outputs.py",
+        "sha256": "58afaacf0d7792141861034817bbbf2caeae002955a3d4c1ac0fa50fcfdccb8d",
+        "chars": 10024,
+        "truncated": true
+      },
+      {
+        "id": "code:src/train_fmnist.py",
+        "path": "src/train_fmnist.py",
+        "sha256": "b3e1d337505bc72bd57879107cfafff85c8c6cb4e6b01df38caec5fb61cb1dd0",
+        "chars": 10024,
+        "truncated": true
+      },
+      {
+        "id": "artifact:results/gpu_log_seed42.txt",
+        "path": "results/gpu_log_seed42.txt",
+        "sha256": "c6fffdd32e13e00306acb099e85c039942aa371e7fc5686ec448f7e94f5d8eef",
+        "chars": 212,
+        "truncated": false
+      },
+      {
+        "id": "artifact:results/gpu_log_seed123.txt",
+        "path": "results/gpu_log_seed123.txt",
+        "sha256": "f8f7a42611c3c52a7be074a4d8fa466e06fed6a130d96d109c10b10173ee081b",
+        "chars": 214,
+        "truncated": false
+      },
+      {
+        "id": "artifact:results/results_seed42.csv",
+        "path": "results/results_seed42.csv",
+        "sha256": "1092d2f8feca45257aace5124a7850cbd1ba0e80eff97e9064b7cd396d657784",
+        "chars": 711,
+        "truncated": false
+      },
+      {
+        "id": "artifact:results/results_seed123.csv",
+        "path": "results/results_seed123.csv",
+        "sha256": "a79e12efd28202313871a64bbe43a55d7efbb110a4d2903bb6e4534f945d87d9",
+        "chars": 738,
+        "truncated": false
+      },
+      {
+        "id": "artifact:analysis/test_acc_summary.csv",
+        "path": "analysis/test_acc_summary.csv",
+        "sha256": "5bda329a06742e6aaffd2966370c4e43dae4329ed9551f4fc78ff195a0564a57",
+        "chars": 442,
+        "truncated": false
+      },
+      {
+        "id": "artifact:analysis/delta_by_size.csv",
+        "path": "analysis/delta_by_size.csv",
+        "sha256": "57ba8313354266b69b3e81104548af6958713fac36c0ab1db0b64969618749bc",
+        "chars": 528,
+        "truncated": false
+      },
+      {
+        "id": "artifact:analysis/gpu_device_info.txt",
+        "path": "analysis/gpu_device_info.txt",
+        "sha256": "51e28eab22eec09e17916ff5d299ebfad04f5102cb3505539a18ea95cb8c4e9a",
+        "chars": 730,
+        "truncated": false
+      },
+      {
+        "id": "artifact:analysis/regression_results.json",
+        "path": "analysis/regression_results.json",
+        "sha256": "f11872bae1490611238969a9b1adf2b808fca89cafd040c9f3b7ec4345cb950d",
+        "chars": 784,
+        "truncated": false
+      },
+      {
+        "id": "artifact:analysis/trend_diagnostics.txt",
+        "path": "analysis/trend_diagnostics.txt",
+        "sha256": "cca5f5d0eb71268f0d6fecf7c4c2a6572ed04b3fe1dc86a232bc54bb1b8fea23",
+        "chars": 3572,
+        "truncated": false
+      },
+      {
+        "id": "artifact:analysis/results_all.csv",
+        "path": "analysis/results_all.csv",
+        "sha256": "c28c65d68e1a12b984f5ddd99ab1693603575e65f8b98f2570cab438b9fb9e13",
+        "chars": 725,
+        "truncated": false
+      },
+      {
+        "id": "artifact:analysis/bootstrap_N_star.csv",
+        "path": "analysis/bootstrap_N_star.csv",
+        "sha256": "3407fb5014ae515565ea6d2055f9a6663ca66bbb166874acfa8d8a4f32db87d6",
+        "chars": 468,
+        "truncated": false
+      },
+      {
+        "id": "artifact:config/config.json",
+        "path": "config/config.json",
+        "sha256": "13ff6cbd70590527e8f9f27784e95f1ceb36dc8bce127edb420b00e9030b12f4",
+        "chars": 470,
+        "truncated": false
+      },
+      {
+        "id": "artifact:data/class_balance_check.txt",
+        "path": "data/class_balance_check.txt",
+        "sha256": "e41cf737f1a46bb7c35b3065008d3a3bf58cdb29b87fb20de519cf5fb352e518",
+        "chars": 2788,
+        "truncated": false
+      },
+      {
+        "id": "integrity",
+        "path": null,
+        "sha256": "64e834c13219295e53b2db92dbdc141469e337bec046ae44dd25ec49ed1b2007",
+        "chars": 628,
+        "truncated": false
+      },
+      {
+        "id": "omissions",
+        "path": null,
+        "sha256": "552e423045fcbd949252397b4bee754f0b8f99b1bbbe41edc9b25dbfc81b146a",
+        "chars": 6,
+        "truncated": false
+      },
+      {
+        "id": "figure:figures/fig_delta_vs_size.png",
+        "path": "figures/fig_delta_vs_size.png",
+        "sha256": "b4cd12df1de954e32f1bebe7eca5cc2e578cd20c7042e335fce0957d63b7228f",
+        "bytes": 147662
+      },
+      {
+        "id": "figure:figures/fig_test_acc_bars.png",
+        "path": "figures/fig_test_acc_bars.png",
+        "sha256": "eff43bdedb143870e09dc61cf3323614c3c5e21434f5897e95d56a4429d32581",
+        "bytes": 113543
+      },
+      {
+        "id": "figure:figures/fig_curves_all.png",
+        "path": "figures/fig_curves_all.png",
+        "sha256": "d5ed927156cb5616a279161215e8beedc93de1abe5adee895bea6d95a994ff0a",
+        "bytes": 841733
+      },
+      {
+        "id": "figure:figures/curves_size500.png",
+        "path": "figures/curves_size500.png",
+        "sha256": "2f3fddf4bda59cf9337341aa2562c9c151f621134fafe3d5fa0b4bbfb81a904e",
+        "bytes": 131606
+      },
+      {
+        "id": "figure:figures/curves_size60000.png",
+        "path": "figures/curves_size60000.png",
+        "sha256": "e8adc111eb8edc7fa4250b5a0f9e0392775bdf04383a6549c9bdd9a27e77bfa1",
+        "bytes": 111802
+      }
+    ],
+    "omitted": []
+  },
+  "integrity": {
+    "passed": true,
+    "hard_failures": [],
+    "facts": [
+      "\\ref targets with no matching \\label: tab:results"
+    ],
+    "numeric": {
+      "checked": 124,
+      "unmatched_total": 5
+    }
+  },
+  "judged": true,
+  "valid": true,
+  "verdict": "major_revision",
+  "summary": "The study provides a controlled empirical investigation of how basic geometric data augmentation (random horizontal flip + affine) scales in test-accuracy benefit across seven training set sizes for a fixed small CNN on Fashion-MNIST within a 5-epoch budget. The central finding—that augmentation consistently and uniformly harms accuracy under this budget due to convergence overhead, with harm diminishing but never reversing as N grows—is supported by consistent numerical evidence across both seeds and all size levels. The approach is transparent and the limitations are honestly disclosed. However, several MAJOR issues require correction before publication: a clear figure-caption error labels the N=60,000 sub-figure as N=500; the reproducible training code (build_loaders) incorrectly uses the test set as the validation set, conflicting with the preregistered 10%-holdout protocol and making the validation curves in all figures unverifiable from the published code; and the SUMMARY.md architecture description does not match the implemented model. Several MINOR issues also exist, including unverifiable epoch-count claims for cited prior work, borderline statistical-significance language for a regression fitted to only 7 data points, and a bootstrap CI upper bound that is an artifact of hard clipping rather than a genuine distributional estimate.",
+  "objective_alignment": {
+    "value": "partially_answers",
+    "note": "The preregistered question asked how augmentation benefit scales with training set size and at what sample count it becomes negligible. The study finds augmentation is never beneficial under the 5-epoch budget, so the crossover point is extrapolated far outside the tested range (N*≈6.45M) with an enormous CI. The size-scaling trend is characterised descriptively (OLS slope, Spearman ρ), but the preregistered success criteria (Δ>2pp at N=500 for both seeds; monotonically decreasing; N* within a detectable range) are all unmet. The paper appropriately reports this as a falsification of the hypothesis and provides a mechanistic explanation. The original research brief's core question—whether augmentation improves accuracy—is answered clearly, but the quantitative scaling question (crossover N*) is left unanswered within the tested regime."
+  },
+  "hypothesis_support": "not_supported",
+  "rubric": [
+    {
+      "criterion": "research_question",
+      "assessment": "minor_concerns",
+      "note": "The question is operationalised validly with 7 size levels, 2 seeds, 5 epochs, and a fixed architecture. The paper answers a closely related but different question from the one in the research brief: the brief asked whether augmentation provides benefit and how it scales; the execution finds augmentation always hurts, converting the scaling question into an extrapolation exercise. The paper is honest about this, but the answered question is narrower than preregistered."
+    },
+    {
+      "criterion": "experimental_design",
+      "assessment": "minor_concerns",
+      "note": "The 7-size crossed 2-condition 2-seed design tests the hypothesis adequately given its constraints. The 5-epoch budget is the key confound: it is so restrictive that the epoch-budget effect dominates and prevents observation of any positive augmentation benefit, making the training-size dimension a secondary modulator of a universally negative effect. The design cannot isolate dataset-size scaling from epoch-budget insufficiency."
+    },
+    {
+      "criterion": "controls_confounds",
+      "assessment": "major_concerns",
+      "note": "The implemented architecture (dual conv blocks, BatchNorm, Dropout 0.25/0.50) deviates substantially from the original brief's single-conv architecture (FC 128 units). BatchNorm with a 5-epoch budget and Dropout(0.5) in the FC head may amplify convergence overhead in augmented runs specifically; this architectural choice is a confound that the paper only partially acknowledges in its limitations section. The validation set used in build_loaders is the test set, not a training-data holdout (see reproducibility issue), meaning monitoring curves may have implicitly used the test set."
+    },
+    {
+      "criterion": "statistics",
+      "assessment": "minor_concerns",
+      "note": "The OLS regression uses 7 data points (mean Δ per size, each the mean of 2 seeds), which provides very limited statistical power. Reporting p=0.037 and describing the slope as 'confirming' a decrease 'significantly' (L275) is borderline overstatement for this sample size. The Spearman ρ=0.714, p=0.071 correctly does not reach α=0.05. The bootstrap CI for N* spans four orders of magnitude with the upper bound clipped at 10^9 (hundreds of bootstrap iterations hit the clip per bootstrap_N_star.csv), making the reported CI [40K; ~10^9] an artifact of clipping rather than a genuine distributional limit. These are disclosed in limitations but the language in the results section is occasionally stronger than warranted."
+    },
+    {
+      "criterion": "math_computation",
+      "assessment": "sound",
+      "note": "The OLS equation Δ=-12.00+0.530·log₂(N) is consistent with the regression_results.json (a=-11.9996, b=0.5305). N*=2^(11.9996/0.5305)≈6,448,676 matches the reported ~6.45M. The Δ values in delta_by_size.csv are verified against test_acc_summary.csv values. The FC head dimension 3136=64×7×7 is correct for two 2×2 MaxPool operations on 28×28 input. The parameter count of 871,018 is not found in any result file but is plausible for the dual-block architecture."
+    },
+    {
+      "criterion": "reproducibility",
+      "assessment": "major_concerns",
+      "note": "The published training utility build_loaders in src/train_fmnist.py defines val_dataset=datasets.FashionMNIST(train=False), i.e., the 10,000-image test set, as the validation set—contradicting the preregistered protocol of a 10%-stratified holdout of each training subset. Yet val_acc and test_acc differ in all result CSVs (e.g., seed42, N=500, noaug, epoch 5: val_acc=0.74 vs test_acc=0.732; seed42, N=60000, aug, epoch 5: val_acc=0.8915 vs test_acc=0.8852), implying the actual GPU training scripts (gpu_train_seed42.py, gpu_train_seed123.py, not provided in sources) implemented a different, correct validation split. The published code therefore cannot reproduce the reported validation curves."
+    },
+    {
+      "criterion": "literature",
+      "assessment": "minor_concerns",
+      "note": "L143 states Pham 2018 and Harun 2024 'both used training runs of 50 or more epochs'; neither abstract mentions epoch counts. Kang 2024 (kang2024game) is cited at L82 to support 'canonical geometric transforms are standard practice,' but MFG Augment is an advanced Mean-Field Game method—not a canonical geometric transform—making this citation inapt for that claim. Karadağ 2020 is characterised correctly. Other citations match their abstracts."
+    },
+    {
+      "criterion": "data_integrity",
+      "assessment": "sound",
+      "note": "GPU logs confirm NVIDIA L4 execution for both seeds. The 140 rows in results_all.csv (70 per seed, 7 sizes×2 conditions×5 epochs) are consistent with the 28-run design. The 14 rows in test_acc_summary.csv match the per-(size,seed) final test accuracy values in the raw CSVs. Class balance verification in data/class_balance_check.txt confirms stratified sampling. No signs of fabricated or hard-coded numbers."
+    },
+    {
+      "criterion": "figures_tables",
+      "assessment": "major_concerns",
+      "note": "In the manuscript, the sub-figure showing curves_size60000.png is captioned '$N{=}500$' (L336) instead of $N{=}60{,}000$. This is a copy-paste error: both subfigures in the pair share the same wrong caption text. The SUMMARY.md architecture description ('Conv(32)→MaxPool→Conv(64)→MaxPool→FC(128)→FC(10)') does not match the implemented architecture (dual-conv blocks with BN/Dropout, FC(256)). The integrity checker also flags an unresolved \\ref{tab:results} (label defined in the included file table_results.tex), which may render as '??' in the compiled PDF depending on LaTeX compilation order."
+    },
+    {
+      "criterion": "claims_support",
+      "assessment": "minor_concerns",
+      "note": "The primary claims—augmentation consistently hurts at all 7 sizes, perfect seed concordance, 14/14 epoch-1 loss elevation—are strongly supported by the data. The mechanistic claim of 'convergence overhead' is consistent with the epoch-1 loss pattern but remains an observational interpretation; no ablation varying epoch count is provided. The claim that the epoch budget 'fully explains' the discrepancy with prior work that used 50+ epochs (L395-L398) is an assertion without a supporting experiment varying epoch count. The crossover N*≈6.45M is correctly flagged as extrapolated and unreliable."
+    },
+    {
+      "criterion": "novelty",
+      "assessment": "sound",
+      "note": "The paper claims to provide the first systematic quantification of augmentation-benefit scaling on Fashion-MNIST across training set sizes under a fixed architecture and epoch count. The closest prior work (Karadağ 2020 on CIFAR-10, Kang 2024 MFG Augment) does not replicate this analysis on Fashion-MNIST with basic geometric transforms across a range of sizes. The novelty claim is modest and justified."
+    },
+    {
+      "criterion": "internal_consistency",
+      "assessment": "minor_concerns",
+      "note": "The architecture implemented (dual-conv blocks, BN, Dropout, FC-256) deviates from the research brief's specified architecture (single-conv blocks, FC-128, 1600 input units) but matches config/config.json and is disclosed in Limitation 7. The preregistered success criterion 'Δ>2pp at N=500 for both seeds' is unmet (Δ<0 for both seeds), but the paper correctly reports this as a falsified hypothesis rather than adjusting the goalpost. Spearman ρ is reported as ρ=0.714 with positive sign throughout, correctly noting Δ becomes less negative (not more positive) with N—internally consistent."
+    }
+  ],
+  "issues": [
+    {
+      "ref": "I1",
+      "severity": "MAJOR",
+      "category": "figures_tables",
+      "certainty": "demonstrated",
+      "title": "Sub-figure caption for N=60,000 incorrectly reads N=500",
+      "description": "In the LaTeX source, the subfigure including curves_size60000.png has the caption '$N{=}500$' (L336), which is identical to the caption of the adjacent N=500 subfigure (L331). The correct caption should read '$N{=}60{,}000$'. This error appears in the printed figure pair (fig:curves_extremes) used to illustrate the two extreme training sizes and will mislead readers.",
+      "evidence": [
+        {
+          "source": "manuscript",
+          "locator": "L327-L351",
+          "quote": "\\begin{subfigure}[b]{0.48\\linewidth}\n    \\includegraphics[width=\\linewidth]{../figures/curves_size60000.png}\n    \\caption{$N{=}500$.}\n    \\label{fig:curves60k}",
+          "observation": "The includegraphics filename is curves_size60000.png but the caption text says N=500, which is a copy-paste error from the N=500 subfigure above it.",
+          "verified": false
+        }
+      ],
+      "absence_terms": [],
+      "why_it_matters": "Readers will interpret the N=60,000 training curves as N=500 results, directly contradicting the text at L345-L349 and undermining the paper's central illustration of the convergence overhead mechanism at the largest training size.",
+      "corrective_action": "Change L336 from \\caption{$N{=}500$.} to \\caption{$N{=}60{,}000$.} and recompile the PDF.",
+      "origin": "report",
+      "affected": [
+        "manuscript L336",
+        "figure:figures/curves_size60000.png",
+        "fig:curves_extremes"
+      ],
+      "invalidates": [],
+      "evidence_needed": "",
+      "requested_files": [],
+      "id": "R2-01",
+      "grounding": "unverified",
+      "verification": "confirmed",
+      "verification_note": "The manuscript source at L0336–L0338 shows that the subfigure including curves_size60000.png carries the caption '$N{=}500$.' identical to the caption at L0331 for the N=500 subfigure. This is corroborated directly by the figure-source metadata entry (source id=figure:figures/curves_size60000.png), which explicitly records 'Caption: $N{=}500$.' The correct caption should read '$N{=}60{,}000$.' since the figure text at L0345–L0349 discusses the N=60,000 case. This copy-paste error is present in the published LaTeX and directly misleads readers about the identity of the right-hand subfigure in fig_curves_extremes, which is used to illustrate convergence overhead at the largest training size—a central claim of the paper.",
+      "blocking": true,
+      "open_concern": false,
+      "track_id": "T-004",
+      "tracking": {
+        "status": "new",
+        "previous_ids": []
+      }
+    },
+    {
+      "ref": "I2",
+      "severity": "MINOR",
+      "category": "reproducibility",
+      "certainty": "likely",
+      "title": "Published build_loaders code uses test set as validation set, contradicting preregistered protocol",
+      "description": "In src/train_fmnist.py, build_loaders defines val_dataset = datasets.FashionMNIST(root=data_root, train=False, ...), which is the 10,000-sample test set. The preregistration specifies a 10%-stratified holdout of each training subset as the validation partition. Despite this code-level discrepancy, val_acc and test_acc differ in all result CSVs (e.g., seed=42, N=500, noaug, epoch 5: val_acc=0.74 vs test_acc=0.732; seed=42, N=60000, aug, epoch 5: val_acc=0.8915 vs test_acc=0.8852), implying the actual GPU training scripts that produced the results use a different, correct validation split. The published code therefore cannot reproduce the reported validation curves.",
+      "evidence": [
+        {
+          "source": "code:src/train_fmnist.py",
+          "locator": "build_loaders function, lines defining val_dataset",
+          "quote": "val_dataset = datasets.FashionMNIST(\n        root=data_root, train=False, download=True, transform=val_tf\n    )",
+          "observation": "train=False selects the 10,000-image test partition, not a holdout of the training data.",
+          "verified": true
+        },
+        {
+          "source": "artifact:results/results_seed42.csv",
+          "locator": "rows for seed=42, size=500, noaug, epoch=5 and size=60000, aug, epoch=5",
+          "quote": "42,500,noaug,5,1.05987,0.74,0.732\n42,60000,aug,5,0.442805,0.8915,0.8852",
+          "observation": "val_acc (0.74, 0.8915) differs from test_acc (0.732, 0.8852) at epoch 5; if both used the same 10,000-image test set they should be identical under model.eval() without randomness.",
+          "verified": false
+        }
+      ],
+      "absence_terms": [
+        "gpu_train_seed42.py",
+        "gpu_train_seed123.py",
+        "train_val split",
+        "90/10 split in build_loaders"
+      ],
+      "why_it_matters": "The validation curves in all training-curve figures (fig_curves_all.png, curves_size*.png) cannot be reproduced using the published code. A reader following the reproducibility instructions will obtain different validation metrics. The GPU training scripts that generated the reported numbers are not included in the workspace.",
+      "corrective_action": "Add src/gpu_train_seed42.py and src/gpu_train_seed123.py to the workspace; alternatively, fix build_loaders to implement the 90/10 stratified split on the training subset indices and recompute the validation curves. Clarify in the reproducibility appendix which script generated the published results.",
+      "origin": "execution",
+      "affected": [
+        "code:src/train_fmnist.py",
+        "figure:figures/fig_curves_all.png",
+        "T2.1",
+        "T2.2",
+        "appendix reproducibility statement"
+      ],
+      "invalidates": [
+        "figures/fig_curves_all.png",
+        "figures/curves_size*.png"
+      ],
+      "evidence_needed": "src/gpu_train_seed42.py and src/gpu_train_seed123.py to confirm how validation was actually computed.",
+      "requested_files": [
+        "src/gpu_train_seed42.py",
+        "src/gpu_train_seed123.py"
+      ],
+      "id": "R2-02",
+      "grounding": "partial",
+      "severity_claimed": "MAJOR",
+      "verification": "confirmed",
+      "verification_note": "The build_loaders function in src/train_fmnist.py does use 'val_dataset = datasets.FashionMNIST(root=data_root, train=False, ...)' (i.e., the held-out test split) as the validation set, confirming the code-level discrepancy. However, the actual GPU training scripts that generated the reported results (src/gpu_train_seed42.py and src/gpu_train_seed123.py, which were requested and are present in the workspace) do NOT use build_loaders. Instead, they load base_val_dataset with train=True and apply the stratified val_indices from subset_indices.npz, correctly implementing the preregistered 90/10 split. The discrepancy between val_acc and test_acc in the result CSVs (e.g., seed=42, size=500, noaug, epoch 5: val_acc=0.74 vs test_acc=0.732) confirms the correct separate validation partition was used during actual training. The claim that GPU training scripts are absent from the workspace is refuted—they are present and correct. The reproducibility appendix (L0517–L0520) instructs users to run exactly those GPU scripts, not build_loaders. The bug is real but confined to an unused helper function and does not affect reported results or their reproducibility; this warrants only MINOR severity.",
+      "blocking": false,
+      "open_concern": false
+    },
+    {
+      "ref": "I3",
+      "severity": "MINOR",
+      "category": "figures_tables",
+      "certainty": "demonstrated",
+      "title": "SUMMARY.md architecture description does not match implemented model",
+      "description": "The SUMMARY.md Experiment Overview table describes the architecture as 'Conv(32)→MaxPool→Conv(64)→MaxPool→FC(128)→FC(10)', which matches the original research brief but not the implemented architecture (dual-conv blocks with BatchNorm and Dropout, FC(256→10)).",
+      "evidence": [
+        {
+          "source": "artifact:results/SUMMARY.md",
+          "locator": "Experiment Overview table, Architecture row",
+          "quote": "| Architecture | Small CNN: Conv(32)→MaxPool→Conv(64)→MaxPool→FC(128)→FC(10) |",
+          "observation": "This single-conv-per-block 128-unit FC description contradicts config/config.json (conv_filters=[32,32,64,64], fc_units=256) and the manuscript Methods section (L178-L186).",
+          "verified": true
+        },
+        {
+          "source": "artifact:config/config.json",
+          "locator": "architecture block",
+          "quote": "\"conv_filters\": [32, 32, 64, 64],\n  \"fc_units\": 256",
+          "observation": "Actual architecture has two convolutions per block and 256 FC units, not one conv per block and 128 units.",
+          "verified": true
+        }
+      ],
+      "absence_terms": [],
+      "why_it_matters": "SUMMARY.md is the primary reference document for the report writer and for downstream reuse. An incorrect architecture description could lead to incorrect reproduction attempts.",
+      "corrective_action": "Update SUMMARY.md Architecture row to: 'Small CNN: [Conv(32)→BN→ReLU]×2→MaxPool→Dropout(0.25)→[Conv(64)→BN→ReLU]×2→MaxPool→Dropout(0.25)→FC(256)→Dropout(0.5)→FC(10); 871K parameters'.",
+      "origin": "report",
+      "affected": [
+        "artifact:results/SUMMARY.md"
+      ],
+      "invalidates": [],
+      "evidence_needed": "",
+      "requested_files": [],
+      "id": "R2-03",
+      "grounding": "verified",
+      "verification": "not_needed",
+      "verification_note": "",
+      "blocking": false,
+      "open_concern": false
+    },
+    {
+      "ref": "I4",
+      "severity": "MINOR",
+      "category": "statistics",
+      "certainty": "demonstrated",
+      "title": "OLS slope p-value described as 'confirming significant decrease' despite only 7 data points",
+      "description": "The manuscript reports the OLS slope as 'confirming that augmentation harm decreases significantly as training set size grows' (L274-L275) based on p=0.037 from a regression with n=7 size levels, where each response value is itself the mean of only 2 seed observations. With n=7 the test has minimal power, and the 95% CI for the slope ([0.046, 1.015]) nearly touches zero. The language 'confirming … significantly' overstates inferential strength.",
+      "evidence": [
+        {
+          "source": "manuscript",
+          "locator": "L273-L278",
+          "quote": "The log-linear OLS fit yields slope $b{=}{+}0.530$ (95\\% CI $[0.046,\\, 1.015]$),\n$R^2{=}0.613$, $p{=}0.037$, confirming that augmentation harm decreases\nsignificantly as training set size grows on a log scale.",
+          "observation": "'Confirming significantly' is stronger than warranted for a regression with 7 points each derived from 2-seed means.",
+          "verified": true
+        }
+      ],
+      "absence_terms": [],
+      "why_it_matters": "Readers may interpret this as stronger statistical evidence than exists; the result is consistent with the trend but not robustly significant.",
+      "corrective_action": "Replace 'confirming that augmentation harm decreases significantly' with 'consistent with augmentation harm decreasing' or 'providing weak but positive evidence that augmentation harm decreases'.",
+      "origin": "report",
+      "affected": [
+        "manuscript L274-L275"
+      ],
+      "invalidates": [],
+      "evidence_needed": "",
+      "requested_files": [],
+      "id": "R2-04",
+      "grounding": "verified",
+      "verification": "not_needed",
+      "verification_note": "",
+      "blocking": false,
+      "open_concern": false
+    },
+    {
+      "ref": "I5",
+      "severity": "MINOR",
+      "category": "literature",
+      "certainty": "likely",
+      "title": "Citation of kang2024game to support 'canonical geometric transforms are standard practice' is inapt",
+      "description": "At L82, kang2024game is cited alongside karada2020empirical to support the claim that 'canonical geometric transforms—horizontal flipping, rotation, translation, and cropping—are standard practice across benchmark datasets.' MFG Augment is a Mean-Field Game path-interpolation method synthesising continuous image-distribution transitions—the antithesis of a canonical geometric transform.",
+      "evidence": [
+        {
+          "source": "manuscript",
+          "locator": "L81-L83",
+          "quote": "Canonical geometric transforms---horizontal flipping, rotation, translation,\nand cropping---are standard practice across benchmark datasets\n\\citep{karada2020empirical,kang2024game}.",
+          "observation": "kang2024game proposes MFG Augment, not a canonical geometric transform.",
+          "verified": true
+        },
+        {
+          "source": "literature:kang2024game",
+          "locator": "Abstract",
+          "quote": "we propose MFG Augment, a novel data augmentation method based on the Mean-Field-Game (MFG) theory, that can synthesize a sequence of data between every two images or features",
+          "observation": "MFG Augment is explicitly contrasted with simple geometric transforms throughout the abstract.",
+          "verified": false
+        }
+      ],
+      "absence_terms": [],
+      "why_it_matters": "The citation is misleading; it implies Kang 2024 exemplifies canonical geometric augmentation when it does the opposite.",
+      "corrective_action": "Remove kang2024game from the L82 citation and replace with a reference to a standard data-augmentation survey or the original Krizhevsky/ResNet papers. kang2024game is appropriately cited in later sections where it is correctly described.",
+      "origin": "report",
+      "affected": [
+        "manuscript L81-L83"
+      ],
+      "invalidates": [],
+      "evidence_needed": "",
+      "requested_files": [],
+      "id": "R2-05",
+      "grounding": "partial",
+      "verification": "not_needed",
+      "verification_note": "",
+      "blocking": false,
+      "open_concern": false
+    },
+    {
+      "ref": "I6",
+      "severity": "MINOR",
+      "category": "literature",
+      "certainty": "uncertain",
+      "title": "Claim that Pham 2018 and Harun 2024 used '50 or more epochs' is unverifiable from their abstracts",
+      "description": "L143 and L393 claim these studies 'used training runs of 50 or more epochs.' Neither abstract mentions epoch counts, so this claim cannot be verified from the provided literature sources.",
+      "evidence": [
+        {
+          "source": "manuscript",
+          "locator": "L143-L144",
+          "quote": "\\citet{pham2018deep} found augmentation helpful for skin-lesion classification,\nand \\citet{harun2024dysgraphia} reported similar findings for dysgraphia\ndetection; both studies used training runs of 50 or more epochs.",
+          "observation": "The epoch count claim is used to explain the discrepancy with this study's negative result.",
+          "verified": true
+        },
+        {
+          "source": "literature:harun2024dysgraphia",
+          "locator": "Abstract",
+          "quote": "The results show a significant improvement with 77% accuracy using augmented as compared to without augmented data only 73%.",
+          "observation": "No mention of epoch count in the abstract.",
+          "verified": false
+        }
+      ],
+      "absence_terms": [
+        "50 epochs",
+        "epochs",
+        "training iterations",
+        "epoch count"
+      ],
+      "why_it_matters": "The epoch-count argument is central to the mechanistic explanation. If the claim is wrong, the convergence-overhead interpretation would be weakened.",
+      "corrective_action": "Cite a specific page or section from the referenced papers confirming the epoch counts, or hedge with 'likely employed substantially more training epochs than 5, consistent with typical practice in these domains.'",
+      "origin": "report",
+      "affected": [
+        "manuscript L143-L144",
+        "manuscript L393-L394"
+      ],
+      "invalidates": [],
+      "evidence_needed": "Full text of Pham 2018 and Harun 2024 confirming epoch counts.",
+      "requested_files": [],
+      "id": "R2-06",
+      "grounding": "absence_contradicted",
+      "verification": "not_needed",
+      "verification_note": "",
+      "blocking": false,
+      "open_concern": false
+    },
+    {
+      "ref": "I7",
+      "severity": "MINOR",
+      "category": "statistics",
+      "certainty": "demonstrated",
+      "title": "Bootstrap CI upper bound is an artifact of hard clipping at 10^9",
+      "description": "The reported bootstrap 95% CI upper bound ~10^9 for N* is the clip value, not a distributional estimate. The bootstrap_N_star.csv shows multiple rows with N_star_boot=1,000,000,000.0 (the clip value), meaning many bootstrap iterations produced N* estimates that were clipped. The CI upper bound therefore reflects the clip parameter choice rather than the actual posterior spread.",
+      "evidence": [
+        {
+          "source": "artifact:analysis/bootstrap_N_star.csv",
+          "locator": "rows 4998-4999",
+          "quote": "4998,1000000000.0\n4999,1000000000.0",
+          "observation": "Multiple bootstrap samples hit the 10^9 clip; the 97.5th percentile equals the clip value.",
+          "verified": true
+        },
+        {
+          "source": "artifact:analysis/regression_results.json",
+          "locator": "N_star_clip field",
+          "quote": "\"N_star_clip\": [\n      1,\n      1000000000.0\n    ]",
+          "observation": "The clip at 10^9 directly sets the reported upper bound of the CI.",
+          "verified": true
+        }
+      ],
+      "absence_terms": [],
+      "why_it_matters": "The CI upper bound is presented as a statistical estimate of uncertainty when it is actually a parameter of the analysis pipeline. Reporting '~10^9' implies precision that does not exist.",
+      "corrective_action": "Acknowledge in text that the CI upper bound equals the clip value and is therefore a lower bound on the true upper uncertainty. Consider removing the upper bound from the reported CI or stating it explicitly as '>10^9'.",
+      "origin": "analysis",
+      "affected": [
+        "manuscript L062",
+        "manuscript L293-L294",
+        "figure:figures/fig_delta_vs_size.png"
+      ],
+      "invalidates": [],
+      "evidence_needed": "",
+      "requested_files": [],
+      "id": "R2-07",
+      "grounding": "verified",
+      "verification": "not_needed",
+      "verification_note": "",
+      "blocking": false,
+      "open_concern": false
+    }
+  ],
+  "verification": "ok",
+  "verdict_consistent": true,
+  "rejudged": false,
+  "grammar_mode": "default",
+  "decision": "repair",
+  "decision_reason": "0 fatal and 1 major issues to repair.",
+  "cost_usd": 1.3223
+}

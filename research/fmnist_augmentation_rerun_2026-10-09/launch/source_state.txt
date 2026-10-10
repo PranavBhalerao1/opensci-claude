@@ -1,0 +1,18 @@
+d5538a00ee3e6536602dfcbb00b650fec2b7f02b
+ M backend/app/agents/blueprint.py
+ M backend/app/agents/plan.py
+ M backend/app/execution/e2b_sandbox.py
+ M backend/app/execution/orchestrator.py
+ M backend/app/llm.py
+ M backend/tests/test_bedrock_integration.py
+ M backend/tests/test_llm.py
+ M research/fmnist_augmentation_run_2026-10-09/launch/backend.log
+ M research/fmnist_augmentation_run_2026-10-09/launch/stdout.log
+?? backend/tests/fixtures/
+?? backend/tests/test_blueprint_feasibility.py
+?? research/fmnist_augmentation_rerun_2026-10-09/
+?? research/fmnist_augmentation_run_2026-10-09/README.md
+?? research/fmnist_augmentation_run_2026-10-09/db_export/
+?? research/fmnist_augmentation_run_2026-10-09/plan_exports/
+?? research/fmnist_augmentation_run_2026-10-09/tools/
+?? research/fmnist_augmentation_run_2026-10-09/workspace_copy/

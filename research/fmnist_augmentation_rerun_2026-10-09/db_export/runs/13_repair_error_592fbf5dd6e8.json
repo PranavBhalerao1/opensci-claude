@@ -1,0 +1,18 @@
+{
+  "id": "592fbf5dd6e8",
+  "project_id": "6d8c3c93c209",
+  "kind": "repair",
+  "status": "error",
+  "phase": "planning",
+  "counts": {},
+  "log": [
+    {
+      "t": "2026-10-10T00:30:03.446689+00:00",
+      "text": "The Planning Agent is choosing root-cause fixes"
+    }
+  ],
+  "result": null,
+  "error": "Interrupted by a server restart",
+  "started_at": "2026-10-10 00:30:02.466084+00:00",
+  "finished_at": "2026-10-10 02:21:02.077474+00:00"
+}

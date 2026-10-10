@@ -18,7 +18,7 @@ from ..config import BACKEND_DIR, settings
 from ..db import Message, Paper, Project, ProjectPaper, Run, engine
 from ..graph import project_graph
 from ..jobs import RunHandle
-from ..llm import parse
+from ..llm import LONG_MAX_TOKENS, parse
 from .literature import brief_context, cite
 
 EXPORT_DIR = BACKEND_DIR / "data" / "projects"
@@ -404,6 +404,8 @@ async def run(project_id: str, h: RunHandle) -> dict:
         schema=ResearchPlan,
         # High: the research plan sets the experimental design for the whole study.
         reasoning_effort="high",
+        # Thinking plus the plan's JSON has come within 2K tokens of MAX_TOKENS (30,173 of 32,000).
+        max_tokens=LONG_MAX_TOKENS,
     )
     h.phase("validating", "Checking the task graph")
     plan = await _finalise(plan, h, settings.model_reasoning, [{"role": "user", "content": context}])

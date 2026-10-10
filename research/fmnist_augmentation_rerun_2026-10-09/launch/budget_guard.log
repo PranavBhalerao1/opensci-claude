@@ -1,0 +1,4 @@
+00:26:05Z armed
+00:30:08Z PAUSED (SIGINT to backend): 3rd review requested another repair round; spend=$11.26 status=repairing
+02:20:57Z armed
+02:49:19Z review loop finished: status=unresolved stage=complete spend=$14.35; guard exits without acting

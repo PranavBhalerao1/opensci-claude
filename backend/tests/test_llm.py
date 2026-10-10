@@ -39,6 +39,8 @@ class _Stream:
         self._events, self._final, self._error = events, final, error
 
     async def __aenter__(self):
+        if isinstance(self._final, Exception):  # the request itself was rejected (e.g. a 400)
+            raise self._final
         return self
 
     async def __aexit__(self, *exc):
@@ -63,6 +65,7 @@ class Provider:
         self.requests: list[dict] = []
         self.responses: list = []
         self.searches: list[str] = []
+        self.transports: list[str] = []  # "create" or "stream", per request
         self.messages_api = NS(create=self._create, stream=self._stream)
 
     def install(self, monkeypatch) -> None:
@@ -111,6 +114,7 @@ class Provider:
 
     async def _create(self, **kw):
         self.requests.append(kw)
+        self.transports.append("create")
         item = self.script.pop(0)
         if isinstance(item, Exception):
             raise item
@@ -118,8 +122,15 @@ class Provider:
         return item
 
     def _stream(self, **kw):
+        """A scripted _Stream (chat), or any scripted message or error delivered as a stream."""
         self.requests.append(kw)
-        return self.script.pop(0)
+        self.transports.append("stream")
+        item = self.script.pop(0)
+        if isinstance(item, _Stream):
+            return item
+        if not isinstance(item, Exception):
+            self.responses.append(item)
+        return _Stream([], item, None)
 
     # Inspection
     def model(self, i: int) -> str:
@@ -864,6 +875,155 @@ def test_other_bad_requests_are_not_swallowed(provider, monkeypatch):
     assert llm._GRAMMAR_FALLBACK == {}
 
 
+# ── Long structured outputs: streamed ceiling, continuation, exhausted thinking ──
+# Regression for project d95fb65c9f7a: MasterPlan's freeform answer (thinking + JSON) outgrew the
+# 32K ceiling twice. Once the reasoning used every token and no answer came back at all; once the
+# answer was cut off and the only recovery was to regenerate the whole blueprint.
+
+
+def _cut(text: str) -> NS:
+    return _final(text, "max_tokens")
+
+
+def _thought_only() -> NS:
+    """The reasoning used the whole budget: the response holds no text at all."""
+    return NS(id="m", content=[NS(type="thinking", thinking="…", signature="s")], stop_reason="max_tokens",
+              usage=NS(input_tokens=10, cache_read_input_tokens=0, cache_creation_input_tokens=0, output_tokens=64_000))
+
+
+def _ask_long(schema=Verdict):
+    return asyncio.run(llm.parse(model=settings.model_reasoning, instructions="x",
+                                 messages=[{"role": "user", "content": "y"}], schema=schema,
+                                 reasoning_effort="high", max_tokens=llm.LONG_MAX_TOKENS))
+
+
+def _long_verdict() -> Verdict:
+    return Verdict(results=[CheckResult(check=f"check {i}", passed=i % 2 == 0,
+                                        reason=f"Reason {i}: alpha beta gamma delta epsilon zeta eta theta.")
+                            for i in range(8)])
+
+
+@pytest.fixture
+def freeform(monkeypatch):
+    monkeypatch.setattr(llm, "_GRAMMAR_FALLBACK", {Verdict: "freeform"})
+    monkeypatch.setattr(llm, "_LONG_REFUSED", set())
+
+
+def test_budgets_above_the_non_streaming_ceiling_stream(provider, freeform):
+    provider.parse_result(_verdict())
+    assert _ask_long() == _verdict()
+    assert provider.transports == ["stream"]
+    req = provider.requests[0]
+    assert req["max_tokens"] == llm.LONG_MAX_TOKENS == 64_000  # Sonnet 4.6's Bedrock output maximum
+    assert req["thinking"] == {"type": "adaptive"} and req["output_config"]["effort"] == "high"
+    provider.parse_result(_verdict())
+    _ask()  # routine budgets keep the non-streaming call
+    assert provider.transports[-1] == "create" and provider.requests[-1]["max_tokens"] == 16_000
+
+
+def test_a_refused_long_budget_falls_back_to_the_standard_ceiling(provider, freeform):
+    provider.script.append(_bad_request("max_tokens: 64000 > 32000, which is the maximum allowed for this model"))
+    provider.parse_result(_verdict())
+    assert _ask_long() == _verdict()
+    assert provider.transports == ["stream", "create"]
+    assert [r["max_tokens"] for r in provider.requests] == [64_000, llm.MAX_TOKENS]
+    provider.parse_result(_verdict())
+    _ask_long()  # remembered: no second refused request
+    assert provider.transports[-1] == "create" and provider.requests[-1]["max_tokens"] == llm.MAX_TOKENS
+
+
+def test_freeform_prompt_is_compact_and_asks_not_to_draft_the_json_in_reasoning(provider, freeform):
+    provider.parse_result(_verdict())
+    _ask()
+    system = provider.system(0)
+    assert json.dumps(anthropic.transform_schema(Verdict), separators=(",", ":")) in system  # no indentation
+    assert "compactly" in system and "do not write the JSON, or a draft of it, in your reasoning" in system
+
+
+def test_a_cut_off_answer_is_continued_where_it_stopped_not_regenerated(provider, freeform):
+    full = _long_verdict().model_dump_json()
+    k = len(full) // 2
+    provider.script.append(_cut(full[:k]))
+    provider.script.append(_final("```json\n" + full[k - llm.ANCHOR_CHARS:] + "\n```"))  # repeats the anchor
+    assert _ask_long() == _long_verdict()
+    assert len(provider.requests) == 2
+    cont = provider.messages(1)
+    assert cont[-2] == {"role": "assistant", "content": full[:k]}
+    assert cont[-1]["role"] == "user" and full[k - llm.ANCHOR_CHARS:k] in cont[-1]["content"]
+    assert all(r["thinking"] == {"type": "adaptive"} for r in provider.requests)
+    assert all(r["output_config"]["effort"] == "high" and r["max_tokens"] == 64_000 for r in provider.requests)
+
+
+def test_a_continuation_can_span_several_cut_offs(provider, freeform):
+    full = _long_verdict().model_dump_json()
+    a, b = len(full) // 3, 2 * len(full) // 3
+    provider.script.append(_cut(full[:a]))
+    provider.script.append(_cut(full[a - llm.ANCHOR_CHARS:b]))
+    provider.script.append(_final(full[b - llm.ANCHOR_CHARS:]))
+    assert _ask_long() == _long_verdict()
+    assert len(provider.requests) == llm.CONTINUATIONS + 1
+
+
+def test_a_continuation_that_does_not_resume_at_the_cut_is_never_appended_blindly(provider, freeform):
+    """Appending blindly would parse, with a corrupted string: 'beta' becomes 'beeta'."""
+    full = _long_verdict().model_dump_json()
+    k = full.index("beta") + 2  # cut inside a word
+    provider.script.append(_cut(full[:k]))
+    provider.script.append(_final(full[k - 1:]))  # repeats one character, not the anchor
+    provider.parse_result(_long_verdict())  # the repair turn's fresh answer
+    assert _ask_long() == _long_verdict()
+    assert "did not resume at the cut-off point" in provider.messages(2)[-1]["content"]
+
+
+def test_reasoning_that_used_the_whole_budget_is_retried_once_with_thinking_still_on(provider, freeform):
+    """The first d95fb65c9f7a failure: 32,000 output tokens, all thinking, no answer."""
+    provider.script.append(_thought_only())
+    provider.parse_result(_verdict())
+    assert _ask_long() == _verdict()
+    retry = provider.requests[1]
+    assert retry["thinking"] == {"type": "adaptive"}  # never disabled to make the answer fit
+    assert retry["output_config"]["effort"] == "high" and retry["max_tokens"] == 64_000
+    assert retry["messages"][-1]["content"].endswith(llm.BRIEF_REASONING)
+
+
+def test_exhausted_reasoning_is_retried_only_once(provider, freeform):
+    provider.script += [_thought_only(), _thought_only()]
+    with pytest.raises(RuntimeError, match=r"no structured output \(stop reason: max_tokens\)"):
+        _ask_long()
+    assert len(provider.requests) == 2
+
+
+def test_freeform_recovery_is_bounded_and_never_returns_a_truncated_object(provider, freeform):
+    provider.script += [_cut('{"results": [{"check": "a"')] * 12
+    with pytest.raises(RuntimeError, match="could not produce valid structured output"):
+        _ask_long()
+    assert len(provider.requests) <= llm.REPAIR_ATTEMPTS + llm.CONTINUATIONS + 3
+
+
+def test_large_master_plan_survives_grammar_fallback_and_cut_offs_with_thinking_on(provider, monkeypatch):
+    """The real 15-task MasterPlan of project d95fb65c9f7a (37K characters of JSON), produced in three
+    cut-off pieces after Bedrock rejects its schema for constrained decoding."""
+    from pathlib import Path
+
+    from app.agents.blueprint import MasterPlan
+
+    monkeypatch.setattr(llm, "_GRAMMAR_FALLBACK", {})
+    monkeypatch.setattr(llm, "_LONG_REFUSED", set())
+    doc = json.loads((Path(__file__).parent / "fixtures" / "fmnist_d95fb65c9f7a_master_plan.json")
+                     .read_text(encoding="utf-8"))
+    plan = MasterPlan.model_validate({k: v for k, v in doc.items() if k in MasterPlan.model_fields})
+    full = plan.model_dump_json()
+    a, b = len(full) // 3, 2 * len(full) // 3
+    provider.script.append(_bad_request(TOO_LARGE))
+    provider.script += [_cut(full[:a]), _cut(full[a - llm.ANCHOR_CHARS:b]), _final(full[b - llm.ANCHOR_CHARS:])]
+    assert _ask_long(MasterPlan) == plan
+    assert llm._GRAMMAR_FALLBACK[MasterPlan] == "freeform"
+    assert provider.requests[0]["output_config"]["format"]["type"] == "json_schema"
+    assert all("format" not in r["output_config"] for r in provider.requests[1:])
+    assert all(r["thinking"] == {"type": "adaptive"} for r in provider.requests)
+    assert all(r["max_tokens"] == 64_000 for r in provider.requests) and set(provider.transports) == {"stream"}
+
+
 def test_record_usage_counts_cache_reads_and_writes(run_id):
     response = NS(content=[], usage=NS(input_tokens=1_000, cache_read_input_tokens=50_000,
                                        cache_creation_input_tokens=4_000, output_tokens=2_000))
@@ -923,3 +1083,76 @@ def test_web_search_spec():
         "name": "web_search", "description": "Search the web (hosted).",
         "input_schema": {"type": "object", "properties": {"query": {"type": "string"}}, "required": ["query"],
                          "additionalProperties": False}}
+
+
+# ── Output-limit errors are typed; stream failures are transient ───────────
+# The judge (project 6d8c3c93c209) tells an answer the output limit cut off from an invalid one
+# by type, not by sniffing the message; its 64K calls stream, and a stream can fail midway.
+
+
+def _thinking_then(text: str | None, stop: str) -> NS:
+    content = [NS(type="thinking", thinking="…", signature="s")] + ([NS(type="text", text=text)] if text else [])
+    return NS(id="m", content=content, stop_reason=stop,
+              usage=NS(input_tokens=10, cache_read_input_tokens=0, cache_creation_input_tokens=0, output_tokens=64_000))
+
+
+@pytest.mark.parametrize("text, stop, kind, thinking_only, detail", [
+    ('{"results": [{"check": "a"', "max_tokens", llm.OutputLimitReached, False, "the answer was cut off"),
+    (None, "max_tokens", llm.OutputLimitReached, True, "reasoning used the whole output budget"),
+    (None, "end_turn", RuntimeError, None, "the response held reasoning but no answer"),
+])
+def test_unusable_responses_raise_typed_errors(provider, text, stop, kind, thinking_only, detail):
+    provider.script.append(_thinking_then(text, stop))
+    with pytest.raises(RuntimeError, match=r"no structured output \(stop reason: " + stop) as caught:
+        _ask_long()
+    assert type(caught.value) is kind and detail in str(caught.value)
+    if thinking_only is not None:
+        assert caught.value.thinking_only is thinking_only and "64,000 output tokens" in str(caught.value)
+
+
+def test_a_freeform_answer_still_cut_off_after_its_continuations_raises_output_limit_reached(provider, freeform):
+    provider.script += [_cut('{"results": [{"check": "a"')] * 12
+    with pytest.raises(llm.OutputLimitReached, match="could not produce valid structured output"):
+        _ask_long()
+    provider.script[:] = [_final('{"results": "nope"}')] * (llm.REPAIR_ATTEMPTS + 1)
+    with pytest.raises(RuntimeError, match="invalid structured output") as caught:  # invalid, not cut off
+        _ask_long()
+    assert type(caught.value) is RuntimeError
+
+
+class _BrokenStream(_Stream):
+    def __init__(self, exc: Exception):
+        super().__init__([], None, None)
+        self.exc = exc
+
+    async def get_final_message(self):
+        raise self.exc
+
+
+def _frame(kind: str) -> anthropic.APIStatusError:
+    body = {"type": "error", "error": {"type": kind, "message": "stream failed"}}
+    request = httpx2.Request("POST", "https://bedrock.example")
+    return anthropic.APIStatusError(str(body), response=httpx2.Response(200, request=request), body=body)
+
+
+@pytest.mark.parametrize("error", [httpx2.RemoteProtocolError("peer closed connection"),
+                                   httpx2.ReadTimeout("read timed out"), _frame("throttlingException"),
+                                   _frame("internalServerException"), _frame("api_error")])
+def test_a_stream_that_fails_after_it_began_is_transient(provider, freeform, run_id, error):
+    provider.script.append(_BrokenStream(error))
+    with pytest.raises(llm.StreamInterrupted, match="Response stream interrupted") as caught:
+        _ask_long()
+    assert isinstance(caught.value, llm.TRANSIENT_ERRORS) and caught.value.__cause__ is error
+    assert _usage_rows(run_id) == []  # nothing came back, so nothing was recorded
+
+
+def test_other_stream_failures_keep_their_type(provider, freeform):
+    provider.script.append(_BrokenStream(_frame("validationException")))
+    with pytest.raises(anthropic.APIStatusError) as caught:
+        _ask_long()
+    assert not isinstance(caught.value, llm.TRANSIENT_ERRORS)
+    overloaded = anthropic.OverloadedError("overloaded", response=httpx2.Response(
+        529, request=httpx2.Request("POST", "https://bedrock.example")), body=None)
+    provider.script.append(overloaded)  # rejected when the stream opened: already transient
+    with pytest.raises(anthropic.OverloadedError):
+        _ask_long()

@@ -1,0 +1,980 @@
+INFO:     Started server process [363]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+2026-10-09 15:36:45,648 INFO launcher: created project 6d8c3c93c209 (autonomous)
+2026-10-09 15:36:45,936 INFO launcher: clarify event: message
+2026-10-09 15:36:46,053 INFO launcher: clarify event: status
+2026-10-09 15:37:09,816 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 15:37:10,379 INFO launcher: clarify event: message
+2026-10-09 15:37:10,385 INFO launcher: clarify event: project
+2026-10-09 15:37:10,674 INFO launcher: clarify event: done
+2026-10-09 15:37:10,684 INFO launcher: clarify stream finished; autonomous pipeline continues server-side
+2026-10-09 15:37:11,365 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=data+augmentation+CNN+image+classification&limit=50&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 429 "
+2026-10-09 15:37:14,339 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=data+augmentation+CNN+image+classification&limit=50&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 429 "
+2026-10-09 15:37:17,399 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=data+augmentation+CNN+image+classification&limit=50&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 429 "
+2026-10-09 15:37:24,309 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=data+augmentation+CNN+image+classification&limit=50&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 200 OK"
+2026-10-09 15:37:27,266 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=Fashion-MNIST+benchmark+convolutional+neural+network&limit=50&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 429 "
+2026-10-09 15:37:30,221 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=Fashion-MNIST+benchmark+convolutional+neural+network&limit=50&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 429 "
+2026-10-09 15:37:33,279 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=Fashion-MNIST+benchmark+convolutional+neural+network&limit=50&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 429 "
+2026-10-09 15:37:39,406 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=Fashion-MNIST+benchmark+convolutional+neural+network&limit=50&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 429 "
+2026-10-09 15:37:51,499 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=Fashion-MNIST+benchmark+convolutional+neural+network&limit=50&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 429 "
+2026-10-09 15:38:11,649 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=Fashion-MNIST+benchmark+convolutional+neural+network&limit=50&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 429 "
+2026-10-09 15:38:14,595 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=random+flip+rotation+translation+image+augmentation&limit=50&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 429 "
+2026-10-09 15:38:17,555 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=random+flip+rotation+translation+image+augmentation&limit=50&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 429 "
+2026-10-09 15:38:20,621 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=random+flip+rotation+translation+image+augmentation&limit=50&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 429 "
+2026-10-09 15:38:26,711 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=random+flip+rotation+translation+image+augmentation&limit=50&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 429 "
+2026-10-09 15:38:38,394 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=random+flip+rotation+translation+image+augmentation&limit=50&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 429 "
+2026-10-09 15:38:58,486 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=random+flip+rotation+translation+image+augmentation&limit=50&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 429 "
+2026-10-09 15:39:01,450 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=deep+learning+generalisation+regularisation&limit=50&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 429 "
+2026-10-09 15:39:04,045 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=deep+learning+generalisation+regularisation&limit=50&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 429 "
+2026-10-09 15:39:07,100 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=deep+learning+generalisation+regularisation&limit=50&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 429 "
+2026-10-09 15:39:13,193 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=deep+learning+generalisation+regularisation&limit=50&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 429 "
+2026-10-09 15:39:25,312 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=deep+learning+generalisation+regularisation&limit=50&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 429 "
+2026-10-09 15:39:44,985 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=deep+learning+generalisation+regularisation&limit=50&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 429 "
+2026-10-09 15:39:47,926 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=torchvision+transforms+augmentation+PyTorch&limit=50&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 429 "
+2026-10-09 15:39:50,883 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=torchvision+transforms+augmentation+PyTorch&limit=50&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 429 "
+2026-10-09 15:39:53,939 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=torchvision+transforms+augmentation+PyTorch&limit=50&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 429 "
+2026-10-09 15:40:00,034 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=torchvision+transforms+augmentation+PyTorch&limit=50&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 429 "
+2026-10-09 15:40:11,702 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=torchvision+transforms+augmentation+PyTorch&limit=50&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 429 "
+2026-10-09 15:40:31,797 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=torchvision+transforms+augmentation+PyTorch&limit=50&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 429 "
+2026-10-09 15:40:34,769 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=small+CNN+architecture+MNIST+Fashion-MNIST&limit=50&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 429 "
+2026-10-09 15:40:38,111 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=small+CNN+architecture+MNIST+Fashion-MNIST&limit=50&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 200 OK"
+2026-10-09 15:40:41,469 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=training+vs+test+accuracy+gap+overfitting&limit=50&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 429 "
+2026-10-09 15:40:44,571 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=training+vs+test+accuracy+gap+overfitting&limit=50&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 429 "
+2026-10-09 15:40:47,619 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=training+vs+test+accuracy+gap+overfitting&limit=50&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 429 "
+2026-10-09 15:40:53,713 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=training+vs+test+accuracy+gap+overfitting&limit=50&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 429 "
+2026-10-09 15:41:05,793 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=training+vs+test+accuracy+gap+overfitting&limit=50&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 429 "
+2026-10-09 15:41:26,370 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=training+vs+test+accuracy+gap+overfitting&limit=50&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 200 OK"
+2026-10-09 15:41:29,863 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=data+augmentation+empirical+evaluation&limit=50&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 429 "
+2026-10-09 15:41:32,862 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=data+augmentation+empirical+evaluation&limit=50&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 429 "
+2026-10-09 15:41:35,924 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=data+augmentation+empirical+evaluation&limit=50&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 429 "
+2026-10-09 15:41:41,457 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=data+augmentation+empirical+evaluation&limit=50&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 429 "
+2026-10-09 15:41:53,581 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=data+augmentation+empirical+evaluation&limit=50&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 429 "
+2026-10-09 15:42:13,158 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=data+augmentation+empirical+evaluation&limit=50&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 429 "
+2026-10-09 15:42:16,134 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=image+augmentation+training+regularisation+effect&limit=50&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 429 "
+2026-10-09 15:42:19,144 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=image+augmentation+training+regularisation+effect&limit=50&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 429 "
+2026-10-09 15:42:22,196 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=image+augmentation+training+regularisation+effect&limit=50&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 429 "
+2026-10-09 15:42:28,270 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=image+augmentation+training+regularisation+effect&limit=50&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 429 "
+2026-10-09 15:42:40,397 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=image+augmentation+training+regularisation+effect&limit=50&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 429 "
+2026-10-09 15:42:59,966 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=image+augmentation+training+regularisation+effect&limit=50&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 429 "
+2026-10-09 15:43:02,938 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=CNN+benchmark+reproducibility+fixed+random+seed&limit=50&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 429 "
+2026-10-09 15:43:06,906 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=CNN+benchmark+reproducibility+fixed+random+seed&limit=50&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 200 OK"
+2026-10-09 15:43:10,483 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=Fashion-MNIST+state+of+the+art+baseline&limit=50&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 429 "
+2026-10-09 15:43:13,431 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=Fashion-MNIST+state+of+the+art+baseline&limit=50&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 429 "
+2026-10-09 15:43:15,976 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=Fashion-MNIST+state+of+the+art+baseline&limit=50&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 429 "
+2026-10-09 15:43:22,059 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=Fashion-MNIST+state+of+the+art+baseline&limit=50&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 429 "
+2026-10-09 15:43:34,139 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=Fashion-MNIST+state+of+the+art+baseline&limit=50&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 429 "
+2026-10-09 15:43:53,763 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=Fashion-MNIST+state+of+the+art+baseline&limit=50&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 429 "
+2026-10-09 15:43:56,754 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=augmentation-induced+variance+deep+learning&limit=50&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 429 "
+2026-10-09 15:43:59,701 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=augmentation-induced+variance+deep+learning&limit=50&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 429 "
+2026-10-09 15:44:02,756 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=augmentation-induced+variance+deep+learning&limit=50&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 429 "
+2026-10-09 15:44:08,832 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=augmentation-induced+variance+deep+learning&limit=50&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 429 "
+2026-10-09 15:44:20,917 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=augmentation-induced+variance+deep+learning&limit=50&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 429 "
+2026-10-09 15:44:40,337 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=augmentation-induced+variance+deep+learning&limit=50&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 429 "
+2026-10-09 15:44:46,263 INFO httpx: HTTP Request: GET https://api.openalex.org/works?filter=title_and_abstract.search%3AFashion-MNIST+benchmark+convolutional+neural+network&per_page=50&select=id%2Cdoi%2Ctitle%2Cpublication_year%2Ccited_by_count%2Cabstract_inverted_index%2Cprimary_location%2Cids%2Cauthorships "HTTP/1.1 200 OK"
+2026-10-09 15:44:49,868 INFO httpx: HTTP Request: GET https://api.openalex.org/works?filter=title_and_abstract.search%3Arandom+flip+rotation+translation+image+augmentation&per_page=50&select=id%2Cdoi%2Ctitle%2Cpublication_year%2Ccited_by_count%2Cabstract_inverted_index%2Cprimary_location%2Cids%2Cauthorships "HTTP/1.1 200 OK"
+2026-10-09 15:44:51,196 INFO httpx: HTTP Request: GET https://api.openalex.org/works?filter=title_and_abstract.search%3Adeep+learning+generalisation+regularisation&per_page=50&select=id%2Cdoi%2Ctitle%2Cpublication_year%2Ccited_by_count%2Cabstract_inverted_index%2Cprimary_location%2Cids%2Cauthorships "HTTP/1.1 200 OK"
+2026-10-09 15:44:54,651 INFO httpx: HTTP Request: GET https://api.openalex.org/works?filter=title_and_abstract.search%3Atorchvision+transforms+augmentation+PyTorch&per_page=50&select=id%2Cdoi%2Ctitle%2Cpublication_year%2Ccited_by_count%2Cabstract_inverted_index%2Cprimary_location%2Cids%2Cauthorships "HTTP/1.1 200 OK"
+2026-10-09 15:44:55,318 INFO httpx: HTTP Request: GET https://api.openalex.org/works?filter=title_and_abstract.search%3Adata+augmentation+empirical+evaluation&per_page=50&select=id%2Cdoi%2Ctitle%2Cpublication_year%2Ccited_by_count%2Cabstract_inverted_index%2Cprimary_location%2Cids%2Cauthorships "HTTP/1.1 200 OK"
+2026-10-09 15:44:58,809 INFO httpx: HTTP Request: GET https://api.openalex.org/works?filter=title_and_abstract.search%3Aimage+augmentation+training+regularisation+effect&per_page=50&select=id%2Cdoi%2Ctitle%2Cpublication_year%2Ccited_by_count%2Cabstract_inverted_index%2Cprimary_location%2Cids%2Cauthorships "HTTP/1.1 200 OK"
+2026-10-09 15:44:59,602 INFO httpx: HTTP Request: GET https://api.openalex.org/works?filter=title_and_abstract.search%3AFashion-MNIST+state+of+the+art+baseline&per_page=50&select=id%2Cdoi%2Ctitle%2Cpublication_year%2Ccited_by_count%2Cabstract_inverted_index%2Cprimary_location%2Cids%2Cauthorships "HTTP/1.1 200 OK"
+2026-10-09 15:45:03,195 INFO httpx: HTTP Request: GET https://api.openalex.org/works?filter=title_and_abstract.search%3Aaugmentation-induced+variance+deep+learning&per_page=50&select=id%2Cdoi%2Ctitle%2Cpublication_year%2Ccited_by_count%2Cabstract_inverted_index%2Cprimary_location%2Cids%2Cauthorships "HTTP/1.1 200 OK"
+2026-10-09 15:45:14,623 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 15:45:15,891 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 15:45:16,412 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 15:45:16,841 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 15:45:17,282 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 15:45:17,449 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 15:45:17,779 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 15:45:20,088 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 15:45:26,156 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 15:45:26,392 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 15:45:27,023 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 15:45:30,844 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 15:46:02,330 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 15:46:02,882 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 15:46:03,431 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 15:46:03,993 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 15:46:04,553 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 15:46:05,215 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 15:46:05,764 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 15:46:06,660 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 15:46:08,166 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 15:46:08,907 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 15:46:09,119 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 15:46:09,793 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 15:46:10,343 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 15:46:10,629 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 15:46:11,439 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 15:46:12,128 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 15:46:12,694 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 15:46:12,978 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 15:46:13,977 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 15:46:15,383 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 15:46:16,755 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 15:46:17,379 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 15:46:17,928 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 15:46:18,468 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 15:46:18,739 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 15:46:19,669 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 15:46:19,942 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 15:46:20,214 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 15:46:22,267 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 15:46:22,821 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 15:46:24,256 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 15:46:24,808 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 15:46:25,357 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 15:46:25,995 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 15:46:26,540 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 15:46:27,216 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 15:46:27,794 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 15:46:28,393 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 15:46:28,657 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 15:46:29,630 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 15:46:30,033 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 15:46:31,944 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 15:46:32,280 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 15:46:34,340 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 15:46:35,213 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 15:46:37,146 INFO httpx: HTTP Request: POST https://api.semanticscholar.org/graph/v1/paper/batch?fields=references.paperId "HTTP/1.1 200 OK"
+2026-10-09 15:47:01,493 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 15:51:11,259 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 15:51:12,503 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=data+augmentation+benefit+epoch+count+training+duration+CNN&limit=20&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 429 "
+2026-10-09 15:51:15,069 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=data+augmentation+effectiveness+training+set+size+Fashion+MNIST&limit=20&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 429 "
+2026-10-09 15:51:18,194 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=rotation+angle+magnitude+augmentation+accuracy+Fashion+MNIST+CNN&limit=20&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 200 OK"
+2026-10-09 15:51:21,071 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=random+seed+variance+CNN+accuracy+Fashion+MNIST+reproducibility&limit=20&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 429 "
+2026-10-09 15:51:24,083 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=per+class+accuracy+data+augmentation+Fashion+MNIST+CNN&limit=20&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 429 "
+2026-10-09 15:51:26,573 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=augmentation+ablation+flip+rotation+translation+individual+contribution+CNN&limit=20&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 429 "
+2026-10-09 15:51:29,582 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=data+augmentation+benefit+epoch+count+training+duration+CNN&limit=20&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 429 "
+2026-10-09 15:51:32,553 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=data+augmentation+effectiveness+training+set+size+Fashion+MNIST&limit=20&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 429 "
+2026-10-09 15:51:35,620 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=optimal+augmentation+degree+rotation+translation+benchmark+CNN&limit=20&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 429 "
+2026-10-09 15:51:38,590 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=random+seed+variance+CNN+accuracy+Fashion+MNIST+reproducibility&limit=20&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 429 "
+2026-10-09 15:51:41,588 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=per+class+accuracy+data+augmentation+Fashion+MNIST+CNN&limit=20&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 429 "
+2026-10-09 15:51:44,603 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=augmentation+ablation+flip+rotation+translation+individual+contribution+CNN&limit=20&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 429 "
+2026-10-09 15:51:47,561 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=data+augmentation+benefit+epoch+count+training+duration+CNN&limit=20&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 429 "
+2026-10-09 15:51:50,600 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=data+augmentation+effectiveness+training+set+size+Fashion+MNIST&limit=20&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 429 "
+2026-10-09 15:51:53,555 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=optimal+augmentation+degree+rotation+translation+benchmark+CNN&limit=20&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 429 "
+2026-10-09 15:51:56,597 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=random+seed+variance+CNN+accuracy+Fashion+MNIST+reproducibility&limit=20&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 429 "
+2026-10-09 15:51:58,945 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=per+class+accuracy+data+augmentation+Fashion+MNIST+CNN&limit=20&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 429 "
+2026-10-09 15:52:01,933 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=augmentation+ablation+flip+rotation+translation+individual+contribution+CNN&limit=20&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 429 "
+2026-10-09 15:52:04,940 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=data+augmentation+benefit+epoch+count+training+duration+CNN&limit=20&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 429 "
+2026-10-09 15:52:07,952 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=optimal+augmentation+degree+rotation+translation+benchmark+CNN&limit=20&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 429 "
+2026-10-09 15:52:10,938 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=data+augmentation+effectiveness+training+set+size+Fashion+MNIST&limit=20&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 429 "
+2026-10-09 15:52:13,908 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=random+seed+variance+CNN+accuracy+Fashion+MNIST+reproducibility&limit=20&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 429 "
+2026-10-09 15:52:16,942 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=per+class+accuracy+data+augmentation+Fashion+MNIST+CNN&limit=20&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 429 "
+2026-10-09 15:52:19,954 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=augmentation+ablation+flip+rotation+translation+individual+contribution+CNN&limit=20&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 429 "
+2026-10-09 15:52:22,948 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=optimal+augmentation+degree+rotation+translation+benchmark+CNN&limit=20&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 429 "
+2026-10-09 15:52:25,972 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=data+augmentation+benefit+epoch+count+training+duration+CNN&limit=20&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 429 "
+2026-10-09 15:52:29,285 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=data+augmentation+effectiveness+training+set+size+Fashion+MNIST&limit=20&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 200 OK"
+2026-10-09 15:52:31,357 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=random+seed+variance+CNN+accuracy+Fashion+MNIST+reproducibility&limit=20&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 429 "
+2026-10-09 15:52:34,398 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=per+class+accuracy+data+augmentation+Fashion+MNIST+CNN&limit=20&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 429 "
+2026-10-09 15:52:37,400 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=augmentation+benefit+sample+size+scaling+image+classification+CNN&limit=20&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 429 "
+2026-10-09 15:52:40,393 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=augmentation+ablation+flip+rotation+translation+individual+contribution+CNN&limit=20&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 429 "
+2026-10-09 15:52:43,405 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=optimal+augmentation+degree+rotation+translation+benchmark+CNN&limit=20&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 429 "
+2026-10-09 15:52:46,401 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=augmentation+benefit+sample+size+scaling+image+classification+CNN&limit=20&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 429 "
+2026-10-09 15:52:49,678 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=data+augmentation+benefit+epoch+count+training+duration+CNN&limit=20&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 200 OK"
+2026-10-09 15:52:52,402 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=augmentation+benefit+sample+size+scaling+image+classification+CNN&limit=20&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 429 "
+2026-10-09 15:52:55,368 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=minimum+epochs+augmentation+improvement+generalization+CNN&limit=20&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 429 "
+2026-10-09 15:52:58,426 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=random+seed+variance+CNN+accuracy+Fashion+MNIST+reproducibility&limit=20&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 429 "
+2026-10-09 15:53:00,860 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=per+class+accuracy+data+augmentation+Fashion+MNIST+CNN&limit=20&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 429 "
+2026-10-09 15:53:03,805 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=minimum+epochs+augmentation+improvement+generalization+CNN&limit=20&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 429 "
+2026-10-09 15:53:06,804 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=augmentation+benefit+sample+size+scaling+image+classification+CNN&limit=20&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 429 "
+2026-10-09 15:53:09,837 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=seed+sensitivity+accuracy+measurement+uncertainty+image+classification&limit=20&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 429 "
+2026-10-09 15:53:12,851 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=augmentation+ablation+flip+rotation+translation+individual+contribution+CNN&limit=20&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 429 "
+2026-10-09 15:53:15,848 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=class+specific+augmentation+benefit+image+classification+CNN&limit=20&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 429 "
+2026-10-09 15:53:18,822 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=optimal+augmentation+degree+rotation+translation+benchmark+CNN&limit=20&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 429 "
+2026-10-09 15:53:21,882 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=minimum+epochs+augmentation+improvement+generalization+CNN&limit=20&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 429 "
+2026-10-09 15:53:25,777 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=seed+sensitivity+accuracy+measurement+uncertainty+image+classification&limit=20&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 200 OK"
+2026-10-09 15:53:28,249 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=single+transform+augmentation+effect+image+classification+CNN+benchmark&limit=20&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 200 OK"
+2026-10-09 15:53:30,858 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=class+specific+augmentation+benefit+image+classification+CNN&limit=20&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 429 "
+2026-10-09 15:53:33,284 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=augmentation+benefit+sample+size+scaling+image+classification+CNN&limit=20&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 429 "
+2026-10-09 15:53:36,291 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=augmentation+hyperparameter+strength+sensitivity+image+classification&limit=20&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 429 "
+2026-10-09 15:53:39,290 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=effect+size+versus+variance+augmentation+comparison+reliability+CNN&limit=20&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 429 "
+2026-10-09 15:53:42,262 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=minimum+epochs+augmentation+improvement+generalization+CNN&limit=20&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 429 "
+2026-10-09 15:53:45,286 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=horizontal+flip+translation+rotation+isolated+accuracy+Fashion+MNIST&limit=20&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 429 "
+2026-10-09 15:53:48,255 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=class+specific+augmentation+benefit+image+classification+CNN&limit=20&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 429 "
+2026-10-09 15:53:51,252 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=augmentation+hyperparameter+strength+sensitivity+image+classification&limit=20&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 429 "
+2026-10-09 15:53:54,303 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=effect+size+versus+variance+augmentation+comparison+reliability+CNN&limit=20&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 429 "
+2026-10-09 15:53:57,303 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=horizontal+flip+translation+rotation+isolated+accuracy+Fashion+MNIST&limit=20&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 429 "
+2026-10-09 15:54:00,295 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=augmentation+benefit+sample+size+scaling+image+classification+CNN&limit=20&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 429 "
+2026-10-09 15:54:03,260 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=augmentation+hyperparameter+strength+sensitivity+image+classification&limit=20&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 429 "
+2026-10-09 15:54:05,716 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=class+specific+augmentation+benefit+image+classification+CNN&limit=20&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 429 "
+2026-10-09 15:54:08,711 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=minimum+epochs+augmentation+improvement+generalization+CNN&limit=20&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 429 "
+2026-10-09 15:54:11,713 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=effect+size+versus+variance+augmentation+comparison+reliability+CNN&limit=20&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 429 "
+2026-10-09 15:54:15,185 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=sample+size+augmentation+interaction+accuracy+benchmark+small+CNN&limit=20&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 200 OK"
+2026-10-09 15:54:17,726 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=horizontal+flip+translation+rotation+isolated+accuracy+Fashion+MNIST&limit=20&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 429 "
+2026-10-09 15:54:20,735 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=augmentation+hyperparameter+strength+sensitivity+image+classification&limit=20&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 429 "
+2026-10-09 15:54:23,735 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=effect+size+versus+variance+augmentation+comparison+reliability+CNN&limit=20&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 429 "
+2026-10-09 15:54:25,549 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 15:54:26,729 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=class+specific+augmentation+benefit+image+classification+CNN&limit=20&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 429 "
+2026-10-09 15:54:29,720 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=horizontal+flip+translation+rotation+isolated+accuracy+Fashion+MNIST&limit=20&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 429 "
+2026-10-09 15:54:32,728 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=minimum+epochs+augmentation+improvement+generalization+CNN&limit=20&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 429 "
+2026-10-09 15:54:35,725 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=augmentation+epoch+interaction+Fashion+MNIST+small+CNN&limit=20&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 429 "
+2026-10-09 15:54:39,576 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=augmentation+hyperparameter+strength+sensitivity+image+classification&limit=20&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 200 OK"
+2026-10-09 15:54:41,728 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=effect+size+versus+variance+augmentation+comparison+reliability+CNN&limit=20&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 429 "
+2026-10-09 15:54:44,736 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=augmentation+epoch+interaction+Fashion+MNIST+small+CNN&limit=20&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 429 "
+2026-10-09 15:54:47,735 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=horizontal+flip+translation+rotation+isolated+accuracy+Fashion+MNIST&limit=20&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 429 "
+2026-10-09 15:54:48,313 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 15:54:51,494 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=class+specific+augmentation+benefit+image+classification+CNN&limit=20&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 200 OK"
+2026-10-09 15:54:53,147 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=augmentation+epoch+interaction+Fashion+MNIST+small+CNN&limit=20&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 200 OK"
+2026-10-09 15:54:55,832 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=augmentation+differential+class+accuracy+garment+recognition&limit=20&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 429 "
+2026-10-09 15:54:59,600 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=augmentation+differential+class+accuracy+garment+recognition&limit=20&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 200 OK"
+2026-10-09 15:55:01,257 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 15:55:01,841 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=effect+size+versus+variance+augmentation+comparison+reliability+CNN&limit=20&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 429 "
+2026-10-09 15:55:06,909 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 15:55:07,249 INFO httpx: HTTP Request: GET https://api.semanticscholar.org/graph/v1/paper/search?query=horizontal+flip+translation+rotation+isolated+accuracy+Fashion+MNIST&limit=20&fields=paperId%2CexternalIds%2Ctitle%2Cabstract%2Cyear%2Cvenue%2CcitationCount%2Cauthors%2Ctldr%2CopenAccessPdf%2Curl "HTTP/1.1 429 "
+2026-10-09 15:55:12,365 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 15:55:12,878 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 15:55:15,467 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke-with-response-stream "HTTP/1.1 400 Bad Request"
+2026-10-09 15:55:15,471 INFO openscientist.llm: parse: ResearchPlan's schema is too complex for constrained decoding; falling back to freeform JSON with adaptive thinking preserved
+2026-10-09 15:55:16,484 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke-with-response-stream "HTTP/1.1 200 OK"
+2026-10-09 15:57:54,027 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 15:57:55,603 INFO httpx: HTTP Request: POST https://api.tavily.com/search "HTTP/1.1 200 OK"
+2026-10-09 15:57:58,241 INFO httpx: HTTP Request: POST https://api.tavily.com/search "HTTP/1.1 200 OK"
+2026-10-09 15:58:00,138 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 15:58:01,041 INFO httpx: HTTP Request: POST https://api.tavily.com/search "HTTP/1.1 200 OK"
+2026-10-09 15:58:14,742 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 15:58:16,096 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke-with-response-stream "HTTP/1.1 400 Bad Request"
+2026-10-09 15:58:16,102 INFO openscientist.llm: parse: MasterPlan's schema is too complex for constrained decoding; falling back to freeform JSON with adaptive thinking preserved
+2026-10-09 15:58:25,027 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke-with-response-stream "HTTP/1.1 200 OK"
+2026-10-09 16:06:49,777 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 16:06:51,710 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke-with-response-stream "HTTP/1.1 200 OK"
+2026-10-09 16:09:23,310 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 16:09:24,126 INFO httpx: HTTP Request: HEAD https://github.com/zalandoresearch/fashion-mnist "HTTP/1.1 200 OK"
+2026-10-09 16:09:27,122 INFO httpx: HTTP Request: POST https://api.e2b.app/v2/sandboxes "HTTP/1.1 201 Created"
+2026-10-09 16:09:57,425 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 16:09:57,778 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 16:09:58,021 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.tgz "HTTP/1.1 200 OK"
+2026-10-09 16:09:58,078 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.list "HTTP/1.1 200 OK"
+2026-10-09 16:09:59,033 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.list "HTTP/1.1 200 OK"
+2026-10-09 16:09:59,269 INFO httpx: HTTP Request: GET https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.tgz "HTTP/1.1 200 OK"
+2026-10-09 16:10:22,679 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 16:10:24,734 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 16:10:24,949 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.tgz "HTTP/1.1 200 OK"
+2026-10-09 16:10:25,005 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.list "HTTP/1.1 200 OK"
+2026-10-09 16:10:29,384 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 16:10:33,342 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 16:10:42,542 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 16:10:42,805 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.tgz "HTTP/1.1 200 OK"
+2026-10-09 16:10:42,855 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.list "HTTP/1.1 200 OK"
+2026-10-09 16:10:49,866 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.list "HTTP/1.1 200 OK"
+2026-10-09 16:10:53,508 INFO httpx: HTTP Request: GET https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.tgz "HTTP/1.1 200 OK"
+2026-10-09 16:11:05,790 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 16:11:11,466 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 16:11:11,683 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.tgz "HTTP/1.1 200 OK"
+2026-10-09 16:11:11,733 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.list "HTTP/1.1 200 OK"
+2026-10-09 16:11:15,268 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 16:11:15,740 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.list "HTTP/1.1 200 OK"
+2026-10-09 16:11:15,885 INFO httpx: HTTP Request: GET https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.tgz "HTTP/1.1 200 OK"
+2026-10-09 16:11:28,669 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 16:11:30,128 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 16:11:40,470 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 16:11:44,620 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 16:11:49,613 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 16:11:49,827 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.tgz "HTTP/1.1 200 OK"
+2026-10-09 16:11:49,881 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.list "HTTP/1.1 200 OK"
+2026-10-09 16:11:50,612 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.list "HTTP/1.1 200 OK"
+2026-10-09 16:11:50,728 INFO httpx: HTTP Request: GET https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.tgz "HTTP/1.1 200 OK"
+2026-10-09 16:12:15,331 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 16:12:18,777 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 16:19:59,611 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 16:20:00,026 INFO httpx: HTTP Request: POST https://api.e2b.app/sandboxes/idvr8s9zefod5k7lgo0fs/timeout "HTTP/1.1 204 No Content"
+2026-10-09 16:20:00,199 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.tgz "HTTP/1.1 200 OK"
+2026-10-09 16:20:00,248 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.list "HTTP/1.1 200 OK"
+2026-10-09 16:20:02,295 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.list "HTTP/1.1 200 OK"
+2026-10-09 16:20:02,496 INFO httpx: HTTP Request: GET https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.tgz "HTTP/1.1 200 OK"
+2026-10-09 16:20:06,905 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 16:20:07,127 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.tgz "HTTP/1.1 200 OK"
+2026-10-09 16:20:07,177 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.list "HTTP/1.1 200 OK"
+2026-10-09 16:20:07,449 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.list "HTTP/1.1 200 OK"
+2026-10-09 16:20:07,563 INFO httpx: HTTP Request: GET https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.tgz "HTTP/1.1 200 OK"
+2026-10-09 16:20:20,222 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 16:20:29,034 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 16:20:33,499 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 16:20:58,597 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 16:21:01,903 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 16:25:27,584 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 16:25:27,928 INFO httpx: HTTP Request: POST https://api.e2b.app/sandboxes/idvr8s9zefod5k7lgo0fs/timeout "HTTP/1.1 204 No Content"
+2026-10-09 16:25:28,107 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.tgz "HTTP/1.1 200 OK"
+2026-10-09 16:25:28,164 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.list "HTTP/1.1 200 OK"
+2026-10-09 16:25:30,060 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.list "HTTP/1.1 200 OK"
+2026-10-09 16:25:30,264 INFO httpx: HTTP Request: GET https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.tgz "HTTP/1.1 200 OK"
+2026-10-09 16:25:32,897 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 16:25:44,580 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 16:25:52,378 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 16:25:56,642 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 16:25:56,868 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.tgz "HTTP/1.1 200 OK"
+2026-10-09 16:25:56,921 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.list "HTTP/1.1 200 OK"
+2026-10-09 16:25:57,210 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.list "HTTP/1.1 200 OK"
+2026-10-09 16:25:57,324 INFO httpx: HTTP Request: GET https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.tgz "HTTP/1.1 200 OK"
+2026-10-09 16:26:00,048 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 16:26:00,266 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.tgz "HTTP/1.1 200 OK"
+2026-10-09 16:26:00,315 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.list "HTTP/1.1 200 OK"
+2026-10-09 16:26:02,135 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.list "HTTP/1.1 200 OK"
+2026-10-09 16:26:02,256 INFO httpx: HTTP Request: GET https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.tgz "HTTP/1.1 200 OK"
+2026-10-09 16:26:07,725 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 16:26:07,952 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.tgz "HTTP/1.1 200 OK"
+2026-10-09 16:26:08,010 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.list "HTTP/1.1 200 OK"
+2026-10-09 16:26:09,897 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.list "HTTP/1.1 200 OK"
+2026-10-09 16:26:10,008 INFO httpx: HTTP Request: GET https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.tgz "HTTP/1.1 200 OK"
+2026-10-09 16:26:15,449 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 16:26:15,660 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.tgz "HTTP/1.1 200 OK"
+2026-10-09 16:26:15,725 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.list "HTTP/1.1 200 OK"
+2026-10-09 16:26:15,999 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.list "HTTP/1.1 200 OK"
+2026-10-09 16:26:16,109 INFO httpx: HTTP Request: GET https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.tgz "HTTP/1.1 200 OK"
+2026-10-09 16:26:19,156 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 16:26:19,376 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.tgz "HTTP/1.1 200 OK"
+2026-10-09 16:26:19,425 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.list "HTTP/1.1 200 OK"
+2026-10-09 16:26:21,245 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.list "HTTP/1.1 200 OK"
+2026-10-09 16:26:21,368 INFO httpx: HTTP Request: GET https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.tgz "HTTP/1.1 200 OK"
+2026-10-09 16:26:27,342 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 16:26:27,544 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.tgz "HTTP/1.1 200 OK"
+2026-10-09 16:26:27,591 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.list "HTTP/1.1 200 OK"
+2026-10-09 16:26:27,869 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.list "HTTP/1.1 200 OK"
+2026-10-09 16:26:27,982 INFO httpx: HTTP Request: GET https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.tgz "HTTP/1.1 200 OK"
+2026-10-09 16:26:34,253 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 16:26:34,477 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.tgz "HTTP/1.1 200 OK"
+2026-10-09 16:26:34,526 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.list "HTTP/1.1 200 OK"
+2026-10-09 16:26:36,374 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.list "HTTP/1.1 200 OK"
+2026-10-09 16:26:36,485 INFO httpx: HTTP Request: GET https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.tgz "HTTP/1.1 200 OK"
+2026-10-09 16:26:41,342 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 16:26:41,572 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.tgz "HTTP/1.1 200 OK"
+2026-10-09 16:26:41,623 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.list "HTTP/1.1 200 OK"
+2026-10-09 16:26:43,648 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.list "HTTP/1.1 200 OK"
+2026-10-09 16:26:43,761 INFO httpx: HTTP Request: GET https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.tgz "HTTP/1.1 200 OK"
+2026-10-09 16:26:55,489 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 16:26:55,720 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.tgz "HTTP/1.1 200 OK"
+2026-10-09 16:26:55,775 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.list "HTTP/1.1 200 OK"
+2026-10-09 16:26:56,066 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.list "HTTP/1.1 200 OK"
+2026-10-09 16:26:56,181 INFO httpx: HTTP Request: GET https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.tgz "HTTP/1.1 200 OK"
+2026-10-09 16:27:02,420 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 16:27:02,642 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.tgz "HTTP/1.1 200 OK"
+2026-10-09 16:27:02,693 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.list "HTTP/1.1 200 OK"
+2026-10-09 16:27:04,598 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.list "HTTP/1.1 200 OK"
+2026-10-09 16:27:04,713 INFO httpx: HTTP Request: GET https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.tgz "HTTP/1.1 200 OK"
+2026-10-09 16:27:08,121 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 16:27:08,332 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.tgz "HTTP/1.1 200 OK"
+2026-10-09 16:27:08,383 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.list "HTTP/1.1 200 OK"
+2026-10-09 16:27:08,712 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.list "HTTP/1.1 200 OK"
+2026-10-09 16:27:08,825 INFO httpx: HTTP Request: GET https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.tgz "HTTP/1.1 200 OK"
+2026-10-09 16:27:14,264 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 16:27:14,491 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.tgz "HTTP/1.1 200 OK"
+2026-10-09 16:27:14,546 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.list "HTTP/1.1 200 OK"
+2026-10-09 16:27:14,876 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.list "HTTP/1.1 200 OK"
+2026-10-09 16:27:14,987 INFO httpx: HTTP Request: GET https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.tgz "HTTP/1.1 200 OK"
+2026-10-09 16:27:23,939 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 16:27:24,150 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.tgz "HTTP/1.1 200 OK"
+2026-10-09 16:27:24,198 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.list "HTTP/1.1 200 OK"
+2026-10-09 16:27:26,030 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.list "HTTP/1.1 200 OK"
+2026-10-09 16:27:26,147 INFO httpx: HTTP Request: GET https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.tgz "HTTP/1.1 200 OK"
+2026-10-09 16:27:36,746 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 16:27:44,941 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 16:27:49,528 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 16:27:50,135 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 16:27:50,559 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.tgz "HTTP/1.1 200 OK"
+2026-10-09 16:27:50,608 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.list "HTTP/1.1 200 OK"
+2026-10-09 16:27:52,402 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.list "HTTP/1.1 200 OK"
+2026-10-09 16:27:52,513 INFO httpx: HTTP Request: GET https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.tgz "HTTP/1.1 200 OK"
+2026-10-09 16:27:53,820 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 16:27:54,052 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.tgz "HTTP/1.1 200 OK"
+2026-10-09 16:27:54,103 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.list "HTTP/1.1 200 OK"
+2026-10-09 16:27:56,044 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.list "HTTP/1.1 200 OK"
+2026-10-09 16:27:56,165 INFO httpx: HTTP Request: GET https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.tgz "HTTP/1.1 200 OK"
+2026-10-09 16:28:04,094 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 16:28:04,312 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.tgz "HTTP/1.1 200 OK"
+2026-10-09 16:28:04,390 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.list "HTTP/1.1 200 OK"
+2026-10-09 16:28:07,435 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 16:28:07,641 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.tgz "HTTP/1.1 200 OK"
+2026-10-09 16:28:07,688 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.list "HTTP/1.1 200 OK"
+2026-10-09 16:28:09,503 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.list "HTTP/1.1 200 OK"
+2026-10-09 16:28:09,626 INFO httpx: HTTP Request: GET https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.tgz "HTTP/1.1 200 OK"
+2026-10-09 16:28:10,690 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.list "HTTP/1.1 200 OK"
+2026-10-09 16:28:10,815 INFO httpx: HTTP Request: GET https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.tgz "HTTP/1.1 200 OK"
+2026-10-09 16:28:14,513 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 16:28:14,741 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.tgz "HTTP/1.1 200 OK"
+2026-10-09 16:28:14,796 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.list "HTTP/1.1 200 OK"
+2026-10-09 16:28:16,012 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 16:28:16,227 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.tgz "HTTP/1.1 200 OK"
+2026-10-09 16:28:16,279 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.list "HTTP/1.1 200 OK"
+2026-10-09 16:28:16,561 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.list "HTTP/1.1 200 OK"
+2026-10-09 16:28:16,674 INFO httpx: HTTP Request: GET https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.tgz "HTTP/1.1 200 OK"
+2026-10-09 16:28:21,106 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 16:28:21,323 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.tgz "HTTP/1.1 200 OK"
+2026-10-09 16:28:21,377 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.list "HTTP/1.1 200 OK"
+2026-10-09 16:28:21,778 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.list "HTTP/1.1 200 OK"
+2026-10-09 16:28:21,892 INFO httpx: HTTP Request: GET https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.tgz "HTTP/1.1 200 OK"
+2026-10-09 16:28:23,875 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 16:28:24,093 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.tgz "HTTP/1.1 200 OK"
+2026-10-09 16:28:24,145 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.list "HTTP/1.1 200 OK"
+2026-10-09 16:28:25,168 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 16:28:25,376 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.tgz "HTTP/1.1 200 OK"
+2026-10-09 16:28:25,423 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.list "HTTP/1.1 200 OK"
+2026-10-09 16:28:27,404 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.list "HTTP/1.1 200 OK"
+2026-10-09 16:28:27,513 INFO httpx: HTTP Request: GET https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.tgz "HTTP/1.1 200 OK"
+2026-10-09 16:28:29,715 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.list "HTTP/1.1 200 OK"
+2026-10-09 16:28:29,882 INFO httpx: HTTP Request: GET https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.tgz "HTTP/1.1 200 OK"
+2026-10-09 16:28:35,976 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 16:28:36,891 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.tgz "HTTP/1.1 200 OK"
+2026-10-09 16:28:36,939 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.list "HTTP/1.1 200 OK"
+2026-10-09 16:28:37,218 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.list "HTTP/1.1 200 OK"
+2026-10-09 16:28:37,327 INFO httpx: HTTP Request: GET https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.tgz "HTTP/1.1 200 OK"
+2026-10-09 16:28:45,120 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 16:28:44,702 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 16:28:51,923 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 16:28:54,524 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 16:28:56,277 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 16:28:58,948 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 16:28:59,175 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.tgz "HTTP/1.1 200 OK"
+2026-10-09 16:28:59,232 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.list "HTTP/1.1 200 OK"
+2026-10-09 16:29:01,424 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.list "HTTP/1.1 200 OK"
+2026-10-09 16:29:01,537 INFO httpx: HTTP Request: GET https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.tgz "HTTP/1.1 200 OK"
+2026-10-09 16:29:04,900 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 16:29:05,118 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.tgz "HTTP/1.1 200 OK"
+2026-10-09 16:29:05,171 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.list "HTTP/1.1 200 OK"
+2026-10-09 16:29:07,890 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.list "HTTP/1.1 200 OK"
+2026-10-09 16:29:08,007 INFO httpx: HTTP Request: GET https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.tgz "HTTP/1.1 200 OK"
+2026-10-09 16:29:09,448 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 16:29:09,671 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.tgz "HTTP/1.1 200 OK"
+2026-10-09 16:29:09,720 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.list "HTTP/1.1 200 OK"
+2026-10-09 16:29:10,841 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 16:29:11,055 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.tgz "HTTP/1.1 200 OK"
+2026-10-09 16:29:11,104 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.list "HTTP/1.1 200 OK"
+2026-10-09 16:29:13,511 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.list "HTTP/1.1 200 OK"
+2026-10-09 16:29:13,630 INFO httpx: HTTP Request: GET https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.tgz "HTTP/1.1 200 OK"
+2026-10-09 16:29:17,813 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 16:29:18,043 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.tgz "HTTP/1.1 200 OK"
+2026-10-09 16:29:18,095 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.list "HTTP/1.1 200 OK"
+2026-10-09 16:29:18,379 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.list "HTTP/1.1 200 OK"
+2026-10-09 16:29:18,491 INFO httpx: HTTP Request: GET https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.tgz "HTTP/1.1 200 OK"
+2026-10-09 16:29:20,342 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 16:29:20,557 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.tgz "HTTP/1.1 200 OK"
+2026-10-09 16:29:20,606 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.list "HTTP/1.1 200 OK"
+2026-10-09 16:29:20,888 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.list "HTTP/1.1 200 OK"
+2026-10-09 16:29:20,999 INFO httpx: HTTP Request: GET https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.tgz "HTTP/1.1 200 OK"
+2026-10-09 16:29:27,537 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 16:29:27,774 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.tgz "HTTP/1.1 200 OK"
+2026-10-09 16:29:27,826 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.list "HTTP/1.1 200 OK"
+2026-10-09 16:29:29,345 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 16:29:29,585 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.tgz "HTTP/1.1 200 OK"
+2026-10-09 16:29:29,639 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.list "HTTP/1.1 200 OK"
+2026-10-09 16:29:31,550 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.list "HTTP/1.1 200 OK"
+2026-10-09 16:29:31,664 INFO httpx: HTTP Request: GET https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.tgz "HTTP/1.1 200 OK"
+2026-10-09 16:29:37,964 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 16:29:38,193 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.tgz "HTTP/1.1 200 OK"
+2026-10-09 16:29:38,243 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.list "HTTP/1.1 200 OK"
+2026-10-09 16:29:40,738 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 16:29:40,947 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.tgz "HTTP/1.1 200 OK"
+2026-10-09 16:29:40,996 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.list "HTTP/1.1 200 OK"
+2026-10-09 16:29:41,276 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.list "HTTP/1.1 200 OK"
+2026-10-09 16:29:41,385 INFO httpx: HTTP Request: GET https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.tgz "HTTP/1.1 200 OK"
+2026-10-09 16:29:54,702 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 16:29:54,924 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.tgz "HTTP/1.1 200 OK"
+2026-10-09 16:29:54,978 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.list "HTTP/1.1 200 OK"
+2026-10-09 16:30:01,165 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.list "HTTP/1.1 200 OK"
+2026-10-09 16:30:01,287 INFO httpx: HTTP Request: GET https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.tgz "HTTP/1.1 200 OK"
+2026-10-09 16:30:04,871 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 16:30:05,093 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.tgz "HTTP/1.1 200 OK"
+2026-10-09 16:30:05,147 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.list "HTTP/1.1 200 OK"
+2026-10-09 16:30:09,023 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.list "HTTP/1.1 200 OK"
+2026-10-09 16:30:09,147 INFO httpx: HTTP Request: GET https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.tgz "HTTP/1.1 200 OK"
+2026-10-09 16:30:12,601 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 16:30:12,813 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.tgz "HTTP/1.1 200 OK"
+2026-10-09 16:30:12,863 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.list "HTTP/1.1 200 OK"
+2026-10-09 16:30:13,412 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 16:30:14,308 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.tgz "HTTP/1.1 200 OK"
+2026-10-09 16:30:14,358 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.list "HTTP/1.1 200 OK"
+2026-10-09 16:30:14,662 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.list "HTTP/1.1 200 OK"
+2026-10-09 16:30:14,786 INFO httpx: HTTP Request: GET https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.tgz "HTTP/1.1 200 OK"
+2026-10-09 16:30:24,972 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 16:30:32,795 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 16:30:34,051 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 16:30:34,811 INFO httpx: HTTP Request: POST https://api.e2b.app/sandboxes/idvr8s9zefod5k7lgo0fs/timeout "HTTP/1.1 204 No Content"
+2026-10-09 16:30:34,868 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.tgz "HTTP/1.1 200 OK"
+2026-10-09 16:30:34,918 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.list "HTTP/1.1 200 OK"
+2026-10-09 16:30:38,417 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 16:30:38,640 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.tgz "HTTP/1.1 200 OK"
+2026-10-09 16:30:38,691 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.list "HTTP/1.1 200 OK"
+2026-10-09 16:30:39,567 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.list "HTTP/1.1 200 OK"
+2026-10-09 16:30:39,680 INFO httpx: HTTP Request: GET https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.tgz "HTTP/1.1 200 OK"
+2026-10-09 16:30:47,574 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 16:30:48,768 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 16:30:48,992 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.tgz "HTTP/1.1 200 OK"
+2026-10-09 16:30:49,047 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.list "HTTP/1.1 200 OK"
+2026-10-09 16:30:51,437 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.list "HTTP/1.1 200 OK"
+2026-10-09 16:30:51,546 INFO httpx: HTTP Request: GET https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.tgz "HTTP/1.1 200 OK"
+2026-10-09 16:30:53,004 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 16:30:57,979 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 16:31:01,918 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 16:31:06,109 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 16:31:06,333 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.tgz "HTTP/1.1 200 OK"
+2026-10-09 16:31:06,389 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.list "HTTP/1.1 200 OK"
+2026-10-09 16:31:11,230 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 16:31:11,445 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.tgz "HTTP/1.1 200 OK"
+2026-10-09 16:31:11,492 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.list "HTTP/1.1 200 OK"
+2026-10-09 16:31:11,664 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.list "HTTP/1.1 200 OK"
+2026-10-09 16:31:11,804 INFO httpx: HTTP Request: GET https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.tgz "HTTP/1.1 200 OK"
+2026-10-09 16:31:14,972 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.list "HTTP/1.1 200 OK"
+2026-10-09 16:31:15,089 INFO httpx: HTTP Request: GET https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.tgz "HTTP/1.1 200 OK"
+2026-10-09 16:31:17,471 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 16:31:17,746 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.tgz "HTTP/1.1 200 OK"
+2026-10-09 16:31:17,797 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.list "HTTP/1.1 200 OK"
+2026-10-09 16:31:18,295 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.list "HTTP/1.1 200 OK"
+2026-10-09 16:31:18,414 INFO httpx: HTTP Request: GET https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.tgz "HTTP/1.1 200 OK"
+2026-10-09 16:31:23,446 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 16:31:23,664 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.tgz "HTTP/1.1 200 OK"
+2026-10-09 16:31:23,715 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.list "HTTP/1.1 200 OK"
+2026-10-09 16:31:24,006 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.list "HTTP/1.1 200 OK"
+2026-10-09 16:31:24,115 INFO httpx: HTTP Request: GET https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.tgz "HTTP/1.1 200 OK"
+2026-10-09 16:31:29,053 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 16:31:29,271 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.tgz "HTTP/1.1 200 OK"
+2026-10-09 16:31:29,322 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.list "HTTP/1.1 200 OK"
+2026-10-09 16:31:29,629 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.list "HTTP/1.1 200 OK"
+2026-10-09 16:31:29,740 INFO httpx: HTTP Request: GET https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.tgz "HTTP/1.1 200 OK"
+2026-10-09 16:31:37,594 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 16:31:42,505 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 16:31:42,741 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.tgz "HTTP/1.1 200 OK"
+2026-10-09 16:31:42,796 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.list "HTTP/1.1 200 OK"
+2026-10-09 16:31:44,473 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 16:31:46,268 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.list "HTTP/1.1 200 OK"
+2026-10-09 16:31:46,387 INFO httpx: HTTP Request: GET https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.tgz "HTTP/1.1 200 OK"
+2026-10-09 16:31:58,302 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 16:31:58,539 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.tgz "HTTP/1.1 200 OK"
+2026-10-09 16:31:58,592 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.list "HTTP/1.1 200 OK"
+2026-10-09 16:31:58,879 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.list "HTTP/1.1 200 OK"
+2026-10-09 16:31:58,996 INFO httpx: HTTP Request: GET https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.tgz "HTTP/1.1 200 OK"
+2026-10-09 16:32:08,000 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 16:32:08,225 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.tgz "HTTP/1.1 200 OK"
+2026-10-09 16:32:08,275 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.list "HTTP/1.1 200 OK"
+2026-10-09 16:32:10,033 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.list "HTTP/1.1 200 OK"
+2026-10-09 16:32:10,145 INFO httpx: HTTP Request: GET https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.tgz "HTTP/1.1 200 OK"
+2026-10-09 16:32:20,038 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 16:32:20,273 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.tgz "HTTP/1.1 200 OK"
+2026-10-09 16:32:20,326 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.list "HTTP/1.1 200 OK"
+2026-10-09 16:32:20,672 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.list "HTTP/1.1 200 OK"
+2026-10-09 16:32:20,790 INFO httpx: HTTP Request: GET https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.tgz "HTTP/1.1 200 OK"
+2026-10-09 16:32:27,225 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 16:32:27,458 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.tgz "HTTP/1.1 200 OK"
+2026-10-09 16:32:27,508 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.list "HTTP/1.1 200 OK"
+2026-10-09 16:32:30,117 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.list "HTTP/1.1 200 OK"
+2026-10-09 16:32:30,232 INFO httpx: HTTP Request: GET https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.tgz "HTTP/1.1 200 OK"
+2026-10-09 16:33:05,479 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 16:33:05,697 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.tgz "HTTP/1.1 200 OK"
+2026-10-09 16:33:05,746 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.list "HTTP/1.1 200 OK"
+2026-10-09 16:33:06,033 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.list "HTTP/1.1 200 OK"
+2026-10-09 16:33:06,142 INFO httpx: HTTP Request: GET https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.tgz "HTTP/1.1 200 OK"
+2026-10-09 16:34:19,029 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 16:34:21,458 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 16:34:21,686 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.tgz "HTTP/1.1 200 OK"
+2026-10-09 16:34:21,741 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.list "HTTP/1.1 200 OK"
+2026-10-09 16:34:25,279 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.list "HTTP/1.1 200 OK"
+2026-10-09 16:34:25,395 INFO httpx: HTTP Request: GET https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.tgz "HTTP/1.1 200 OK"
+2026-10-09 16:34:44,801 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 16:34:45,031 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.tgz "HTTP/1.1 200 OK"
+2026-10-09 16:34:45,084 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.list "HTTP/1.1 200 OK"
+2026-10-09 16:34:45,385 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.list "HTTP/1.1 200 OK"
+2026-10-09 16:34:45,494 INFO httpx: HTTP Request: GET https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.tgz "HTTP/1.1 200 OK"
+2026-10-09 16:34:58,840 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 16:34:59,063 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.tgz "HTTP/1.1 200 OK"
+2026-10-09 16:34:59,118 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.list "HTTP/1.1 200 OK"
+2026-10-09 16:34:59,428 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.list "HTTP/1.1 200 OK"
+2026-10-09 16:34:59,577 INFO httpx: HTTP Request: GET https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.tgz "HTTP/1.1 200 OK"
+2026-10-09 16:35:03,268 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 16:35:03,492 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.tgz "HTTP/1.1 200 OK"
+2026-10-09 16:35:03,543 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.list "HTTP/1.1 200 OK"
+2026-10-09 16:35:03,873 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.list "HTTP/1.1 200 OK"
+2026-10-09 16:35:03,991 INFO httpx: HTTP Request: GET https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.tgz "HTTP/1.1 200 OK"
+2026-10-09 16:35:07,000 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 16:35:07,225 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.tgz "HTTP/1.1 200 OK"
+2026-10-09 16:35:07,274 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.list "HTTP/1.1 200 OK"
+2026-10-09 16:35:07,562 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.list "HTTP/1.1 200 OK"
+2026-10-09 16:35:07,679 INFO httpx: HTTP Request: GET https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.tgz "HTTP/1.1 200 OK"
+2026-10-09 16:35:15,639 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 16:35:15,890 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.tgz "HTTP/1.1 200 OK"
+2026-10-09 16:35:15,940 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.list "HTTP/1.1 200 OK"
+2026-10-09 16:35:16,265 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.list "HTTP/1.1 200 OK"
+2026-10-09 16:35:16,372 INFO httpx: HTTP Request: GET https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.tgz "HTTP/1.1 200 OK"
+2026-10-09 16:35:27,632 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 16:35:42,056 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 16:40:27,179 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 16:40:30,699 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 16:40:33,470 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 16:40:36,402 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 16:40:36,748 INFO httpx: HTTP Request: POST https://api.e2b.app/sandboxes/idvr8s9zefod5k7lgo0fs/timeout "HTTP/1.1 204 No Content"
+2026-10-09 16:40:36,935 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.tgz "HTTP/1.1 200 OK"
+2026-10-09 16:40:36,989 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.list "HTTP/1.1 200 OK"
+2026-10-09 16:40:37,238 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.list "HTTP/1.1 200 OK"
+2026-10-09 16:40:37,432 INFO httpx: HTTP Request: GET https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.tgz "HTTP/1.1 200 OK"
+2026-10-09 16:40:40,029 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 16:42:36,234 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 16:42:38,818 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 16:42:39,052 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.tgz "HTTP/1.1 200 OK"
+2026-10-09 16:42:39,104 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.list "HTTP/1.1 200 OK"
+2026-10-09 16:44:00,026 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.list "HTTP/1.1 200 OK"
+2026-10-09 16:44:00,185 INFO httpx: HTTP Request: GET https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.tgz "HTTP/1.1 200 OK"
+2026-10-09 16:44:04,083 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 16:44:07,821 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 16:44:10,388 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 16:44:26,356 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 16:51:43,413 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 16:54:38,724 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 16:55:27,025 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 17:02:51,031 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 17:05:53,843 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 17:06:32,105 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 17:07:09,138 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 17:11:24,777 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 17:11:28,628 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 17:11:30,950 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 17:11:34,470 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 17:11:37,877 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 17:11:40,981 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 17:11:41,353 INFO httpx: HTTP Request: POST https://api.e2b.app/sandboxes/idvr8s9zefod5k7lgo0fs/timeout "HTTP/1.1 204 No Content"
+2026-10-09 17:11:41,510 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.tgz "HTTP/1.1 200 OK"
+2026-10-09 17:11:41,566 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.list "HTTP/1.1 200 OK"
+2026-10-09 17:11:41,858 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.list "HTTP/1.1 200 OK"
+2026-10-09 17:11:42,017 INFO httpx: HTTP Request: GET https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.tgz "HTTP/1.1 200 OK"
+2026-10-09 17:11:49,555 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 17:12:11,852 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 17:12:14,733 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 17:12:17,550 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 17:12:19,806 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 17:12:20,036 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.tgz "HTTP/1.1 200 OK"
+2026-10-09 17:12:20,082 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.list "HTTP/1.1 200 OK"
+2026-10-09 17:12:20,309 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.list "HTTP/1.1 200 OK"
+2026-10-09 17:12:20,431 INFO httpx: HTTP Request: GET https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.tgz "HTTP/1.1 200 OK"
+2026-10-09 17:12:24,690 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 17:12:34,169 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 17:12:36,819 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 17:12:41,030 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.list "HTTP/1.1 200 OK"
+2026-10-09 17:12:41,189 INFO httpx: HTTP Request: GET https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.tgz "HTTP/1.1 200 OK"
+2026-10-09 17:12:44,673 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 17:12:54,243 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 17:20:40,205 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 17:23:51,944 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 17:24:47,366 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 17:25:04,377 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 17:28:50,722 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 17:28:54,078 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 17:28:57,097 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 17:29:00,062 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 17:29:02,815 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 17:29:05,208 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 17:29:05,504 INFO httpx: HTTP Request: POST https://api.e2b.app/sandboxes/idvr8s9zefod5k7lgo0fs/timeout "HTTP/1.1 204 No Content"
+2026-10-09 17:29:05,650 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.tgz "HTTP/1.1 200 OK"
+2026-10-09 17:29:05,703 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.list "HTTP/1.1 200 OK"
+2026-10-09 17:29:05,991 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.list "HTTP/1.1 200 OK"
+2026-10-09 17:29:06,175 INFO httpx: HTTP Request: GET https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.tgz "HTTP/1.1 200 OK"
+2026-10-09 17:29:08,349 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 17:29:17,743 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 17:29:27,571 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 17:29:31,131 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 17:29:33,792 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 17:29:37,367 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.list "HTTP/1.1 200 OK"
+2026-10-09 17:29:37,530 INFO httpx: HTTP Request: GET https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.tgz "HTTP/1.1 200 OK"
+2026-10-09 17:29:41,810 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-09 17:29:57,406 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [363]
+Traceback (most recent call last):
+  File "/mnt/c/Users/Pranav Bhalerao/desktop/projects/openscientist/opensci-bedrock/backend/app/jobs.py", line 86, in wrapper
+    result = await job(project_id, handle)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/c/Users/Pranav Bhalerao/desktop/projects/openscientist/opensci-bedrock/backend/app/refine.py", line 686, in _repair_job
+    rp = await plan_agent.draft_repair(context)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/c/Users/Pranav Bhalerao/desktop/projects/openscientist/opensci-bedrock/backend/app/agents/plan.py", line 203, in draft_repair
+    return await parse(
+           ^^^^^^^^^^^^
+  File "/mnt/c/Users/Pranav Bhalerao/desktop/projects/openscientist/opensci-bedrock/backend/app/llm.py", line 402, in parse
+    return await _schema_constrained(model, instructions, msgs, schema, reasoning_effort, budget)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/c/Users/Pranav Bhalerao/desktop/projects/openscientist/opensci-bedrock/backend/app/llm.py", line 257, in _schema_constrained
+    response = await _attempt(model, instructions, msgs, max_tokens, reasoning_effort, fmt)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/c/Users/Pranav Bhalerao/desktop/projects/openscientist/opensci-bedrock/backend/app/llm.py", line 233, in _attempt
+    response = await client.messages.create(**kw)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pranav_bhalerao/.venvs/opensci-bedrock/lib/python3.12/site-packages/anthropic/resources/messages/messages.py", line 2511, in create
+    return await self._post(
+           ^^^^^^^^^^^^^^^^^
+  File "/home/pranav_bhalerao/.venvs/opensci-bedrock/lib/python3.12/site-packages/anthropic/_base_client.py", line 2258, in post
+    return await self.request(cast_to, opts, stream=stream, stream_cls=stream_cls)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pranav_bhalerao/.venvs/opensci-bedrock/lib/python3.12/site-packages/anthropic/_base_client.py", line 1870, in request
+    response, prepared = await self._attempt_request(
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pranav_bhalerao/.venvs/opensci-bedrock/lib/python3.12/site-packages/anthropic/_base_client.py", line 2031, in _attempt_request
+    response = await self._client.send(
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pranav_bhalerao/.venvs/opensci-bedrock/lib/python3.12/site-packages/httpx2/_client.py", line 1818, in send
+    response = await self._send_handling_auth(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pranav_bhalerao/.venvs/opensci-bedrock/lib/python3.12/site-packages/httpx2/_client.py", line 1846, in _send_handling_auth
+    response = await self._send_handling_redirects(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pranav_bhalerao/.venvs/opensci-bedrock/lib/python3.12/site-packages/httpx2/_client.py", line 1881, in _send_handling_redirects
+    response = await self._send_single_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pranav_bhalerao/.venvs/opensci-bedrock/lib/python3.12/site-packages/httpx2/_client.py", line 1915, in _send_single_request
+    response = await transport.handle_async_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pranav_bhalerao/.venvs/opensci-bedrock/lib/python3.12/site-packages/httpx2/_transports/default.py", line 388, in handle_async_request
+    resp = await self._pool.handle_async_request(req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pranav_bhalerao/.venvs/opensci-bedrock/lib/python3.12/site-packages/httpcore2/_async/connection_pool.py", line 242, in handle_async_request
+    raise exc from None
+  File "/home/pranav_bhalerao/.venvs/opensci-bedrock/lib/python3.12/site-packages/httpcore2/_async/connection_pool.py", line 224, in handle_async_request
+    response = await connection.handle_async_request(pool_request.request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pranav_bhalerao/.venvs/opensci-bedrock/lib/python3.12/site-packages/httpcore2/_async/connection.py", line 96, in handle_async_request
+    return await self._connection.handle_async_request(request)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pranav_bhalerao/.venvs/opensci-bedrock/lib/python3.12/site-packages/httpcore2/_async/http11.py", line 125, in handle_async_request
+    raise exc
+  File "/home/pranav_bhalerao/.venvs/opensci-bedrock/lib/python3.12/site-packages/httpcore2/_async/http11.py", line 97, in handle_async_request
+    ) = await self._receive_response_headers(**kwargs)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pranav_bhalerao/.venvs/opensci-bedrock/lib/python3.12/site-packages/httpcore2/_async/http11.py", line 167, in _receive_response_headers
+    event = await self._receive_event(timeout=timeout)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pranav_bhalerao/.venvs/opensci-bedrock/lib/python3.12/site-packages/httpcore2/_async/http11.py", line 200, in _receive_event
+    data = await self._network_stream.read(self.READ_NUM_BYTES, timeout=timeout)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pranav_bhalerao/.venvs/opensci-bedrock/lib/python3.12/site-packages/httpcore2/_backends/anyio.py", line 37, in read
+    return await self._stream.receive(max_bytes=max_bytes)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pranav_bhalerao/.venvs/opensci-bedrock/lib/python3.12/site-packages/anyio/streams/tls.py", line 254, in receive
+    data = await self._call_sslobject_method(self._ssl_object.read, max_bytes)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pranav_bhalerao/.venvs/opensci-bedrock/lib/python3.12/site-packages/anyio/streams/tls.py", line 194, in _call_sslobject_method
+    data = await self.transport_stream.receive()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pranav_bhalerao/.venvs/opensci-bedrock/lib/python3.12/site-packages/anyio/_backends/_asyncio.py", line 1407, in receive
+    await self._protocol.read_event.wait()
+  File "/usr/lib/python3.12/asyncio/locks.py", line 212, in wait
+    await fut
+asyncio.exceptions.CancelledError
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/mnt/c/Users/Pranav Bhalerao/desktop/projects/openscientist/opensci-bedrock/backend/../research/fmnist_augmentation_rerun_2026-10-09/launch/launcher.py", line 61, in <module>
+    asyncio.run(main())
+  File "/usr/lib/python3.12/asyncio/runners.py", line 193, in run
+    with Runner(debug=debug, loop_factory=loop_factory) as runner:
+  File "/usr/lib/python3.12/asyncio/runners.py", line 62, in __exit__
+    self.close()
+  File "/usr/lib/python3.12/asyncio/runners.py", line 70, in close
+    _cancel_all_tasks(loop)
+  File "/usr/lib/python3.12/asyncio/runners.py", line 205, in _cancel_all_tasks
+    loop.run_until_complete(tasks.gather(*to_cancel, return_exceptions=True))
+  File "/usr/lib/python3.12/asyncio/base_events.py", line 674, in run_until_complete
+    self.run_forever()
+  File "/usr/lib/python3.12/asyncio/base_events.py", line 641, in run_forever
+    self._run_once()
+  File "/usr/lib/python3.12/asyncio/base_events.py", line 1987, in _run_once
+    handle._run()
+  File "/usr/lib/python3.12/asyncio/events.py", line 88, in _run
+    self._context.run(self._callback, *self._args)
+  File "/mnt/c/Users/Pranav Bhalerao/desktop/projects/openscientist/opensci-bedrock/backend/app/jobs.py", line 92, in wrapper
+    handle._update(cancelled)
+  File "/mnt/c/Users/Pranav Bhalerao/desktop/projects/openscientist/opensci-bedrock/backend/app/jobs.py", line 31, in _update
+    run = s.get(Run, self.run_id)
+          ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pranav_bhalerao/.venvs/opensci-bedrock/lib/python3.12/site-packages/sqlalchemy/orm/session.py", line 3702, in get
+    return self._get_impl(
+           ^^^^^^^^^^^^^^^
+  File "/home/pranav_bhalerao/.venvs/opensci-bedrock/lib/python3.12/site-packages/sqlalchemy/orm/session.py", line 3881, in _get_impl
+    return db_load_fn(
+           ^^^^^^^^^^^
+  File "/home/pranav_bhalerao/.venvs/opensci-bedrock/lib/python3.12/site-packages/sqlalchemy/orm/loading.py", line 695, in load_on_pk_identity
+    session.execute(
+  File "/home/pranav_bhalerao/.venvs/opensci-bedrock/lib/python3.12/site-packages/sqlmodel/orm/session.py", line 136, in execute
+    return super().execute(
+           ^^^^^^^^^^^^^^^^
+  File "/home/pranav_bhalerao/.venvs/opensci-bedrock/lib/python3.12/site-packages/sqlalchemy/orm/session.py", line 2373, in execute
+    return self._execute_internal(
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pranav_bhalerao/.venvs/opensci-bedrock/lib/python3.12/site-packages/sqlalchemy/orm/session.py", line 2271, in _execute_internal
+    result: Result[Any] = compile_state_cls.orm_execute_statement(
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pranav_bhalerao/.venvs/opensci-bedrock/lib/python3.12/site-packages/sqlalchemy/orm/context.py", line 306, in orm_execute_statement
+    result = conn.execute(
+             ^^^^^^^^^^^^^
+  File "/home/pranav_bhalerao/.venvs/opensci-bedrock/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1421, in execute
+    return meth(
+           ^^^^^
+  File "/home/pranav_bhalerao/.venvs/opensci-bedrock/lib/python3.12/site-packages/sqlalchemy/sql/elements.py", line 526, in _execute_on_connection
+    return connection._execute_clauseelement(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pranav_bhalerao/.venvs/opensci-bedrock/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1643, in _execute_clauseelement
+    ret = self._execute_context(
+          ^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pranav_bhalerao/.venvs/opensci-bedrock/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1848, in _execute_context
+    return self._exec_single_context(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pranav_bhalerao/.venvs/opensci-bedrock/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1988, in _exec_single_context
+    self._handle_dbapi_exception(
+  File "/home/pranav_bhalerao/.venvs/opensci-bedrock/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 2368, in _handle_dbapi_exception
+    raise exc_info[1].with_traceback(exc_info[2])
+  File "/home/pranav_bhalerao/.venvs/opensci-bedrock/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1969, in _exec_single_context
+    self.dialect.do_execute(
+  File "/home/pranav_bhalerao/.venvs/opensci-bedrock/lib/python3.12/site-packages/sqlalchemy/engine/default.py", line 952, in do_execute
+    cursor.execute(statement, parameters)
+  File "/home/pranav_bhalerao/.venvs/opensci-bedrock/lib/python3.12/site-packages/psycopg/cursor.py", line 117, in execute
+    raise ex.with_traceback(None)
+KeyboardInterrupt
+2026-10-09 17:30:08,666 ERROR asyncio: Task exception was never retrieved
+future: <Task finished name='Task-1103' coro=<start.<locals>.wrapper() done, defined at /mnt/c/Users/Pranav Bhalerao/desktop/projects/openscientist/opensci-bedrock/backend/app/jobs.py:80> exception=KeyboardInterrupt()>
+Traceback (most recent call last):
+  File "/mnt/c/Users/Pranav Bhalerao/desktop/projects/openscientist/opensci-bedrock/backend/app/jobs.py", line 86, in wrapper
+    result = await job(project_id, handle)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/c/Users/Pranav Bhalerao/desktop/projects/openscientist/opensci-bedrock/backend/app/refine.py", line 686, in _repair_job
+    rp = await plan_agent.draft_repair(context)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/c/Users/Pranav Bhalerao/desktop/projects/openscientist/opensci-bedrock/backend/app/agents/plan.py", line 203, in draft_repair
+    return await parse(
+           ^^^^^^^^^^^^
+  File "/mnt/c/Users/Pranav Bhalerao/desktop/projects/openscientist/opensci-bedrock/backend/app/llm.py", line 402, in parse
+    return await _schema_constrained(model, instructions, msgs, schema, reasoning_effort, budget)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/c/Users/Pranav Bhalerao/desktop/projects/openscientist/opensci-bedrock/backend/app/llm.py", line 257, in _schema_constrained
+    response = await _attempt(model, instructions, msgs, max_tokens, reasoning_effort, fmt)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/c/Users/Pranav Bhalerao/desktop/projects/openscientist/opensci-bedrock/backend/app/llm.py", line 233, in _attempt
+    response = await client.messages.create(**kw)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pranav_bhalerao/.venvs/opensci-bedrock/lib/python3.12/site-packages/anthropic/resources/messages/messages.py", line 2511, in create
+    return await self._post(
+           ^^^^^^^^^^^^^^^^^
+  File "/home/pranav_bhalerao/.venvs/opensci-bedrock/lib/python3.12/site-packages/anthropic/_base_client.py", line 2258, in post
+    return await self.request(cast_to, opts, stream=stream, stream_cls=stream_cls)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pranav_bhalerao/.venvs/opensci-bedrock/lib/python3.12/site-packages/anthropic/_base_client.py", line 1870, in request
+    response, prepared = await self._attempt_request(
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pranav_bhalerao/.venvs/opensci-bedrock/lib/python3.12/site-packages/anthropic/_base_client.py", line 2031, in _attempt_request
+    response = await self._client.send(
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pranav_bhalerao/.venvs/opensci-bedrock/lib/python3.12/site-packages/httpx2/_client.py", line 1818, in send
+    response = await self._send_handling_auth(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pranav_bhalerao/.venvs/opensci-bedrock/lib/python3.12/site-packages/httpx2/_client.py", line 1846, in _send_handling_auth
+    response = await self._send_handling_redirects(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pranav_bhalerao/.venvs/opensci-bedrock/lib/python3.12/site-packages/httpx2/_client.py", line 1881, in _send_handling_redirects
+    response = await self._send_single_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pranav_bhalerao/.venvs/opensci-bedrock/lib/python3.12/site-packages/httpx2/_client.py", line 1915, in _send_single_request
+    response = await transport.handle_async_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pranav_bhalerao/.venvs/opensci-bedrock/lib/python3.12/site-packages/httpx2/_transports/default.py", line 388, in handle_async_request
+    resp = await self._pool.handle_async_request(req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pranav_bhalerao/.venvs/opensci-bedrock/lib/python3.12/site-packages/httpcore2/_async/connection_pool.py", line 242, in handle_async_request
+    raise exc from None
+  File "/home/pranav_bhalerao/.venvs/opensci-bedrock/lib/python3.12/site-packages/httpcore2/_async/connection_pool.py", line 224, in handle_async_request
+    response = await connection.handle_async_request(pool_request.request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pranav_bhalerao/.venvs/opensci-bedrock/lib/python3.12/site-packages/httpcore2/_async/connection.py", line 96, in handle_async_request
+    return await self._connection.handle_async_request(request)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pranav_bhalerao/.venvs/opensci-bedrock/lib/python3.12/site-packages/httpcore2/_async/http11.py", line 125, in handle_async_request
+    raise exc
+  File "/home/pranav_bhalerao/.venvs/opensci-bedrock/lib/python3.12/site-packages/httpcore2/_async/http11.py", line 97, in handle_async_request
+    ) = await self._receive_response_headers(**kwargs)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pranav_bhalerao/.venvs/opensci-bedrock/lib/python3.12/site-packages/httpcore2/_async/http11.py", line 167, in _receive_response_headers
+    event = await self._receive_event(timeout=timeout)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pranav_bhalerao/.venvs/opensci-bedrock/lib/python3.12/site-packages/httpcore2/_async/http11.py", line 200, in _receive_event
+    data = await self._network_stream.read(self.READ_NUM_BYTES, timeout=timeout)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pranav_bhalerao/.venvs/opensci-bedrock/lib/python3.12/site-packages/httpcore2/_backends/anyio.py", line 37, in read
+    return await self._stream.receive(max_bytes=max_bytes)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pranav_bhalerao/.venvs/opensci-bedrock/lib/python3.12/site-packages/anyio/streams/tls.py", line 254, in receive
+    data = await self._call_sslobject_method(self._ssl_object.read, max_bytes)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pranav_bhalerao/.venvs/opensci-bedrock/lib/python3.12/site-packages/anyio/streams/tls.py", line 194, in _call_sslobject_method
+    data = await self.transport_stream.receive()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pranav_bhalerao/.venvs/opensci-bedrock/lib/python3.12/site-packages/anyio/_backends/_asyncio.py", line 1407, in receive
+    await self._protocol.read_event.wait()
+  File "/usr/lib/python3.12/asyncio/locks.py", line 212, in wait
+    await fut
+asyncio.exceptions.CancelledError
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/mnt/c/Users/Pranav Bhalerao/desktop/projects/openscientist/opensci-bedrock/backend/../research/fmnist_augmentation_rerun_2026-10-09/launch/launcher.py", line 61, in <module>
+    asyncio.run(main())
+  File "/usr/lib/python3.12/asyncio/runners.py", line 193, in run
+    with Runner(debug=debug, loop_factory=loop_factory) as runner:
+  File "/usr/lib/python3.12/asyncio/runners.py", line 62, in __exit__
+    self.close()
+  File "/usr/lib/python3.12/asyncio/runners.py", line 70, in close
+    _cancel_all_tasks(loop)
+  File "/usr/lib/python3.12/asyncio/runners.py", line 205, in _cancel_all_tasks
+    loop.run_until_complete(tasks.gather(*to_cancel, return_exceptions=True))
+  File "/usr/lib/python3.12/asyncio/base_events.py", line 674, in run_until_complete
+    self.run_forever()
+  File "/usr/lib/python3.12/asyncio/base_events.py", line 641, in run_forever
+    self._run_once()
+  File "/usr/lib/python3.12/asyncio/base_events.py", line 1987, in _run_once
+    handle._run()
+  File "/usr/lib/python3.12/asyncio/events.py", line 88, in _run
+    self._context.run(self._callback, *self._args)
+  File "/mnt/c/Users/Pranav Bhalerao/desktop/projects/openscientist/opensci-bedrock/backend/app/jobs.py", line 92, in wrapper
+    handle._update(cancelled)
+  File "/mnt/c/Users/Pranav Bhalerao/desktop/projects/openscientist/opensci-bedrock/backend/app/jobs.py", line 31, in _update
+    run = s.get(Run, self.run_id)
+          ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pranav_bhalerao/.venvs/opensci-bedrock/lib/python3.12/site-packages/sqlalchemy/orm/session.py", line 3702, in get
+    return self._get_impl(
+           ^^^^^^^^^^^^^^^
+  File "/home/pranav_bhalerao/.venvs/opensci-bedrock/lib/python3.12/site-packages/sqlalchemy/orm/session.py", line 3881, in _get_impl
+    return db_load_fn(
+           ^^^^^^^^^^^
+  File "/home/pranav_bhalerao/.venvs/opensci-bedrock/lib/python3.12/site-packages/sqlalchemy/orm/loading.py", line 695, in load_on_pk_identity
+    session.execute(
+  File "/home/pranav_bhalerao/.venvs/opensci-bedrock/lib/python3.12/site-packages/sqlmodel/orm/session.py", line 136, in execute
+    return super().execute(
+           ^^^^^^^^^^^^^^^^
+  File "/home/pranav_bhalerao/.venvs/opensci-bedrock/lib/python3.12/site-packages/sqlalchemy/orm/session.py", line 2373, in execute
+    return self._execute_internal(
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pranav_bhalerao/.venvs/opensci-bedrock/lib/python3.12/site-packages/sqlalchemy/orm/session.py", line 2271, in _execute_internal
+    result: Result[Any] = compile_state_cls.orm_execute_statement(
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pranav_bhalerao/.venvs/opensci-bedrock/lib/python3.12/site-packages/sqlalchemy/orm/context.py", line 306, in orm_execute_statement
+    result = conn.execute(
+             ^^^^^^^^^^^^^
+  File "/home/pranav_bhalerao/.venvs/opensci-bedrock/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1421, in execute
+    return meth(
+           ^^^^^
+  File "/home/pranav_bhalerao/.venvs/opensci-bedrock/lib/python3.12/site-packages/sqlalchemy/sql/elements.py", line 526, in _execute_on_connection
+    return connection._execute_clauseelement(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pranav_bhalerao/.venvs/opensci-bedrock/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1643, in _execute_clauseelement
+    ret = self._execute_context(
+          ^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pranav_bhalerao/.venvs/opensci-bedrock/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1848, in _execute_context
+    return self._exec_single_context(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pranav_bhalerao/.venvs/opensci-bedrock/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1988, in _exec_single_context
+    self._handle_dbapi_exception(
+  File "/home/pranav_bhalerao/.venvs/opensci-bedrock/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 2368, in _handle_dbapi_exception
+    raise exc_info[1].with_traceback(exc_info[2])
+  File "/home/pranav_bhalerao/.venvs/opensci-bedrock/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1969, in _exec_single_context
+    self.dialect.do_execute(
+  File "/home/pranav_bhalerao/.venvs/opensci-bedrock/lib/python3.12/site-packages/sqlalchemy/engine/default.py", line 952, in do_execute
+    cursor.execute(statement, parameters)
+  File "/home/pranav_bhalerao/.venvs/opensci-bedrock/lib/python3.12/site-packages/psycopg/cursor.py", line 117, in execute
+    raise ex.with_traceback(None)
+KeyboardInterrupt

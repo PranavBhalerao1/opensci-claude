@@ -1,9 +1,11 @@
 """Deterministic manuscript and workspace integrity checks (app/integrity.py), offline."""
 
+import hashlib
 import json
 import os
 import time
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 
 import pytest
 from sqlmodel import Session, select
@@ -269,3 +271,178 @@ def test_protocol_file_tamper_ignores_files_that_were_never_written(project):
         s.add(p)
         s.commit()
     assert ig.protocol_file_tamper(root, pid) == []  # context/plan.json does not exist yet
+
+
+# ── Figures, sub-figures, captions and labels ──────────────────────────────
+# Regression for project 6d8c3c93c209: a non-overlapping regex matched each outer figure
+# environment and never its nested subfigures, so every panel got the figure's first \caption
+# and \label. The judge then reported a caption mismatch that did not exist, three times.
+
+FIXTURES = Path(__file__).parent / "fixtures"
+FMNIST_TEX = FIXTURES / "fmnist_6d8c3c93c209_paper.tex"  # byte copy of that project's final paper.tex
+FMNIST_SHA256 = "c992ccaee1dda1c9bab176f7cb217503f5543aea8b7e4a9df3cfd33c0d5b0367"
+
+
+def _doc(body: str) -> str:
+    return "\\documentclass{article}\n\\begin{document}\n" + body + "\n\\end{document}\n"
+
+
+def _by_target(tex: str) -> dict[str, ig.Graphic]:
+    return {g.target: g for g in ig.parse_tex(tex).graphics}
+
+
+def test_historical_subfigures_get_their_own_captions_and_labels():
+    tex = FMNIST_TEX.read_text(encoding="utf-8")
+    assert hashlib.sha256(tex.replace("\r\n", "\n").encode("utf-8")).hexdigest() == FMNIST_SHA256  # unmodified
+    g = _by_target(tex)
+    assert list(g) == ["../figures/fig_delta_vs_size.png", "../figures/fig_test_acc_bars.png",
+                       "../figures/fig_curves_all.png", "../figures/curves_size500.png",
+                       "../figures/curves_size60000.png"]
+    small, large = g["../figures/curves_size500.png"], g["../figures/curves_size60000.png"]
+    assert (small.caption, small.label, small.panel) == ("$N{=}500$.", "fig:curves500", True)
+    assert (large.caption, large.label, large.panel) == ("$N{=}60{,}000$.", "fig:curves60k", True)
+    for panel in (small, large):  # the enclosing figure keeps its own caption and label
+        assert panel.figure_label == "fig:curves_extremes" and panel.figure_line == 327
+        assert panel.figure_caption.startswith("Training loss and validation accuracy curves at the two extreme")
+        assert panel.figure_caption.endswith("with the complete Fashion-MNIST training set.") and not panel.note
+    for target, label, start in [("../figures/fig_delta_vs_size.png", "fig:delta", "Augmentation benefit"),
+                                 ("../figures/fig_test_acc_bars.png", "fig:bars", "Test accuracy at epoch~5 (\\%)"),
+                                 ("../figures/fig_curves_all.png", "fig:curves_all", "Per-epoch training loss")]:
+        assert g[target].label == label and g[target].caption.startswith(start), target
+        assert not g[target].panel and g[target].figure_caption == g[target].figure_label == ""
+
+
+def test_multiple_subfigures_and_the_outer_caption_are_kept_apart():
+    tex = _doc(r"""
+\begin{figure*}[t]
+  \centering
+  \begin{subfigure}[t]{0.32\textwidth}\includegraphics{a.png}\caption{Panel A.}\label{fig:a}\end{subfigure}
+  \begin{subfigure}[t]{0.32\textwidth}
+    \includegraphics{b.png}
+    \caption[B short]{Panel B: {\em longer} text.}
+    \label{fig:b}
+  \end{subfigure}
+  \begin{subfigure}[t]{0.32\textwidth}\includegraphics{c.png}\caption{Panel C.}\label{fig:c}\end{subfigure}
+  \caption{Three panels.}
+  \label{fig:abc}
+\end{figure*}
+\begin{figure}\includegraphics{d.png}\caption{Single.}\label{fig:d}\end{figure}""")
+    g = _by_target(tex)
+    assert [(g[t].caption, g[t].label) for t in ("a.png", "b.png", "c.png")] == [
+        ("Panel A.", "fig:a"), ("Panel B: {\\em longer} text.", "fig:b"), ("Panel C.", "fig:c")]
+    assert {(g[t].figure_caption, g[t].figure_label, g[t].panel) for t in ("a.png", "b.png", "c.png")} == {
+        ("Three panels.", "fig:abc", True)}
+    assert (g["d.png"].caption, g["d.png"].label, g["d.png"].panel, g["d.png"].figure_label) == (
+        "Single.", "fig:d", False, "")
+
+
+def test_nested_layout_boxes_and_subfigure_commands():
+    tex = _doc(r"""
+\begin{figure}
+  \begin{minipage}{0.5\linewidth}
+    \begin{subfigure}{\linewidth}\includegraphics{inner.png}\caption{Inner.}\label{fig:inner}\end{subfigure}
+  \end{minipage}%
+  \begin{minipage}{0.5\linewidth}\includegraphics{layout.png}\end{minipage}
+  \caption{Outer.}\label{fig:outer}
+\end{figure}
+\begin{figure}
+  \subfloat[Sub float \label{fig:sf}]{\includegraphics{sf.png}}
+  \subfloat[List entry][Second optional is the caption]{\includegraphics{sf2.png}}
+  \subcaptionbox{Box caption\label{fig:box}}[0.4\linewidth]{\includegraphics{box.png}}
+  \caption{Commands.}\label{fig:commands}
+\end{figure}
+\begin{figure}
+  \begin{minipage}{0.5\linewidth}\includegraphics{mp.png}\subcaption{Mini.}\label{fig:mp}\end{minipage}
+  \caption{With subcaption.}\label{fig:mps}
+\end{figure}
+\begin{minipage}{\linewidth}\includegraphics{free.png}\captionof{figure}{Outside a float.}\label{fig:free}
+\end{minipage}""")
+    g = _by_target(tex)
+    assert (g["inner.png"].caption, g["inner.png"].label, g["inner.png"].figure_label) == (
+        "Inner.", "fig:inner", "fig:outer")
+    # A minipage without a caption only lays things out: its graphic is the figure's own.
+    assert (g["layout.png"].caption, g["layout.png"].label, g["layout.png"].panel) == ("Outer.", "fig:outer", False)
+    assert (g["sf.png"].caption, g["sf.png"].label, g["sf.png"].figure_label) == ("Sub float", "fig:sf", "fig:commands")
+    assert g["sf2.png"].caption == "Second optional is the caption" and g["sf2.png"].label == ""
+    assert (g["box.png"].caption, g["box.png"].label, g["box.png"].panel) == ("Box caption", "fig:box", True)
+    assert (g["mp.png"].caption, g["mp.png"].label, g["mp.png"].panel, g["mp.png"].figure_caption) == (
+        "Mini.", "fig:mp", True, "With subcaption.")
+    assert (g["free.png"].caption, g["free.png"].label, g["free.png"].panel, g["free.png"].figure_line) == (
+        "Outside a float.", "fig:free", False, 0)
+
+
+def test_captions_with_escaped_characters_braces_and_comments():
+    tex = _doc(r"""
+\begin{figure}
+  \includegraphics{e.png}
+  \caption[Short {with ] bracket}]{Accuracy (\%) on \{train, test\} sets, $x_{i}$ \& 50\% done.\\% a comment
+    second line}
+  \label{fig:e}
+\end{figure}
+\begin{figure}
+  \includegraphics{f.png}
+  % \caption{A commented-out caption.}
+  \caption{Real caption with a brace: \}.}
+\end{figure}""")
+    g = _by_target(tex)
+    assert g["e.png"].caption == r"Accuracy (\%) on \{train, test\} sets, $x_{i}$ \& 50\% done.\\ second line"
+    assert g["e.png"].label == "fig:e"
+    assert g["f.png"].caption == r"Real caption with a brace: \}." and g["f.png"].label == ""
+
+
+def test_missing_captions_are_left_empty_never_borrowed():
+    tex = _doc(r"""
+\begin{figure}
+  \begin{subfigure}{0.5\linewidth}\includegraphics{nocap.png}\label{fig:nocap}\end{subfigure}
+  \begin{subfigure}{0.5\linewidth}\includegraphics{cap.png}\caption{Has one.}\end{subfigure}
+  \caption{Outer only.}\label{fig:outer}
+\end{figure}
+\begin{figure}\includegraphics{bare.png}\end{figure}
+\includegraphics{loose.png}""")
+    g = _by_target(tex)
+    nocap = g["nocap.png"]
+    assert (nocap.caption, nocap.label, nocap.panel) == ("", "fig:nocap", True)  # not the outer caption
+    assert (nocap.figure_caption, nocap.figure_label) == ("Outer only.", "fig:outer")
+    assert (g["cap.png"].caption, g["cap.png"].label) == ("Has one.", "")
+    assert (g["bare.png"].caption, g["bare.png"].label) == ("", "")
+    assert (g["loose.png"].caption, g["loose.png"].figure_line) == ("", 0)
+
+
+def test_two_captioned_figures_in_one_float_and_labels_inside_captions():
+    tex = _doc(r"""
+\begin{figure}
+  \includegraphics{one.png}\caption{First.\label{fig:one}}
+  \includegraphics{two.png}\caption{Second.}\label{fig:two}
+\end{figure}""")
+    g = _by_target(tex)
+    assert (g["one.png"].caption, g["one.png"].label) == ("First.", "fig:one")
+    assert (g["two.png"].caption, g["two.png"].label) == ("Second.", "fig:two")
+
+
+def test_malformed_latex_is_handled_conservatively():
+    tex = _doc(r"""
+\begin{figure}
+  \begin{subfigure}{0.5\linewidth}\includegraphics{open.png}\caption{Never closed.}
+  \caption{Outer.}\label{fig:outer}
+\end{figure}
+\begin{figure}
+  \includegraphics{brace.png}
+  \caption{Unclosed caption \label{fig:brace}
+\end{figure}
+\end{subfigure}
+\begin{figure}\subfloat[Broken{\includegraphics{cmd.png}\caption{Cmd outer.}\end{figure}""")
+    g = _by_target(tex)
+    opened = g["open.png"]
+    # Where the unclosed subfigure was meant to end is unknown, so the caption and label after it
+    # are attributed to nothing: neither to the panel nor to the figure.
+    assert (opened.caption, opened.label, opened.figure_caption, opened.figure_label) == ("", "", "", "")
+    assert "\\begin{subfigure} on line 5 is never closed" in opened.note
+    assert g["brace.png"].caption == "" and "could not be parsed" in g["brace.png"].note
+    assert g["cmd.png"].caption == "" and "could not be parsed" in g["cmd.png"].note
+    assert g["cmd.png"].figure_caption == ""  # \caption{Cmd outer.} sits inside the broken \subfloat
+
+
+def test_strip_comments_respects_escapes_and_line_breaks():
+    assert ig.strip_comments(r"50\% of runs % note") == r"50\% of runs "
+    assert ig.strip_comments(r"end\\% comment") == "end\\\\"
+    assert ig.strip_comments(r"odd\\\% kept") == r"odd\\\% kept"

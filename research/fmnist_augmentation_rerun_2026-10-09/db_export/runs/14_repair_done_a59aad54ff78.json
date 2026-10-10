@@ -1,0 +1,33 @@
+{
+  "id": "a59aad54ff78",
+  "project_id": "6d8c3c93c209",
+  "kind": "repair",
+  "status": "done",
+  "phase": "done",
+  "counts": {
+    "rerun": 0,
+    "carried": 0
+  },
+  "log": [
+    {
+      "t": "2026-10-10T02:21:05.381454+00:00",
+      "text": "The Planning Agent is choosing root-cause fixes"
+    },
+    {
+      "t": "2026-10-10T02:21:29.345553+00:00",
+      "text": "Repair level report: re-running no tasks"
+    }
+  ],
+  "result": {
+    "level": "report",
+    "outcome": "report",
+    "skipped": [],
+    "plan_run_id": null,
+    "rerun_tasks": [],
+    "carried_over": [],
+    "blueprint_run_id": null
+  },
+  "error": null,
+  "started_at": "2026-10-10 02:21:04.047083+00:00",
+  "finished_at": "2026-10-10 02:21:29.447786+00:00"
+}

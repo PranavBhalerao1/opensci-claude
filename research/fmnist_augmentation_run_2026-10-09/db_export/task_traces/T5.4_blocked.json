@@ -1,0 +1,19 @@
+{
+  "id": "d52fa69daafd",
+  "project_id": "d95fb65c9f7a",
+  "blueprint_run_id": "629eb62da8a3",
+  "task_id": "T5.4",
+  "agent": "A5",
+  "status": "blocked",
+  "attempts": 0,
+  "cost": 0.0,
+  "summary": null,
+  "artifacts": [],
+  "checks": [],
+  "issues": [],
+  "events": [],
+  "note": "Waiting on a failed or blocked upstream task",
+  "feedback": null,
+  "started_at": null,
+  "finished_at": null
+}

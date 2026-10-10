@@ -1,0 +1,24 @@
+{
+  "summary": "The single remaining blocking issue (R2-01 / T-004) is a LaTeX caption copy-paste error: the subfigure embedding curves_size60000.png carries the caption '$N{=}500$' instead of '$N{=}60{,}000$'. No code, data, analysis, or figure files need to change—only the manuscript LaTeX source. Directive D2-1 already specifies this exact one-word fix and remains active. All prior literature-description directives (D1-1, D1-2) are also retained as they address resolved but still-required text corrections.",
+  "decisions": [
+    {
+      "issue_id": "R2-01",
+      "disposition": "fix",
+      "root_cause": "report",
+      "rationale": "The underlying figure file (curves_size60000.png) is correct; only the \\caption{} text in the LaTeX subfigure block is wrong—a copy-paste error that introduced '$N{=}500$' where '$N{=}60{,}000$' is required. This is a pure manuscript text fix with no upstream computation involved. Directive D2-1 already covers it precisely and must be applied."
+    }
+  ],
+  "plan_revision": "",
+  "blueprint_changes": "",
+  "task_changes": [],
+  "rerun_failed_tasks": [],
+  "report_directives": [
+    {
+      "issue_ids": [
+        "R2-01"
+      ],
+      "text": "In the LaTeX source, locate the \\begin{subfigure} block that contains \\includegraphics{../figures/curves_size60000.png} (label fig:curves60k, near L327–L336). Change its \\caption{} argument from '$N{=}500$.' to '$N{=}60{,}000$.' Recompile the PDF and confirm that the two subfigures in fig:curves_extremes are captioned '$N{=}500$' (left panel) and '$N{=}60{,}000$' (right panel) respectively, matching the surrounding prose at L345–L349."
+    }
+  ],
+  "withdraw_directives": []
+}

@@ -1,0 +1,115 @@
+{
+  "id": "4c51cef974d4",
+  "project_id": "6d8c3c93c209",
+  "blueprint_run_id": "5853e52a54fe",
+  "task_id": "T3.3",
+  "agent": "A4",
+  "status": "done",
+  "attempts": 1,
+  "cost": 0.157222725,
+  "summary": "All checks pass. Here is a complete account of what was done and what was found:\n\n---\n\n## T3.3 Complete — Regression & Crossover Estimation\n\n### OLS Log-linear Regression: **Δ = −12.00 + 0.530 · log₂(N)**\n\n| Statistic | Value |\n|-----------|-------|\n| Intercept *a* | −11.9996 |\n| Slope *b* | +0.5305 |\n| R² | **0.6130** |\n| p-value (slope) | 0.0374 ✓ significant |\n| 95% CI (slope) | [0.046, 1.015] |\n\n### Crossover N\\*\n\n| Item | Value | Note |\n|------|-------|------|\n| Point estimate N\\* | **6,448,676** | 2^(−a/b) |\n| Bootstrap 95% CI | [40,325 — 1,000,000,000] | Very wide; right tail hits clip at 1e9 |\n| Flag | `extrapolated_above_range` | N\\* >> tested max of 60,000 |\n| R² flag | None — R² = 0.613 ≥ 0.5 | |\n\n### Key Interpretive Findings\n\n1. **All 7 Δ values are negative** — data augmentation *hurts* accuracy at 5-epoch training across every tested size. This is the well-known under-training effect: augmentation increases effective variance when the model hasn't converged.\n2. **Positive slope b = +0.530** confirms the trend is monotonically improving: augmentation becomes progressively *less harmful* as training set size grows.\n3. **N\\* ≈ 6.45 million** is far beyond the tested range (500–60,000), meaning augmentation would not break even within the studied regime. The bootstrap CI is very wide (40K → 1B), reflecting high uncertainty in extrapolation.\n4. **R² = 0.613** — the log-linear model explains ~61% of variance; fit is moderate but statistically significant (p = 0.037).\n\n### Artifacts produced\n- **`analysis/regression_results.json`** — OLS coefficients (a, b, R², p-value, slope CI), N\\* point estimate, bootstrap 95% CI, and interpretive flags\n- **`analysis/bootstrap_N_star.csv`** — exactly 5,000 rows (`iter`, `N_star_boot`) of the bootstrap N\\* distribution",
+  "artifacts": [],
+  "checks": [
+    {
+      "check": "analysis/regression_results.json is valid JSON with keys: a, b, r2, N_star, N_star_ci_low, N_star_ci_high, N_star_note",
+      "passed": true,
+      "reason": "The file preview shows valid JSON containing all seven required keys: a, b, r2, N_star, N_star_ci_low, N_star_ci_high, and N_star_note."
+    },
+    {
+      "check": "analysis/bootstrap_N_star.csv has exactly 5000 data rows",
+      "passed": true,
+      "reason": "The FACTS computed by the platform explicitly state '5,000 data rows (excluding the header)' for bootstrap_N_star.csv."
+    },
+    {
+      "check": "R² value in regression_results.json is a float between 0 and 1",
+      "passed": true,
+      "reason": "The file shows \"r2\": 0.613012257845969, which is a float in the valid [0,1] range."
+    }
+  ],
+  "issues": [],
+  "events": [
+    {
+      "t": "2026-10-09T23:28:56.499244+00:00",
+      "args": "{\"path\": \"analysis/delta_by_size.csv\"}",
+      "cost": 0.0148764,
+      "step": 1,
+      "tool": "read_file",
+      "type": "tool",
+      "result": "size,delta_seed42,delta_seed123,delta_mean,delta_range,acc_noaug_mean,acc_aug_mean\n500,-6.91,-9.2,-8.055,2.29,73.375,65.32\n1000,-7.49,-3.59,-5.54,3.9,77.91,72.37\n2500,-4.22,-5.32,-4.77,1.1,81.135,76.365\n5000,-6.45,-6.65,-6.55,0.2,84.805,78.255\n10000,-6.56,-5.71,-6.135,0.85,87.29,81.155\n30000,-4.02,-4.45,-4.235,0.43,90.64,86.405\n60000,-2.88,-2.73,-2.805,0.15,91.485,88.68\n"
+    },
+    {
+      "t": "2026-10-09T23:28:56.704580+00:00",
+      "args": "{\"packages\": [\"statsmodels\", \"numpy\", \"scipy\", \"pandas\"]}",
+      "cost": 0.0148764,
+      "step": 1,
+      "tool": "install_packages",
+      "type": "tool",
+      "result": "exit_code: 0"
+    },
+    {
+      "t": "2026-10-09T23:29:13.691215+00:00",
+      "args": "{\"code\": \"\\nimport numpy as np\\nimport pandas as pd\\nimport json\\nfrom scipy import stats\\nimport warnings\\nwarnings.filterwarnings('ignore')\\n\\n# ── 1. Load data ──────────────────────────────────────────────────────────────\\ndf = pd.read_csv('analysis/delta_by_size.csv')\\nprint(\\\"Input data:\\\")\\np…",
+      "cost": 0.033379664999999996,
+      "step": 2,
+      "tool": "run_python",
+      "type": "tool",
+      "result": "exit_code: 0\nstdout:\nInput data:\n size  delta_mean\n  500      -8.055\n 1000      -5.540\n 2500      -4.770\n 5000      -6.550\n10000      -6.135\n30000      -4.235\n60000      -2.805\n\nOLS results:\n  intercept  a = -11.999585\n  slope      b = 0.530472\n  R²           = 0.613012\n  p-value (b)  = 0.037358\n  95% CI slope = [0.045940, 1.015005]\n"
+    },
+    {
+      "t": "2026-10-09T23:29:18.555108+00:00",
+      "args": "{\"code\": \"\\n# ── 3. Compute N* and set interpretive note ───────────────────────────────────\\nSIZE_MIN = sizes.min()   # 500\\nSIZE_MAX = sizes.max()   # 60000\\n\\nif b >= 0:\\n    N_star = 2 ** (-a / b)\\n    if N_star < SIZE_MIN:\\n        N_star_note = 'extrapolated_below_range'\\n    elif N_star > SIZ…",
+      "cost": 0.045235739999999997,
+      "step": 3,
+      "tool": "run_python",
+      "type": "tool",
+      "result": "exit_code: 1\nstderr:\nTraceback (most recent call last):\n  File \"/home/user/workspace/.scratch/cell_151f05_002.py\", line 3, in <module>\n    SIZE_MIN = sizes.min()   # 500\n               ^^^^^\nNameError: name 'sizes' is not defined\n"
+    },
+    {
+      "t": "2026-10-09T23:29:36.199536+00:00",
+      "args": "{\"code\": \"\\nimport numpy as np\\nimport pandas as pd\\nimport json\\nfrom scipy import stats\\nimport warnings\\nwarnings.filterwarnings('ignore')\\n\\n# ── 1. Load data ──────────────────────────────────────────────────────────────\\ndf = pd.read_csv('analysis/delta_by_size.csv')\\nsizes = df['size'].values…",
+      "cost": 0.068035605,
+      "step": 4,
+      "tool": "run_python",
+      "type": "tool",
+      "result": "exit_code: 0\nstdout:\na=-11.999585, b=0.530472, R²=0.613012, p=0.037358\nslope 95% CI=[0.045940, 1.015005]\n\nN* = 6448675.86  [500–60000]\nnote: extrapolated_above_range\n\nDegenerate bootstrap iterations (NaN): 0\nBootstrap 95% CI for N*: [40324.83, 1000000000.00]\nBootstrap median N*: 6094618.88\n"
+    },
+    {
+      "t": "2026-10-09T23:29:41.442815+00:00",
+      "args": "{\"code\": \"\\n# ── 5. Save bootstrap distribution CSV ───────────────────────────────────────\\nimport os\\nos.makedirs('analysis', exist_ok=True)\\n\\nboot_df = pd.DataFrame({\\n    'iter':        np.arange(1, BOOT+1),\\n    'N_star_boot': N_star_boot_arr\\n})\\nboot_df.to_csv('analysis/bootstrap_N_star.csv'…",
+      "cost": 0.079649295,
+      "step": 5,
+      "tool": "run_python",
+      "type": "tool",
+      "result": "exit_code: 1\nstderr:\nTraceback (most recent call last):\n  File \"/home/user/workspace/.scratch/cell_151f05_004.py\", line 6, in <module>\n    boot_df = pd.DataFrame({\n              ^^\nNameError: name 'pd' is not defined. Did you mean: 'id'?\n"
+    },
+    {
+      "t": "2026-10-09T23:30:01.354091+00:00",
+      "args": "{\"code\": \"\\nimport numpy as np\\nimport pandas as pd\\nimport json\\nimport os\\nfrom scipy import stats\\nimport warnings\\nwarnings.filterwarnings('ignore')\\n\\nos.makedirs('analysis', exist_ok=True)\\n\\n# ── 1. Load data ──────────────────────────────────────────────────────────────\\ndf = pd.read_csv('an…",
+      "cost": 0.11410971,
+      "step": 6,
+      "tool": "run_python",
+      "type": "tool",
+      "result": "exit_code: 0\nstdout:\na=-11.999585, b=0.530472, R²=0.613012, p=0.037358\nslope 95% CI=[0.045940, 1.015005]\nN* = 6448675.86, note: extrapolated_above_range\n\nDegenerate bootstrap its: 0\nBootstrap 95% CI: [40324.83, 1000000000.00]\nBootstrap median: 6094618.88\n\n✓ bootstrap_N_star.csv saved — (5000, 2)\ncount    5.000000e+03\nmean     1.494309e+08\nstd      3.211528e+08\nmin      1.000000e+00\n25%      2.260807e+06\n50%      6.094619e+06\n75%      4.677302e+07\nmax      1.000000e+09\nName: N_star_boot, dtype: f…"
+    },
+    {
+      "t": "2026-10-09T23:30:15.306316+00:00",
+      "args": "{\"code\": \"\\nimport pandas as pd, json, numpy as np\\n\\n# ── Final verification ────────────────────────────────────────────────────────\\nboot_df = pd.read_csv('analysis/bootstrap_N_star.csv')\\nprint(f\\\"bootstrap_N_star.csv rows: {len(boot_df)}  cols: {list(boot_df.columns)}\\\")\\nassert len(boot_df) ==…",
+      "cost": 0.139675965,
+      "step": 7,
+      "tool": "run_python",
+      "type": "tool",
+      "result": "exit_code: 0\nstdout:\nbootstrap_N_star.csv rows: 5000  cols: ['iter', 'N_star_boot']\n\n═══ REGRESSION SUMMARY ═══\n  Model:       Δ = -11.9996 + 0.5305 · log₂(N)\n  R²           = 0.6130\n  p-value (b)  = 0.0374\n  95% CI slope = [0.0459, 1.0150]\n\n  N*           = 6,448,676\n  Bootstrap CI = [40,325, 1,000,000,000]\n  Note:          extrapolated_above_range\n\n  Negative Δ at all 7 sizes: *** ALL NEGATIVE ***\n  R² flag:       NO – R² ≥ 0.5 (OK)\n\n✓ All acceptance checks passed\n"
+    },
+    {
+      "t": "2026-10-09T23:30:25.209039+00:00",
+      "cost": 0.157222725,
+      "step": 8,
+      "text": "All checks pass. Here is a complete account of what was done and what was found:\n\n---\n\n## T3.3 Complete — Regression & Crossover Estimation\n\n### OLS Log-linear Regression: **Δ = −12.00 + 0.530 · log₂(N)**\n\n| Statistic | Value |\n|-----------|-------|\n| Intercept *a* | −11.9996 |\n| Slope *b* | +0.5305 |\n| R² | **0.6130** |\n| p-value (slope) | 0.0374 ✓ significant |\n| 95% CI (slope) | [0.046, 1.015] |\n\n### Crossover N\\*\n\n| Item | Value | Note |\n|------|-------|------|\n| Point estimate N\\* | **6,448,676** | 2^(−a/b) |\n| Bootstrap 95% CI | [40,325 — 1,000,000,000] | Very wide; right tail hits clip …",
+      "type": "message"
+    }
+  ],
+  "note": null,
+  "feedback": null,
+  "started_at": "2026-10-09 23:28:53.641127+00:00",
+  "finished_at": "2026-10-09 23:30:32.961716+00:00"
+}

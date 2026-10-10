@@ -1,0 +1,1140 @@
+{
+  "id": "629eb62da8a3",
+  "project_id": "d95fb65c9f7a",
+  "kind": "blueprint",
+  "status": "done",
+  "phase": "done",
+  "counts": {
+    "tasks": 15,
+    "agents": 6,
+    "warnings": 0
+  },
+  "log": [
+    {
+      "t": "2026-10-09T20:57:22.692091+00:00",
+      "text": "Locating sources for 1 datasets"
+    },
+    {
+      "t": "2026-10-09T20:57:40.861856+00:00",
+      "text": "Found sources for 1 of 1 datasets"
+    },
+    {
+      "t": "2026-10-09T20:57:40.970392+00:00",
+      "text": "Designing the agent team and executable tasks"
+    },
+    {
+      "t": "2026-10-09T21:08:51.177855+00:00",
+      "text": "Checking tools, inputs/outputs, dependencies and budget"
+    },
+    {
+      "t": "2026-10-09T21:08:52.214894+00:00",
+      "text": "Blueprint ready for review"
+    }
+  ],
+  "result": {
+    "budget": {
+      "llm_usd": 15.0,
+      "gpu_hours": 5.0
+    },
+    "warnings": [],
+    "master_plan": {
+      "tasks": [
+        {
+          "id": "T1.1",
+          "agent": "A1",
+          "steps": [
+            "Install packages via install_packages: torch>=2.0, torchvision>=0.15, scikit-learn>=1.3, matplotlib>=3.7, seaborn>=0.12, pandas>=2.0, numpy>=1.24, scipy>=1.10, tabulate>=0.9, torchinfo>=1.8, tqdm>=4.65.",
+            "Run python asserting torch.cuda.is_available()==True; if False raise RuntimeError immediately; log GPU device name, total memory in GB, PyTorch version, CUDA version, and Python version.",
+            "Create workspace directories: src/, data/, data/checkpoints/, data/logs/, data/predictions/, analysis/, figures/, tables/, results/, scripts/.",
+            "Write data/environment_report.txt with a timestamp header followed by all environment details."
+          ],
+          "title": "Verify environment and install Python dependencies",
+          "tools": [
+            "install_packages",
+            "run_python",
+            "run_shell",
+            "write_file"
+          ],
+          "inputs": [],
+          "compute": {
+            "kind": "cpu",
+            "est_minutes": 5,
+            "timeout_minutes": 15
+          },
+          "outputs": [
+            {
+              "path": "data/environment_report.txt",
+              "format": "text",
+              "description": "GPU device name, memory, PyTorch and CUDA versions confirming GPU runtime is ready"
+            }
+          ],
+          "retries": 1,
+          "objective": "Install all required packages, assert CUDA GPU is available, create workspace directories, and write data/environment_report.txt.",
+          "resources": [],
+          "depends_on": [],
+          "max_cost_usd": 0.05,
+          "human_required": false,
+          "acceptance_checks": [
+            "data/environment_report.txt exists and contains 'cuda' (case-insensitive) and a GPU device name string.",
+            "Directories src/, data/checkpoints/, data/logs/, data/predictions/, analysis/, figures/, tables/, results/, scripts/ all exist."
+          ]
+        },
+        {
+          "id": "T1.2",
+          "agent": "A2",
+          "steps": [
+            "Download via torchvision.datasets.FashionMNIST(root='data/fashion_mnist', download=True) for train=True and train=False.",
+            "Define no_aug=Compose([ToTensor(),Normalize((0.2860,),(0.3530,))]) and aug=Compose([RandomHorizontalFlip(0.5),RandomAffine(degrees=10,translate=(0.1,0.1)),ToTensor(),Normalize((0.2860,),(0.3530,))]).",
+            "Save data/dataset_stats.json with fields: train_count, test_count, class_names (list of 10), per_class_train_counts, normalization_mean, normalization_std.",
+            "Sample 5 images per class; render each under no_aug and aug side-by-side in a 10-row grid; save figures/sample_augmented_images.png at 100 dpi; post class-name-to-label mapping to team notes."
+          ],
+          "title": "Download Fashion-MNIST and configure transform pipelines",
+          "tools": [
+            "run_python",
+            "write_file",
+            "post_note"
+          ],
+          "inputs": [
+            {
+              "path": "data/environment_report.txt",
+              "source": "task:T1.1"
+            }
+          ],
+          "compute": {
+            "kind": "cpu",
+            "est_minutes": 10,
+            "timeout_minutes": 20
+          },
+          "outputs": [
+            {
+              "path": "data/fashion_mnist/",
+              "format": "directory",
+              "description": "Raw Fashion-MNIST IDX files cached by torchvision"
+            },
+            {
+              "path": "data/dataset_stats.json",
+              "format": "JSON",
+              "description": "Dataset counts, class names, and normalization constants"
+            },
+            {
+              "path": "figures/sample_augmented_images.png",
+              "format": "PNG",
+              "description": "Visual grid of samples under both transform pipelines for qualitative inspection"
+            }
+          ],
+          "retries": 2,
+          "objective": "Download both dataset splits, define both transform pipelines, compute dataset statistics, and produce a visual augmentation check grid.",
+          "resources": [
+            "D1"
+          ],
+          "depends_on": [
+            "T1.1"
+          ],
+          "max_cost_usd": 0.1,
+          "human_required": false,
+          "acceptance_checks": [
+            "data/dataset_stats.json has train_count=60000, test_count=10000, and class_names list of length 10.",
+            "figures/sample_augmented_images.png exists and is larger than 50 KB."
+          ]
+        },
+        {
+          "id": "T1.3",
+          "agent": "A1",
+          "steps": [
+            "Write src/model.py: SmallCNN with three conv blocks 1→32→64→128 (Conv2d 3×3 padding=1, BatchNorm2d, ReLU, MaxPool2d(2,2)) then Flatten→Linear(128*3*3,256)→ReLU→Dropout(0.5)→Linear(256,10).",
+            "Implement set_seed(seed) setting random.seed, np.random.seed, torch.manual_seed, torch.cuda.manual_seed_all, cudnn.deterministic=True, cudnn.benchmark=False.",
+            "Add __main__ guard: instantiate SmallCNN, run forward pass on torch.zeros(2,1,28,28), print output shape and total params via torchinfo.summary; write printed output to data/model_summary.txt.",
+            "Verify python src/model.py runs without error and output shape is (2,10)."
+          ],
+          "title": "Implement SmallCNN architecture and set_seed utility",
+          "tools": [
+            "run_python",
+            "write_file"
+          ],
+          "inputs": [
+            {
+              "path": "data/environment_report.txt",
+              "source": "task:T1.1"
+            }
+          ],
+          "compute": {
+            "kind": "cpu",
+            "est_minutes": 5,
+            "timeout_minutes": 10
+          },
+          "outputs": [
+            {
+              "path": "src/model.py",
+              "format": "Python source",
+              "description": "SmallCNN class and set_seed utility, fully importable"
+            },
+            {
+              "path": "data/model_summary.txt",
+              "format": "text",
+              "description": "torchinfo summary with total trainable parameters and layer shapes"
+            }
+          ],
+          "retries": 1,
+          "objective": "Write src/model.py with the exact SmallCNN architecture and a fully deterministic set_seed function.",
+          "resources": [],
+          "depends_on": [
+            "T1.1"
+          ],
+          "max_cost_usd": 0.12,
+          "human_required": false,
+          "acceptance_checks": [
+            "src/model.py imports without error and forward pass on input (2,1,28,28) yields output shape (2,10).",
+            "data/model_summary.txt contains 'Trainable params' with a value between 100000 and 1000000."
+          ]
+        },
+        {
+          "id": "T1.4",
+          "agent": "A1",
+          "steps": [
+            "Write train_epoch(model, loader, optimizer, criterion, device) returning (train_loss, train_acc) using Adam(lr=0.001,betas=(0.9,0.999)) and CrossEntropyLoss with batch_size=128.",
+            "Write evaluate(model, loader, device) returning (loss, overall_acc, preds_df) with columns [sample_idx, true_label, pred_label, prob_0..prob_9] using softmax over raw logits without gradient computation.",
+            "Write run_training(seed, condition, data_dir, ckpt_dir, log_dir, pred_dir, epochs=5): calls set_seed, builds 90/10 random_split DataLoaders (batch=128, num_workers=2, pin_memory=True) using a Generator(seed) for reproducibility, applies the appropriate transform (no_aug or aug based on condition string), trains for epochs epochs logging (epoch,train_loss,train_acc,val_loss,val_acc,elapsed_s) to CSV per epoch, saves best-val-acc checkpoint and per-epoch epoch-N checkpoints, evaluates test set with best checkpoint and saves preds_df.",
+            "Smoke-test with epochs=1 on CPU-only data; verify no import errors, shape mismatches, or CSV write failures."
+          ],
+          "title": "Implement training loop, evaluation function, and logging utilities",
+          "tools": [
+            "run_python",
+            "write_file",
+            "read_file"
+          ],
+          "inputs": [
+            {
+              "path": "src/model.py",
+              "source": "task:T1.3"
+            }
+          ],
+          "compute": {
+            "kind": "cpu",
+            "est_minutes": 10,
+            "timeout_minutes": 20
+          },
+          "outputs": [
+            {
+              "path": "src/train.py",
+              "format": "Python source",
+              "description": "Full training and evaluation utilities with logging, checkpointing, and crash recovery"
+            }
+          ],
+          "retries": 1,
+          "objective": "Write src/train.py with train_epoch(), evaluate(), and run_training() covering all four experimental configurations with full logging and crash-recovery checkpoints.",
+          "resources": [],
+          "depends_on": [
+            "T1.3"
+          ],
+          "max_cost_usd": 0.18,
+          "human_required": false,
+          "acceptance_checks": [
+            "src/train.py imports without error; run_training, train_epoch, evaluate are all defined as callables.",
+            "Smoke-test (epochs=1) completes without RuntimeError and writes a checkpoint file to data/checkpoints/."
+          ]
+        },
+        {
+          "id": "T2.1",
+          "agent": "A3",
+          "steps": [
+            "Write scripts/gpu_train.py: insert workspace root into sys.path, import run_training from src.train, define configs=[(42,'noaug'),(42,'aug'),(123,'noaug'),(123,'aug')], loop calling run_training(seed,condition,'data/fashion_mnist','data/checkpoints','data/logs','data/predictions',epochs=5) for each config, print GPU device name and per-run elapsed seconds.",
+            "Submit via run_gpu_jobs with job script 'python scripts/gpu_train.py', name='fashion_mnist_train', timeout_minutes=90; all four runs are sequential in one GPU session.",
+            "Monitor logs/gpu/fashion_mnist_train.log; wait up to 90 minutes for all four runs to finish.",
+            "After completion, verify all 12 output files (4 checkpoints, 4 log CSVs, 4 prediction CSVs) exist and are non-empty; post GPU device name and per-run test accuracies to team notes."
+          ],
+          "title": "Execute all four training configurations on CUDA GPU",
+          "tools": [
+            "run_gpu_jobs",
+            "write_file",
+            "read_file",
+            "run_python",
+            "run_shell",
+            "post_note"
+          ],
+          "inputs": [
+            {
+              "path": "src/model.py",
+              "source": "task:T1.3"
+            },
+            {
+              "path": "src/train.py",
+              "source": "task:T1.4"
+            },
+            {
+              "path": "data/fashion_mnist/",
+              "source": "task:T1.2"
+            },
+            {
+              "path": "data/dataset_stats.json",
+              "source": "task:T1.2"
+            }
+          ],
+          "compute": {
+            "kind": "cuda_gpu",
+            "est_minutes": 50,
+            "timeout_minutes": 90
+          },
+          "outputs": [
+            {
+              "path": "data/checkpoints/model_seed42_noaug.pt",
+              "format": "PyTorch checkpoint",
+              "description": "Best-val-acc checkpoint, seed=42, no augmentation"
+            },
+            {
+              "path": "data/checkpoints/model_seed42_aug.pt",
+              "format": "PyTorch checkpoint",
+              "description": "Best-val-acc checkpoint, seed=42, augmentation"
+            },
+            {
+              "path": "data/checkpoints/model_seed123_noaug.pt",
+              "format": "PyTorch checkpoint",
+              "description": "Best-val-acc checkpoint, seed=123, no augmentation"
+            },
+            {
+              "path": "data/checkpoints/model_seed123_aug.pt",
+              "format": "PyTorch checkpoint",
+              "description": "Best-val-acc checkpoint, seed=123, augmentation"
+            },
+            {
+              "path": "data/logs/train_seed42_noaug.csv",
+              "format": "CSV",
+              "description": "Per-epoch training log: epoch,train_loss,train_acc,val_loss,val_acc,elapsed_s"
+            },
+            {
+              "path": "data/logs/train_seed42_aug.csv",
+              "format": "CSV",
+              "description": "Per-epoch training log, seed=42, augmentation"
+            },
+            {
+              "path": "data/logs/train_seed123_noaug.csv",
+              "format": "CSV",
+              "description": "Per-epoch training log, seed=123, no augmentation"
+            },
+            {
+              "path": "data/logs/train_seed123_aug.csv",
+              "format": "CSV",
+              "description": "Per-epoch training log, seed=123, augmentation"
+            },
+            {
+              "path": "data/predictions/preds_seed42_noaug.csv",
+              "format": "CSV",
+              "description": "Test predictions: sample_idx,true_label,pred_label,prob_0..prob_9"
+            },
+            {
+              "path": "data/predictions/preds_seed42_aug.csv",
+              "format": "CSV",
+              "description": "Test predictions, seed=42, augmentation"
+            },
+            {
+              "path": "data/predictions/preds_seed123_noaug.csv",
+              "format": "CSV",
+              "description": "Test predictions, seed=123, no augmentation"
+            },
+            {
+              "path": "data/predictions/preds_seed123_aug.csv",
+              "format": "CSV",
+              "description": "Test predictions, seed=123, augmentation"
+            }
+          ],
+          "retries": 2,
+          "objective": "Train SmallCNN under (seed=42,noaug), (seed=42,aug), (seed=123,noaug), (seed=123,aug) for exactly 5 epochs each on a cloud CUDA GPU, saving checkpoints, logs, and test predictions.",
+          "resources": [
+            "D1"
+          ],
+          "depends_on": [
+            "T1.2",
+            "T1.3",
+            "T1.4"
+          ],
+          "max_cost_usd": 2.0,
+          "human_required": false,
+          "acceptance_checks": [
+            "All 12 output files exist and are non-empty (prediction CSVs >500 KB, checkpoints >100 KB).",
+            "Each training log CSV has exactly 5 rows with numeric val_acc values.",
+            "Each prediction CSV has exactly 10000 rows with columns true_label and pred_label."
+          ]
+        },
+        {
+          "id": "T3.1",
+          "agent": "A4",
+          "steps": [
+            "Load all four prediction CSVs; verify each has exactly 10000 rows, no missing values, and all 10 class labels present in true_label.",
+            "Compute overall test accuracy (correct/10000) for each model; cross-check against final-epoch val_acc in the corresponding training log CSV, flagging discrepancies greater than 3pp.",
+            "Save analysis/validation_summary.txt with per-file integrity results and any flags.",
+            "Save analysis/overall_accuracy.csv with columns: seed, condition, test_accuracy, final_val_acc, discrepancy_flag."
+          ],
+          "title": "Validate prediction files and compute overall test accuracy",
+          "tools": [
+            "run_python",
+            "write_file",
+            "read_file"
+          ],
+          "inputs": [
+            {
+              "path": "data/predictions/preds_seed42_noaug.csv",
+              "source": "task:T2.1"
+            },
+            {
+              "path": "data/predictions/preds_seed42_aug.csv",
+              "source": "task:T2.1"
+            },
+            {
+              "path": "data/predictions/preds_seed123_noaug.csv",
+              "source": "task:T2.1"
+            },
+            {
+              "path": "data/predictions/preds_seed123_aug.csv",
+              "source": "task:T2.1"
+            },
+            {
+              "path": "data/logs/train_seed42_noaug.csv",
+              "source": "task:T2.1"
+            },
+            {
+              "path": "data/logs/train_seed42_aug.csv",
+              "source": "task:T2.1"
+            },
+            {
+              "path": "data/logs/train_seed123_noaug.csv",
+              "source": "task:T2.1"
+            },
+            {
+              "path": "data/logs/train_seed123_aug.csv",
+              "source": "task:T2.1"
+            }
+          ],
+          "compute": {
+            "kind": "cpu",
+            "est_minutes": 5,
+            "timeout_minutes": 15
+          },
+          "outputs": [
+            {
+              "path": "analysis/validation_summary.txt",
+              "format": "text",
+              "description": "Integrity check results and any discrepancy flags per model"
+            },
+            {
+              "path": "analysis/overall_accuracy.csv",
+              "format": "CSV",
+              "description": "seed, condition, test_accuracy, final_val_acc, discrepancy_flag for all four models"
+            }
+          ],
+          "retries": 1,
+          "objective": "Verify prediction file integrity and cross-check computed test accuracies against training log final-epoch val_acc.",
+          "resources": [],
+          "depends_on": [
+            "T2.1"
+          ],
+          "max_cost_usd": 0.15,
+          "human_required": false,
+          "acceptance_checks": [
+            "analysis/overall_accuracy.csv has exactly 4 rows with numeric test_accuracy values between 0 and 1.",
+            "analysis/validation_summary.txt exists and contains confirmation that all four files have 10000 rows."
+          ]
+        },
+        {
+          "id": "T3.2",
+          "agent": "A5",
+          "steps": [
+            "Load data/logs/train_seed{42,123}_{noaug,aug}.csv; add columns seed (int) and condition (str) to each before concatenation.",
+            "Verify each run contributes exactly 5 rows and val_acc is non-decreasing for at least 3 of 5 epochs in each run.",
+            "Save analysis/learning_curves_merged.csv with columns: seed, condition, epoch, train_loss, train_acc, val_loss, val_acc."
+          ],
+          "title": "Merge training logs into unified learning curves dataset",
+          "tools": [
+            "run_python",
+            "write_file",
+            "read_file"
+          ],
+          "inputs": [
+            {
+              "path": "data/logs/train_seed42_noaug.csv",
+              "source": "task:T2.1"
+            },
+            {
+              "path": "data/logs/train_seed42_aug.csv",
+              "source": "task:T2.1"
+            },
+            {
+              "path": "data/logs/train_seed123_noaug.csv",
+              "source": "task:T2.1"
+            },
+            {
+              "path": "data/logs/train_seed123_aug.csv",
+              "source": "task:T2.1"
+            }
+          ],
+          "compute": {
+            "kind": "cpu",
+            "est_minutes": 3,
+            "timeout_minutes": 10
+          },
+          "outputs": [
+            {
+              "path": "analysis/learning_curves_merged.csv",
+              "format": "CSV",
+              "description": "Long-format learning curves: seed, condition, epoch, train_loss, train_acc, val_loss, val_acc for all four runs"
+            }
+          ],
+          "retries": 1,
+          "objective": "Concatenate the four training log CSVs into a single long-format file with seed and condition columns for the learning curves figure.",
+          "resources": [],
+          "depends_on": [
+            "T2.1"
+          ],
+          "max_cost_usd": 0.05,
+          "human_required": false,
+          "acceptance_checks": [
+            "analysis/learning_curves_merged.csv has exactly 20 rows (4 runs times 5 epochs).",
+            "Columns seed, condition, epoch, val_acc are all present."
+          ]
+        },
+        {
+          "id": "T4.1",
+          "agent": "A4",
+          "steps": [
+            "For each of the four prediction CSVs compute per-class accuracy as (correct_count/1000) per class (1000 = balanced test size per class) and use sklearn.metrics.precision_recall_fscore_support(average=None) to get per-class precision, recall, F1.",
+            "Assemble analysis/per_class_metrics_all_models.csv (40 rows: 4 models times 10 classes) with columns: seed, condition, class_idx, class_name, accuracy, precision, recall, f1.",
+            "Average across seeds per condition; save analysis/per_class_metrics_by_condition.csv (20 rows: 2 conditions times 10 classes) with mean and seed-range (min,max) columns.",
+            "Compute delta = aug_mean minus noaug_mean per class for accuracy, precision, recall, f1; save analysis/per_class_delta_metrics.csv with columns: class_idx, class_name, delta_accuracy, delta_accuracy_min, delta_accuracy_max, delta_precision, delta_recall, delta_f1."
+          ],
+          "title": "Compute per-class metrics and delta metrics across conditions",
+          "tools": [
+            "run_python",
+            "write_file",
+            "read_file",
+            "install_packages"
+          ],
+          "inputs": [
+            {
+              "path": "data/predictions/preds_seed42_noaug.csv",
+              "source": "task:T2.1"
+            },
+            {
+              "path": "data/predictions/preds_seed42_aug.csv",
+              "source": "task:T2.1"
+            },
+            {
+              "path": "data/predictions/preds_seed123_noaug.csv",
+              "source": "task:T2.1"
+            },
+            {
+              "path": "data/predictions/preds_seed123_aug.csv",
+              "source": "task:T2.1"
+            },
+            {
+              "path": "analysis/overall_accuracy.csv",
+              "source": "task:T3.1"
+            }
+          ],
+          "compute": {
+            "kind": "cpu",
+            "est_minutes": 5,
+            "timeout_minutes": 15
+          },
+          "outputs": [
+            {
+              "path": "analysis/per_class_metrics_all_models.csv",
+              "format": "CSV",
+              "description": "Per-class metrics for all four models: seed, condition, class, accuracy, precision, recall, f1"
+            },
+            {
+              "path": "analysis/per_class_metrics_by_condition.csv",
+              "format": "CSV",
+              "description": "Condition-averaged per-class metrics with seed-level ranges"
+            },
+            {
+              "path": "analysis/per_class_delta_metrics.csv",
+              "format": "CSV",
+              "description": "Delta metrics (aug minus noaug) per class with seed-level min/max range for accuracy, precision, recall, f1"
+            }
+          ],
+          "retries": 1,
+          "objective": "Extract per-class precision, recall, F1, and accuracy for all four models; compute condition-mean deltas with seed-level ranges.",
+          "resources": [],
+          "depends_on": [
+            "T2.1",
+            "T3.1"
+          ],
+          "max_cost_usd": 0.2,
+          "human_required": false,
+          "acceptance_checks": [
+            "analysis/per_class_metrics_all_models.csv has exactly 40 rows with numeric accuracy values between 0 and 1.",
+            "analysis/per_class_delta_metrics.csv has exactly 10 rows with columns delta_accuracy, delta_accuracy_min, delta_accuracy_max."
+          ]
+        },
+        {
+          "id": "T4.2",
+          "agent": "A5",
+          "steps": [
+            "For each prediction CSV compute 10x10 confusion matrix via sklearn.metrics.confusion_matrix; row-normalise by dividing each row by 1000.",
+            "Average the two noaug and two aug normalised matrices across seeds to produce condition-average matrices avg_noaug and avg_aug.",
+            "Compute delta = avg_aug minus avg_noaug; save all matrices to analysis/confusion_matrices.npz with keys: seed42_noaug, seed42_aug, seed123_noaug, seed123_aug, avg_noaug, avg_aug, delta.",
+            "Export delta as analysis/delta_confusion_matrix.csv with Fashion-MNIST class names as row and column headers; save analysis/confusion_stats_summary.csv with max absolute delta on diagonal, max absolute delta in confusable-tops off-diagonal cells (T-shirt/top, Pullover, Coat, Shirt pairwise), and the corresponding class-pair labels."
+          ],
+          "title": "Compute confusion matrices and annotated delta confusion matrix",
+          "tools": [
+            "run_python",
+            "write_file",
+            "read_file"
+          ],
+          "inputs": [
+            {
+              "path": "data/predictions/preds_seed42_noaug.csv",
+              "source": "task:T2.1"
+            },
+            {
+              "path": "data/predictions/preds_seed42_aug.csv",
+              "source": "task:T2.1"
+            },
+            {
+              "path": "data/predictions/preds_seed123_noaug.csv",
+              "source": "task:T2.1"
+            },
+            {
+              "path": "data/predictions/preds_seed123_aug.csv",
+              "source": "task:T2.1"
+            },
+            {
+              "path": "analysis/validation_summary.txt",
+              "source": "task:T3.1"
+            }
+          ],
+          "compute": {
+            "kind": "cpu",
+            "est_minutes": 5,
+            "timeout_minutes": 15
+          },
+          "outputs": [
+            {
+              "path": "analysis/confusion_matrices.npz",
+              "format": "NumPy archive",
+              "description": "All confusion matrices: per-model raw and normalised, condition averages, and delta"
+            },
+            {
+              "path": "analysis/delta_confusion_matrix.csv",
+              "format": "CSV",
+              "description": "10x10 delta confusion matrix with Fashion-MNIST class names as row and column headers"
+            },
+            {
+              "path": "analysis/confusion_stats_summary.csv",
+              "format": "CSV",
+              "description": "Summary statistics: max diagonal delta, max confusable-tops off-diagonal delta, corresponding class pairs"
+            }
+          ],
+          "retries": 1,
+          "objective": "Compute row-normalised 10x10 confusion matrices for all four models, average per condition, and derive the delta confusion matrix.",
+          "resources": [],
+          "depends_on": [
+            "T2.1",
+            "T3.1"
+          ],
+          "max_cost_usd": 0.15,
+          "human_required": false,
+          "acceptance_checks": [
+            "analysis/confusion_matrices.npz contains key 'delta' loadable as a (10,10) numpy array.",
+            "analysis/delta_confusion_matrix.csv is 10 rows by 10 columns with class names as headers."
+          ]
+        },
+        {
+          "id": "T4.3",
+          "agent": "A4",
+          "steps": [
+            "Create analysis/class_morphology.csv with columns class_idx, class_name, symmetric (1=Trouser,Pullover,Dress,Coat,Bag; 0=T-shirt/top,Shirt,Sandal,Sneaker,Ankle boot), morphological_group (tops/bottoms/footwear/accessories), confusability_group (confusable_tops/confusable_footwear/unique).",
+            "Merge with analysis/per_class_delta_metrics.csv on class_idx.",
+            "Compute Spearman rank correlation between symmetric and delta_accuracy across 10 classes using scipy.stats.spearmanr.",
+            "Bootstrap 95% CI: resample 10 class data points with replacement 5000 times, compute rho each time, take 2.5th and 97.5th percentiles; write rho, p-value, lower_ci, upper_ci, and plain-text directional interpretation with explicit exploratory caveat to analysis/morphology_correlation_results.txt."
+          ],
+          "title": "Morphological annotation and symmetry versus delta-accuracy correlation",
+          "tools": [
+            "run_python",
+            "write_file",
+            "read_file"
+          ],
+          "inputs": [
+            {
+              "path": "analysis/per_class_delta_metrics.csv",
+              "source": "task:T4.1"
+            }
+          ],
+          "compute": {
+            "kind": "cpu",
+            "est_minutes": 5,
+            "timeout_minutes": 15
+          },
+          "outputs": [
+            {
+              "path": "analysis/class_morphology.csv",
+              "format": "CSV",
+              "description": "Morphological annotations for all 10 Fashion-MNIST classes: symmetric, morphological_group, confusability_group"
+            },
+            {
+              "path": "analysis/morphology_correlation_results.txt",
+              "format": "text",
+              "description": "Spearman rho, p-value, bootstrap 95% CI, and exploratory directional interpretation"
+            }
+          ],
+          "retries": 1,
+          "objective": "Annotate all 10 garment classes by morphological symmetry and group, then compute Spearman rho with bootstrapped 95% CI.",
+          "resources": [],
+          "depends_on": [
+            "T4.1"
+          ],
+          "max_cost_usd": 0.2,
+          "human_required": false,
+          "acceptance_checks": [
+            "analysis/class_morphology.csv has exactly 10 rows and columns symmetric, morphological_group, confusability_group.",
+            "analysis/morphology_correlation_results.txt contains numeric values for rho, lower_ci, and upper_ci."
+          ]
+        },
+        {
+          "id": "T5.1",
+          "agent": "A5",
+          "steps": [
+            "Load analysis/per_class_delta_metrics.csv and analysis/class_morphology.csv; merge on class_idx.",
+            "Create horizontal bar chart sorted by delta_accuracy; color by morphological_group (tops=coral, bottoms=steelblue, footwear=seagreen, accessories=gold); annotate each bar with S or A for symmetry.",
+            "Add asymmetric error bars spanning (delta_accuracy_min, delta_accuracy_max); add vertical zero line and dashed reference lines at +1.5pp and -1.5pp labeled 'binomial noise floor'.",
+            "Save as figures/fig1_per_class_delta_accuracy.png at 300 dpi with tight_layout."
+          ],
+          "title": "Per-class delta-accuracy bar chart with seed-level error bars",
+          "tools": [
+            "run_python",
+            "write_file"
+          ],
+          "inputs": [
+            {
+              "path": "analysis/per_class_delta_metrics.csv",
+              "source": "task:T4.1"
+            },
+            {
+              "path": "analysis/class_morphology.csv",
+              "source": "task:T4.3"
+            }
+          ],
+          "compute": {
+            "kind": "cpu",
+            "est_minutes": 5,
+            "timeout_minutes": 15
+          },
+          "outputs": [
+            {
+              "path": "figures/fig1_per_class_delta_accuracy.png",
+              "format": "PNG 300 dpi",
+              "description": "Horizontal bar chart of per-class delta-accuracy with seed error bars, morphological group colors, and symmetry labels"
+            }
+          ],
+          "retries": 1,
+          "objective": "Produce figures/fig1_per_class_delta_accuracy.png at 300 dpi showing per-class delta-accuracy sorted by magnitude.",
+          "resources": [],
+          "depends_on": [
+            "T4.1",
+            "T4.3"
+          ],
+          "max_cost_usd": 0.15,
+          "human_required": false,
+          "acceptance_checks": [
+            "figures/fig1_per_class_delta_accuracy.png exists and is larger than 50 KB.",
+            "File is a valid PNG (can be opened by PIL without error)."
+          ]
+        },
+        {
+          "id": "T5.2",
+          "agent": "A5",
+          "steps": [
+            "Load analysis/delta_confusion_matrix.csv; parse class names from row/column headers.",
+            "Create annotated seaborn heatmap with diverging RdBu_r colormap centered at 0; annotate cells where absolute value exceeds 0.005 (0.5pp) with the numeric delta formatted as a percentage point; add black borders to diagonal cells.",
+            "Label both axes with full class names; add colorbar labeled 'Delta confusion rate (pp)'; set figure title 'Delta Confusion Matrix: Augmentation minus No Augmentation'.",
+            "Save as figures/fig2_delta_confusion_matrix.png at 300 dpi with tight_layout."
+          ],
+          "title": "Annotated delta confusion matrix heatmap",
+          "tools": [
+            "run_python",
+            "write_file"
+          ],
+          "inputs": [
+            {
+              "path": "analysis/delta_confusion_matrix.csv",
+              "source": "task:T4.2"
+            },
+            {
+              "path": "analysis/class_morphology.csv",
+              "source": "task:T4.3"
+            }
+          ],
+          "compute": {
+            "kind": "cpu",
+            "est_minutes": 5,
+            "timeout_minutes": 15
+          },
+          "outputs": [
+            {
+              "path": "figures/fig2_delta_confusion_matrix.png",
+              "format": "PNG 300 dpi",
+              "description": "Annotated 10x10 delta confusion matrix heatmap with RdBu_r colormap centred at zero"
+            }
+          ],
+          "retries": 1,
+          "objective": "Produce figures/fig2_delta_confusion_matrix.png at 300 dpi with RdBu_r diverging colormap.",
+          "resources": [],
+          "depends_on": [
+            "T4.2",
+            "T4.3"
+          ],
+          "max_cost_usd": 0.15,
+          "human_required": false,
+          "acceptance_checks": [
+            "figures/fig2_delta_confusion_matrix.png exists and is larger than 100 KB.",
+            "File is a valid PNG."
+          ]
+        },
+        {
+          "id": "T5.3",
+          "agent": "A5",
+          "steps": [
+            "Load analysis/learning_curves_merged.csv.",
+            "Create 2x2 matplotlib subplots arranged as (noaug/seed42, noaug/seed123, aug/seed42, aug/seed123); in each panel plot training loss on left y-axis (solid line) and val accuracy on right y-axis (dashed line) across epochs 1-5; use blue for noaug panels and orange for aug panels.",
+            "Label each panel with its condition and seed; add shared supertitle 'Training Dynamics: No Augmentation vs. Augmentation'.",
+            "Save as figures/fig3_learning_curves.png at 300 dpi with tight_layout."
+          ],
+          "title": "Learning curves figure for all four training runs",
+          "tools": [
+            "run_python",
+            "write_file"
+          ],
+          "inputs": [
+            {
+              "path": "analysis/learning_curves_merged.csv",
+              "source": "task:T3.2"
+            }
+          ],
+          "compute": {
+            "kind": "cpu",
+            "est_minutes": 5,
+            "timeout_minutes": 10
+          },
+          "outputs": [
+            {
+              "path": "figures/fig3_learning_curves.png",
+              "format": "PNG 300 dpi",
+              "description": "2x2 panel learning curves: training loss and validation accuracy across 5 epochs for all four runs"
+            }
+          ],
+          "retries": 1,
+          "objective": "Produce figures/fig3_learning_curves.png with 2x2 panels showing training loss and validation accuracy across 5 epochs.",
+          "resources": [],
+          "depends_on": [
+            "T3.2"
+          ],
+          "max_cost_usd": 0.1,
+          "human_required": false,
+          "acceptance_checks": [
+            "figures/fig3_learning_curves.png exists and is larger than 50 KB.",
+            "File is a valid PNG."
+          ]
+        },
+        {
+          "id": "T5.4",
+          "agent": "A5",
+          "steps": [
+            "Table 1: load analysis/overall_accuracy.csv; build table with 4 data rows (seed x condition), added rows for condition means and random-classifier baseline (10%); include columns seed, condition, test_accuracy, final_val_acc; save tables/table1_overall_accuracy.csv and tables/table1_overall_accuracy.tex with toprule, midrule, bottomrule from tabulate or manually formatted.",
+            "Table 2: load analysis/per_class_metrics_by_condition.csv and analysis/per_class_delta_metrics.csv; build 10-row table sorted ascending by delta_accuracy with columns class_name, noaug_accuracy, aug_accuracy, noaug_f1, aug_f1, delta_accuracy, delta_range; save tables/table2_per_class_metrics.csv and tables/table2_per_class_metrics.tex with booktabs style.",
+            "Verify both .tex files contain toprule and bottomrule and do not contain bare hline commands."
+          ],
+          "title": "Generate summary tables in CSV and LaTeX booktabs format",
+          "tools": [
+            "run_python",
+            "write_file",
+            "read_file"
+          ],
+          "inputs": [
+            {
+              "path": "analysis/overall_accuracy.csv",
+              "source": "task:T3.1"
+            },
+            {
+              "path": "analysis/per_class_metrics_by_condition.csv",
+              "source": "task:T4.1"
+            },
+            {
+              "path": "analysis/per_class_delta_metrics.csv",
+              "source": "task:T4.1"
+            }
+          ],
+          "compute": {
+            "kind": "cpu",
+            "est_minutes": 5,
+            "timeout_minutes": 15
+          },
+          "outputs": [
+            {
+              "path": "tables/table1_overall_accuracy.csv",
+              "format": "CSV",
+              "description": "Overall accuracy summary: 4 runs plus baseline row"
+            },
+            {
+              "path": "tables/table1_overall_accuracy.tex",
+              "format": "LaTeX",
+              "description": "Table 1 in booktabs format ready for paper inclusion"
+            },
+            {
+              "path": "tables/table2_per_class_metrics.csv",
+              "format": "CSV",
+              "description": "Per-class metrics comparison: 10 classes, both conditions, delta with seed range"
+            },
+            {
+              "path": "tables/table2_per_class_metrics.tex",
+              "format": "LaTeX",
+              "description": "Table 2 in booktabs format ready for paper inclusion"
+            }
+          ],
+          "retries": 1,
+          "objective": "Produce Table 1 (overall accuracy) and Table 2 (per-class metrics) as CSV and LaTeX booktabs files.",
+          "resources": [],
+          "depends_on": [
+            "T3.1",
+            "T4.1"
+          ],
+          "max_cost_usd": 0.15,
+          "human_required": false,
+          "acceptance_checks": [
+            "tables/table1_overall_accuracy.csv has at least 5 rows; tables/table2_per_class_metrics.csv has exactly 10 rows.",
+            "Both .tex files contain 'toprule' and 'bottomrule'."
+          ]
+        },
+        {
+          "id": "T6.1",
+          "agent": "A6",
+          "steps": [
+            "Read analysis/overall_accuracy.csv, analysis/per_class_delta_metrics.csv, analysis/morphology_correlation_results.txt, and analysis/confusion_stats_summary.csv.",
+            "Write results/SUMMARY.md with sections: (1) Overall accuracy table for all 4 runs with condition means and 10% baseline; (2) Per-class delta-accuracy for all 10 classes with seed ranges, highlighting classes where absolute delta exceeds 1.5pp; (3) Spearman rho with bootstrap 95% CI and directional interpretation; (4) Max off-diagonal delta in confusable-tops group with class-pair label; (5) Artifact index listing paths to fig1, fig2, fig3, table1 csv/tex, table2 csv/tex.",
+            "Add explicit exploratory caveat section: all per-class findings are exploratory given n=2 seeds; binomial SE approximately 0.6-0.9pp; effects exceeding 1.5pp are above the noise floor.",
+            "Verify every numeric claim can be traced to a specific row or value in an upstream analysis file."
+          ],
+          "title": "Compile results summary with all key numbers and artifact index",
+          "tools": [
+            "read_file",
+            "write_file",
+            "run_python",
+            "post_note"
+          ],
+          "inputs": [
+            {
+              "path": "analysis/overall_accuracy.csv",
+              "source": "task:T3.1"
+            },
+            {
+              "path": "analysis/per_class_delta_metrics.csv",
+              "source": "task:T4.1"
+            },
+            {
+              "path": "analysis/morphology_correlation_results.txt",
+              "source": "task:T4.3"
+            },
+            {
+              "path": "analysis/confusion_stats_summary.csv",
+              "source": "task:T4.2"
+            },
+            {
+              "path": "figures/fig1_per_class_delta_accuracy.png",
+              "source": "task:T5.1"
+            },
+            {
+              "path": "figures/fig2_delta_confusion_matrix.png",
+              "source": "task:T5.2"
+            },
+            {
+              "path": "figures/fig3_learning_curves.png",
+              "source": "task:T5.3"
+            },
+            {
+              "path": "tables/table1_overall_accuracy.tex",
+              "source": "task:T5.4"
+            },
+            {
+              "path": "tables/table2_per_class_metrics.tex",
+              "source": "task:T5.4"
+            }
+          ],
+          "compute": {
+            "kind": "cpu",
+            "est_minutes": 5,
+            "timeout_minutes": 15
+          },
+          "outputs": [
+            {
+              "path": "results/SUMMARY.md",
+              "format": "Markdown",
+              "description": "Self-contained results summary with all key numbers, exploratory framing, and full artifact index"
+            }
+          ],
+          "retries": 1,
+          "objective": "Produce results/SUMMARY.md containing every key metric, the exploratory framing, and paths to all figures and tables.",
+          "resources": [],
+          "depends_on": [
+            "T3.1",
+            "T4.1",
+            "T4.2",
+            "T4.3",
+            "T5.1",
+            "T5.2",
+            "T5.3",
+            "T5.4"
+          ],
+          "max_cost_usd": 0.2,
+          "human_required": false,
+          "acceptance_checks": [
+            "results/SUMMARY.md exists and is larger than 500 characters.",
+            "SUMMARY.md contains numeric values for overall test accuracy, Spearman rho, and at least one per-class delta-accuracy value.",
+            "SUMMARY.md lists paths to all three figure files and both LaTeX table files."
+          ]
+        }
+      ],
+      "title": "Per-Class Accuracy Impact of Basic Image Augmentation on Fashion-MNIST Garment Categories",
+      "agents": [
+        {
+          "id": "A1",
+          "name": "Code Engineer",
+          "tools": [
+            "install_packages",
+            "run_python",
+            "run_shell",
+            "write_file",
+            "read_file",
+            "post_note"
+          ],
+          "model_tier": "standard",
+          "instructions": "Set up the Python environment and implement all model and training code. Write SmallCNN in src/model.py with exactly three conv blocks 1→32→64→128 (3×3 kernels, padding=1, BatchNorm, ReLU, MaxPool) plus FC head (256 units, 0.5 dropout, 10-class output) and a set_seed() covering random/numpy/torch/cuda/cudnn. Implement src/train.py with train_epoch(), evaluate(), and run_training() including epoch-level checkpoints for crash recovery and CSV logging. Validate all code with dummy forward passes and a one-epoch smoke test before marking tasks complete."
+        },
+        {
+          "id": "A2",
+          "name": "Data Engineer",
+          "tools": [
+            "run_python",
+            "run_shell",
+            "write_file",
+            "install_packages",
+            "post_note"
+          ],
+          "model_tier": "standard",
+          "instructions": "Download Fashion-MNIST via torchvision and configure both transform pipelines. Define no_aug as ToTensor+Normalize(0.2860,0.3530) and aug as RandomHorizontalFlip(p=0.5)+RandomAffine(degrees=10,translate=(0.1,0.1))+ToTensor+Normalize. Save dataset statistics to JSON and produce a visual grid of sample images under both pipelines. Post class-name-to-label mapping and dataset split sizes to team notes."
+        },
+        {
+          "id": "A3",
+          "name": "GPU Training Engineer",
+          "tools": [
+            "run_gpu_jobs",
+            "write_file",
+            "read_file",
+            "run_python",
+            "run_shell",
+            "post_note"
+          ],
+          "model_tier": "standard",
+          "instructions": "Write scripts/gpu_train.py to run all four training configurations sequentially on CUDA, then submit via run_gpu_jobs as a single job to minimise queue overhead. After job completion verify all 12 output files exist and are non-empty. Post GPU device name, CUDA version, and per-run test accuracies to team notes as execution evidence."
+        },
+        {
+          "id": "A4",
+          "name": "Statistical Analyst",
+          "tools": [
+            "run_python",
+            "write_file",
+            "read_file",
+            "install_packages",
+            "post_note"
+          ],
+          "model_tier": "reasoning",
+          "instructions": "Validate prediction files for completeness and accuracy consistency, compute per-class precision/recall/F1/accuracy using scikit-learn, derive delta metrics with seed-level ranges, and run Spearman rank correlation between morphological symmetry labels and delta-accuracy with 5000-resample bootstrap CIs. Frame all per-class findings as exploratory relative to the approximately 1.5pp binomial noise floor and flag any model with overall accuracy below 85% with an explicit caveat."
+        },
+        {
+          "id": "A5",
+          "name": "Visualization Engineer",
+          "tools": [
+            "run_python",
+            "write_file",
+            "read_file",
+            "install_packages",
+            "post_note"
+          ],
+          "model_tier": "standard",
+          "instructions": "Merge learning curves into long-format CSV, compute row-normalised confusion matrices and the delta confusion matrix, then produce all three publication-quality figures (300 dpi) and two LaTeX booktabs tables. Use matplotlib/seaborn with exact color and format specifications from the plan. T5.3 can start as soon as T3.2 completes independently of T4.x work."
+        },
+        {
+          "id": "A6",
+          "name": "Results Compiler",
+          "tools": [
+            "read_file",
+            "write_file",
+            "run_python",
+            "post_note"
+          ],
+          "model_tier": "bulk",
+          "instructions": "Read all analysis outputs and compile results/SUMMARY.md with every key number: overall test accuracy per seed and condition, delta-accuracy per class with seed ranges, Spearman rho with 95% CI, max off-diagonal delta in confusable-tops group, and paths to all figures and tables. Every claim must cite a specific numeric value traceable to an upstream analysis file."
+        }
+      ],
+      "summary": "Six agents cooperate to train SmallCNN on Fashion-MNIST under no-augmentation and augmentation conditions (seeds 42/123) and decompose accuracy by garment class. A1 implements model and training code (T1.1, T1.3, T1.4) while A2 configures data pipelines (T1.2) concurrently; A3 submits all four GPU training runs in a single run_gpu_jobs call (T2.1); A4 validates outputs and computes per-class metrics and Spearman symmetry correlation (T3.1, T4.1, T4.3); A5 merges learning curves, computes confusion matrices, and produces all figures and tables (T3.2, T4.2, T5.1–T5.4); A6 compiles all key numbers into results/SUMMARY.md (T6.1). Parallelism is maximised at three points: T1.2 and T1.3 after T1.1, T3.1 and T3.2 after T2.1, and T4.1 and T4.2 after T3.1.",
+      "datasets": [
+        {
+          "id": "D1",
+          "url": "https://github.com/zalandoresearch/fashion-mnist",
+          "name": "Fashion-MNIST",
+          "notes": "70,000 grayscale 28×28 images: 60,000 train plus 10,000 test, balanced 1,000 per class across 10 garment categories. Use torch.utils.data.random_split on the 60k training set with a seeded Generator for 54k/6k train/val split. Normalization constants mean=0.2860, std=0.3530 are accepted dataset-wide values.",
+          "format": "IDX binary (ubyte); torchvision returns tensors of shape (1,28,28) with integer labels 0–9",
+          "license": "MIT License — Copyright Zalando SE",
+          "verified": true,
+          "access_method": "torchvision.datasets.FashionMNIST(root='data/fashion_mnist', download=True) — no authentication required; torchvision fetches IDX gzip files from Zalando S3 mirror automatically"
+        }
+      ],
+      "checkpoints": [
+        {
+          "reason": "Human review of GPU training outputs: verify all 12 files are present, overall test accuracy is plausible (>=85% for no_aug condition on at least one seed), and training logs show convergence. Gate before expensive per-class analysis.",
+          "after_task": "T2.1"
+        },
+        {
+          "reason": "Human review of all publication figures and tables before final summary: confirm figures are publication-quality, per-class delta values are interpretable, and LaTeX tables render correctly with booktabs style.",
+          "after_task": "T5.4"
+        }
+      ],
+      "execution_notes": [
+        "T1.2 and T1.3 run concurrently after T1.1 (A2 and A1 in parallel) with no dependency between them.",
+        "T3.1 and T3.2 run concurrently after T2.1 (A4 and A5 in parallel); T4.1 and T4.2 run concurrently after T3.1.",
+        "T5.3 depends only on T3.2 and can proceed independently of T4.x tasks; T5.1 requires T4.3 which requires T4.1.",
+        "All four training runs are packed into a single run_gpu_jobs call to avoid repeated queue delays; sequential execution within one GPU session is expected to take 40-50 minutes total.",
+        "The plan's T6.1 paper-draft task is replaced with a results/SUMMARY.md compilation task per blueprint rules; the Report stage handles full paper writing from this summary and the figure and table artifacts.",
+        "If torch.cuda.is_available() returns False during T2.1 GPU job execution, the script raises RuntimeError before any training begins so the job fails fast; A3 should check the log and retry.",
+        "Fashion-MNIST normalization constants mean=0.2860 and std=0.3530 are dataset-wide standard values; the slight distribution shift from the 6k validation holdout is negligible and does not require recomputation from the 54k split.",
+        "No MATLAB or non-pip tools are required; all methods are implemented with PyTorch, scikit-learn, matplotlib, seaborn, scipy, and pandas."
+      ],
+      "python_packages": [
+        "torch>=2.0",
+        "torchvision>=0.15",
+        "scikit-learn>=1.3",
+        "matplotlib>=3.7",
+        "seaborn>=0.12",
+        "pandas>=2.0",
+        "numpy>=1.24",
+        "scipy>=1.10",
+        "tabulate>=0.9",
+        "torchinfo>=1.8",
+        "tqdm>=4.65"
+      ],
+      "llm_usd_estimate": 7.5,
+      "system_requirements": [],
+      "compute_hours_estimate": 0.85
+    },
+    "plan_run_id": "dee907afa9ad",
+    "capabilities": [
+      "background",
+      "conda",
+      "cpu",
+      "cuda_gpu",
+      "files",
+      "internet",
+      "python",
+      "shell"
+    ]
+  },
+  "error": null,
+  "started_at": "2026-10-09 20:57:22.063960+00:00",
+  "finished_at": "2026-10-09 21:08:52.327698+00:00"
+}

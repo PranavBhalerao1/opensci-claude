@@ -1,0 +1,24 @@
+{
+  "summary": "Only one blocking issue requires resolution: a copy-paste caption error in the manuscript where the N=60,000 subfigure is mislabelled as N=500. This is a pure manuscript text error introduced at the report-writing stage. No code, data, analysis, or figures need to change; a single directed text correction is sufficient.",
+  "decisions": [
+    {
+      "issue_id": "R2-01",
+      "disposition": "fix",
+      "root_cause": "report",
+      "rationale": "The figure file referenced is correctly curves_size60000.png and the underlying image is correct. The error is solely in the LaTeX caption string, which was copy-pasted from the N=500 subfigure immediately above and never updated. Fixing the caption text in the manuscript fully resolves the issue without any re-running of tasks."
+    }
+  ],
+  "plan_revision": "",
+  "blueprint_changes": "",
+  "task_changes": [],
+  "rerun_failed_tasks": [],
+  "report_directives": [
+    {
+      "issue_ids": [
+        "R2-01"
+      ],
+      "text": "In the LaTeX source, locate the subfigure that includes '../figures/curves_size60000.png' (fig:curves60k, approximately L327–L336). Change its \\caption{} from '$N{=}500$.' to '$N{=}60{,}000$.' and recompile the PDF. Verify in the compiled output that the two subfigures in fig:curves_extremes are labelled N=500 (left) and N=60,000 (right) respectively, consistent with the surrounding text at L345–L349."
+    }
+  ],
+  "withdraw_directives": []
+}

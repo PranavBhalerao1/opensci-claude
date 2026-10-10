@@ -1,0 +1,117 @@
+{
+  "id": "65de5e42c2aa",
+  "project_id": "6d8c3c93c209",
+  "blueprint_run_id": "5853e52a54fe",
+  "task_id": "T2.1",
+  "agent": "A3",
+  "status": "done",
+  "attempts": 1,
+  "cost": 0.206691045,
+  "summary": "T2.1 completed successfully. All 14 CNN training configurations (7 sizes × 2 augmentation conditions) for seed=42 were executed on an NVIDIA L4 GPU in ~3.5 minutes. results/results_seed42.csv contains exactly 70 rows (14 runs × 5 epochs) with columns [seed, size, condition, epoch, train_loss, val_acc, test_acc]. No NaN values appear in train_loss or val_acc; test_acc is populated only at epoch 5. The GPU log confirms device name 'NVIDIA L4'. All 5 acceptance checks pass.",
+  "artifacts": [
+    "results/results_seed42.csv",
+    "results/gpu_log_seed42.txt",
+    "src/gpu_train_seed42.py"
+  ],
+  "checks": [
+    {
+      "check": "results/results_seed42.csv exists with exactly 70 data rows (14 runs × 5 epochs)",
+      "passed": true,
+      "reason": "FACTS explicitly state '70 data rows (excluding the header)' for results/results_seed42.csv."
+    },
+    {
+      "check": "All 7 sizes and both conditions 'noaug' and 'aug' appear in results_seed42.csv",
+      "passed": true,
+      "reason": "gpu_log_seed42.txt lists 'sizes present: [500, 1000, 2500, 5000, 10000, 30000, 60000]' and 'conditions present: [\"aug\", \"noaug\"]', confirmed by the CSV preview."
+    },
+    {
+      "check": "results/gpu_log_seed42.txt contains a non-empty CUDA device name string",
+      "passed": true,
+      "reason": "gpu_log_seed42.txt contains the line 'device: NVIDIA L4', which is a non-empty CUDA device name string."
+    },
+    {
+      "check": "No NaN values in train_loss or val_acc columns of results_seed42.csv",
+      "passed": true,
+      "reason": "All visible rows in the CSV preview show numeric values for train_loss and val_acc, with no NaN entries present across the sampled rows spanning all sizes and conditions."
+    }
+  ],
+  "issues": [],
+  "events": [
+    {
+      "t": "2026-10-09T23:11:44.847862+00:00",
+      "args": "{\"path\": \"src/train_fmnist.py\"}",
+      "cost": 0.020453399999999997,
+      "step": 1,
+      "tool": "read_file",
+      "type": "tool",
+      "result": "\"\"\"\ntrain_fmnist.py\n===============\nSelf-contained module for training SmallCNN on Fashion-MNIST subsets.\n\nExports\n-------\nSmallCNN            – two conv-block architecture with BN, Dropout, MaxPool\nget_transforms      – transform factory for 'noaug' / 'aug' conditions\ntrain_one_epoch     – single epoch training loop, returns mean loss\nevaluate_accuracy   – evaluation loop, returns accuracy float\nCLI                 – argparse entry point (--seed, --size, --condition, ...)\n\nProvenance\n----------…"
+    },
+    {
+      "t": "2026-10-09T23:11:44.966757+00:00",
+      "args": "{\"path\": \"config/config.json\"}",
+      "cost": 0.020453399999999997,
+      "step": 1,
+      "tool": "read_file",
+      "type": "tool",
+      "result": "{\n  \"architecture\": {\n    \"conv_filters\": [32, 32, 64, 64],\n    \"fc_units\": 256,\n    \"dropout_conv\": 0.25,\n    \"dropout_fc\": 0.5\n  },\n  \"training\": {\n    \"lr\": 0.001,\n    \"batch_size\": 64,\n    \"epochs\": 5,\n    \"optimizer\": \"adam\"\n  },\n  \"augmentation\": {\n    \"flip_p\": 0.5,\n    \"degrees\": 10,\n    \"translate\": [0.1, 0.1]\n  },\n  \"normalization\": {\n    \"mean\": 0.2860,\n    \"std\": 0.3530\n  },\n  \"sizes\": [500, 1000, 2500, 5000, 10000, 30000, 60000],\n  \"seeds\": [42, 123]\n}\n"
+    },
+    {
+      "t": "2026-10-09T23:11:50.785579+00:00",
+      "args": "{\"code\": \"\\nimport numpy as np, os\\n\\n# Check subset_indices.npz\\nnpz = np.load('data/subset_indices.npz')\\nprint(\\\"Keys in subset_indices.npz:\\\", sorted(npz.files))\\nprint(\\\"Total arrays:\\\", len(npz.files))\\n\\n# Show a few key names and shapes\\nfor k in sorted(npz.files)[:8]:\\n    print(f\\\"  {k}: {…",
+      "cost": 0.03926389499999999,
+      "step": 2,
+      "tool": "run_python",
+      "type": "tool",
+      "result": "exit_code: 0\nstdout:\nKeys in subset_indices.npz: ['train_10000_123', 'train_10000_42', 'train_1000_123', 'train_1000_42', 'train_2500_123', 'train_2500_42', 'train_30000_123', 'train_30000_42', 'train_5000_123', 'train_5000_42', 'train_500_123', 'train_500_42', 'train_60000_123', 'train_60000_42', 'val_10000_123', 'val_10000_42', 'val_1000_123', 'val_1000_42', 'val_2500_123', 'val_2500_42', 'val_30000_123', 'val_30000_42', 'val_5000_123', 'val_5000_42', 'val_500_123', 'val_500_42', 'val_60000_12…"
+    },
+    {
+      "t": "2026-10-09T23:12:15.562834+00:00",
+      "args": "{\"path\": \"src/gpu_train_seed42.py\", \"content\": \"\\\"\\\"\\\"\\ngpu_train_seed42.py\\n===================\\nSelf-contained GPU training script for seed=42.\\n\\nTrains SmallCNN on Fashion-MNIST for all 14 configurations:\\n  - sizes:      [500, 1000, 2500, 5000, 10000, 30000, 60000]\\n  - conditions: ['noaug', 'a…",
+      "cost": 0.08880695999999999,
+      "step": 3,
+      "tool": "write_file",
+      "type": "tool",
+      "result": "Wrote 7531 chars to src/gpu_train_seed42.py"
+    },
+    {
+      "t": "2026-10-09T23:19:50.362108+00:00",
+      "args": "{\"jobs\": [{\"name\": \"seed42_train\", \"command\": \"cd /workspace && python src/gpu_train_seed42.py\"}], \"pip_packages\": [\"torch\", \"torchvision\", \"numpy\", \"pandas\"], \"gpu\": \"L4\", \"timeout_minutes\": 90}",
+      "cost": 0.105187005,
+      "step": 4,
+      "tool": "run_gpu_jobs",
+      "type": "tool",
+      "result": "{\"jobs\": [{\"name\": \"seed42_train\", \"exit_code\": 0, \"seconds\": 206.0, \"log\": \"logs/gpu/seed42_train.log\", \"timed_out\": false, \"log_tail\": \"\\n[14/14] seed=42  size=60000  condition=aug\\n  epoch 1/5  loss=0.7715  val_acc=0.8198\\n  epoch 2/5  loss=0.5807  val_acc=0.8403\\n  epoch 3/5  loss=0.5164  val_acc=0.8680\\n  epoch 4/5  loss=0.4710  val_acc=0.8860\\n  epoch 5/5  loss=0.4428  val_acc=0.8915  test_acc=0.8852\\n\\n=== DONE: results_seed42.csv has 70 rows (expected 70) ===\\n   seed  size condition  ep…"
+    },
+    {
+      "t": "2026-10-09T23:20:02.562303+00:00",
+      "args": "{\"code\": \"\\nimport pandas as pd\\nimport numpy as np\\n\\n# ── 1. Load and inspect the CSV ────────────────────────────────────────────\\ndf = pd.read_csv('results/results_seed42.csv')\\n\\nprint(f\\\"Shape: {df.shape}\\\")\\nprint(f\\\"Row count: {len(df)}  (expected 70)\\\")\\nprint(f\\\"\\\\nColumns: {df.columns.tol…",
+      "cost": 0.16744068,
+      "step": 5,
+      "tool": "run_python",
+      "type": "tool",
+      "result": "exit_code: 0\nstdout:\nShape: (70, 7)\nRow count: 70  (expected 70)\n\nColumns: ['seed', 'size', 'condition', 'epoch', 'train_loss', 'val_acc', 'test_acc']\n\nFirst 5 rows:\n   seed  size condition  epoch  train_loss  val_acc  test_acc\n0    42   500     noaug      1    2.327104     0.32       NaN\n1    42   500     noaug      2    1.215714     0.62       NaN\n2    42   500     noaug      3    1.147402     0.66       NaN\n3    42   500     noaug      4    0.897664     0.70       NaN\n4    42   500     noaug …"
+    },
+    {
+      "t": "2026-10-09T23:20:07.627483+00:00",
+      "args": "{\"code\": \"\\n# ── 3. Verify GPU log ──────────────────────────────────────────────────────\\nwith open('results/gpu_log_seed42.txt') as f:\\n    log_content = f.read()\\nprint(\\\"=== gpu_log_seed42.txt ===\\\")\\nprint(log_content)\\n\\n# Check it's non-empty and contains a device name\\nassert len(log_content…",
+      "cost": 0.18388128,
+      "step": 6,
+      "tool": "run_python",
+      "type": "tool",
+      "result": "exit_code: 0\nstdout:\n=== gpu_log_seed42.txt ===\ndevice: NVIDIA L4\nseed: 42\ntorch version: 2.11.0+cu130\n\ntotal rows in CSV: 70\nsizes present: [500, 1000, 2500, 5000, 10000, 30000, 60000]\nconditions present: ['aug', 'noaug']\nseeds present: [42]\nSTATUS: COMPLETE\n\n\n✓ GPU log contains device name: 'NVIDIA L4'\n✓ All acceptance checks PASSED\n"
+    },
+    {
+      "t": "2026-10-09T23:20:19.734595+00:00",
+      "args": "{\"status\": \"success\", \"summary\": \"T2.1 completed successfully. All 14 CNN training configurations (7 sizes × 2 augmentation conditions) for seed=42 were executed on an NVIDIA L4 GPU in ~3.5 minutes. results/results_seed42.csv contains exactly 70 rows (14 runs × 5 epochs) with columns [seed, size, co…",
+      "cost": 0.20669104500000002,
+      "step": 7,
+      "tool": "report_result",
+      "type": "tool",
+      "result": "Result recorded."
+    }
+  ],
+  "note": null,
+  "feedback": null,
+  "started_at": "2026-10-09 23:11:41.836814+00:00",
+  "finished_at": "2026-10-09 23:20:29.192311+00:00"
+}

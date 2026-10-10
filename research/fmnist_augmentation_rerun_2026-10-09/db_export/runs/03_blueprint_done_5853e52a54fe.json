@@ -1,0 +1,908 @@
+{
+  "id": "5853e52a54fe",
+  "project_id": "6d8c3c93c209",
+  "kind": "blueprint",
+  "status": "done",
+  "phase": "done",
+  "counts": {
+    "tasks": 11,
+    "agents": 5,
+    "warnings": 0
+  },
+  "log": [
+    {
+      "t": "2026-10-09T22:57:51.957425+00:00",
+      "text": "Locating sources for 2 datasets"
+    },
+    {
+      "t": "2026-10-09T22:58:14.966640+00:00",
+      "text": "Found sources for 1 of 2 datasets"
+    },
+    {
+      "t": "2026-10-09T22:58:15.201666+00:00",
+      "text": "Designing the agent team and executable tasks"
+    },
+    {
+      "t": "2026-10-09T23:06:27.602316+00:00",
+      "text": "Checking tools, inputs/outputs, dependencies, feasibility and budget"
+    },
+    {
+      "t": "2026-10-09T23:06:27.727864+00:00",
+      "text": "Checking that every task can meet its requirements"
+    },
+    {
+      "t": "2026-10-09T23:06:49.996572+00:00",
+      "text": "Fixing 1 problems"
+    },
+    {
+      "t": "2026-10-09T23:06:50.104407+00:00",
+      "text": "Problems found: T4.3: \"read gpu_log_seed42.txt and gpu_log_seed123.txt for device names\" cannot be satisfied: T4.3 lists only analysis/test_acc_summary.csv, analysis/delta_by_s"
+    },
+    {
+      "t": "2026-10-09T23:09:00.969067+00:00",
+      "text": "Checking that every task can meet its requirements"
+    },
+    {
+      "t": "2026-10-09T23:09:23.545254+00:00",
+      "text": "Blueprint repaired in 1 round(s)"
+    },
+    {
+      "t": "2026-10-09T23:09:24.299203+00:00",
+      "text": "Blueprint ready for review"
+    }
+  ],
+  "result": {
+    "budget": {
+      "llm_usd": 15.0,
+      "gpu_hours": 5.0
+    },
+    "warnings": [],
+    "master_plan": {
+      "tasks": [
+        {
+          "id": "T1.1",
+          "agent": "A1",
+          "steps": [
+            "Create directories src/ and config/.",
+            "Write src/train_fmnist.py with: (a) SmallCNN class: Block1=[Conv2d(1→32,3×3,pad=1), BN, ReLU, Conv2d(32→32,3×3,pad=1), BN, ReLU, MaxPool2d(2), Dropout(0.25)]; Block2=[Conv2d(32→64,3×3,pad=1), BN, ReLU, Conv2d(64→64,3×3,pad=1), BN, ReLU, MaxPool2d(2), Dropout(0.25)]; Head=[Flatten, Linear(3136,256), ReLU, Dropout(0.5), Linear(256,10)]; (b) get_transforms(condition, mean=0.2860, std=0.3530) returning transforms for 'noaug' (ToTensor+Normalize) and 'aug' (RandomHorizontalFlip(p=0.5)+RandomAffine(degrees=10,translate=(0.1,0.1))+ToTensor+Normalize); (c) train_one_epoch(model, loader, optimizer, criterion, device) returning mean train loss; (d) evaluate_accuracy(model, loader, device) returning accuracy float; (e) CLI entry point with argparse for --seed, --size, --condition, --indices_path, --output_csv, --data_root.",
+            "Write config/config.json with keys: architecture (conv_filters=[32,32,64,64], fc_units=256, dropout_conv=0.25, dropout_fc=0.5), training (lr=0.001, batch_size=64, epochs=5, optimizer='adam'), augmentation (flip_p=0.5, degrees=10, translate=[0.1,0.1]), normalization (mean=0.2860, std=0.3530), sizes=[500,1000,2500,5000,10000,30000,60000], seeds=[42,123].",
+            "Run a forward-pass unit test: instantiate SmallCNN, pass a (4,1,28,28) zero tensor through it, assert output shape is (4,10) and no exceptions occur.",
+            "Verify config/config.json is valid JSON and that src/train_fmnist.py is importable with all expected exports present."
+          ],
+          "title": "Implement and freeze CNN architecture and training utilities",
+          "tools": [
+            "write_file",
+            "read_file",
+            "run_python",
+            "run_shell",
+            "install_packages"
+          ],
+          "inputs": [],
+          "compute": {
+            "kind": "cpu",
+            "est_minutes": 10,
+            "timeout_minutes": 20
+          },
+          "outputs": [
+            {
+              "path": "src/train_fmnist.py",
+              "format": "python",
+              "description": "Self-contained CNN module with SmallCNN class, transform factory, training loop, evaluation function, and CLI entry point"
+            },
+            {
+              "path": "config/config.json",
+              "format": "json",
+              "description": "All hyperparameters: architecture spec, training settings, augmentation params, normalization stats, subset sizes and seeds"
+            }
+          ],
+          "retries": 1,
+          "objective": "Write a self-contained src/train_fmnist.py module with the specified SmallCNN architecture, training loop, and evaluation code, plus config/config.json recording all hyperparameters.",
+          "resources": [
+            "PyTorch"
+          ],
+          "depends_on": [],
+          "max_cost_usd": 0.5,
+          "human_required": false,
+          "acceptance_checks": [
+            "SmallCNN forward pass on (4,1,28,28) input produces (4,10) output without error",
+            "config/config.json is valid JSON containing keys: architecture, training, augmentation, normalization, sizes, seeds",
+            "src/train_fmnist.py exports SmallCNN, get_transforms, train_one_epoch, evaluate_accuracy without import error"
+          ]
+        },
+        {
+          "id": "T1.2",
+          "agent": "A2",
+          "steps": [
+            "Install torchvision, scikit-learn, numpy via pip.",
+            "Write src/make_subsets.py: load FashionMNIST training labels (60,000) via torchvision with download=True to data/; extract numpy label array y_train.",
+            "For each N in [500,1000,2500,5000,10000,30000,60000] and seed in [42,123]: use numpy RandomState(seed) to select N indices with exactly N//10 per class (stratified); then apply StratifiedShuffleSplit(n_splits=1, test_size=0.1, random_state=seed) on the selected indices to produce train_idx and val_idx; store as keys 'train_{N}_{seed}' and 'val_{N}_{seed}' in a dict.",
+            "Call numpy.savez('data/subset_indices.npz', **arrays_dict) to persist all 28 arrays.",
+            "For N=500 and N=1000 (both seeds), compute per-class counts of training indices and write a formatted report to data/class_balance_check.txt; assert each class has count in [N//10 - 1, N//10 + 1] for the training split.",
+            "Print final key list and array shapes to verify completeness."
+          ],
+          "title": "Generate and save stratified subset index arrays",
+          "tools": [
+            "write_file",
+            "read_file",
+            "run_python",
+            "run_shell",
+            "install_packages"
+          ],
+          "inputs": [
+            {
+              "path": "data/FashionMNIST",
+              "source": "dataset:D1"
+            }
+          ],
+          "compute": {
+            "kind": "cpu",
+            "est_minutes": 5,
+            "timeout_minutes": 15
+          },
+          "outputs": [
+            {
+              "path": "data/subset_indices.npz",
+              "format": "numpy npz",
+              "description": "All 28 index arrays: keys train_{N}_{seed} and val_{N}_{seed} for 7 sizes × 2 seeds"
+            },
+            {
+              "path": "data/class_balance_check.txt",
+              "format": "text",
+              "description": "Per-class training counts for N=500 and N=1000 (both seeds) confirming ±1 balance tolerance"
+            }
+          ],
+          "retries": 1,
+          "objective": "Load Fashion-MNIST training labels and generate class-balanced stratified train/val index arrays for all 7 training sizes and 2 seeds, saving to data/subset_indices.npz.",
+          "resources": [
+            "D1"
+          ],
+          "depends_on": [],
+          "max_cost_usd": 0.3,
+          "human_required": false,
+          "acceptance_checks": [
+            "data/subset_indices.npz exists and contains exactly 28 keys matching pattern train_{N}_{seed} and val_{N}_{seed}",
+            "For N=500 seed=42 training split, all 10 per-class counts are in [44,46]",
+            "For N=1000 seed=42 training split, total training size is approximately 900 (90% of 1000)",
+            "data/class_balance_check.txt is non-empty and readable"
+          ]
+        },
+        {
+          "id": "T2.1",
+          "agent": "A3",
+          "steps": [
+            "Write src/gpu_train_seed42.py as a self-contained script that: (1) pip-installs torch torchvision numpy pandas inside the job; (2) downloads Fashion-MNIST to data/ via torchvision; (3) loads data/subset_indices.npz; (4) imports SmallCNN and helpers from src/train_fmnist.py; (5) loops over sizes=[500,1000,2500,5000,10000,30000,60000] and conditions=['noaug','aug']; (6) for each combination sets torch.manual_seed(42), numpy.random.seed(42), builds DataLoaders from the corresponding index arrays, instantiates SmallCNN with Adam(lr=0.001), runs 5 epochs, appends one row per epoch to results/results_seed42.csv with columns [seed,size,condition,epoch,train_loss,val_acc,test_acc] (test_acc evaluated only at epoch 5, NaN otherwise); (7) writes torch.cuda.get_device_name(0) to results/gpu_log_seed42.txt.",
+            "Submit via run_gpu_jobs with name='seed42_train', the GPU script as the job command, and timeout_minutes=90.",
+            "Wait for the GPU job to complete by polling with wait() or checking logs/gpu/seed42_train.log.",
+            "Read results/results_seed42.csv and verify row count; print first and last 5 rows.",
+            "Confirm results/gpu_log_seed42.txt contains a device name string."
+          ],
+          "title": "Run 14 training experiments for seed 42 (all sizes × both conditions)",
+          "tools": [
+            "write_file",
+            "read_file",
+            "run_python",
+            "run_shell",
+            "run_gpu_jobs",
+            "wait"
+          ],
+          "inputs": [
+            {
+              "path": "src/train_fmnist.py",
+              "source": "task:T1.1"
+            },
+            {
+              "path": "config/config.json",
+              "source": "task:T1.1"
+            },
+            {
+              "path": "data/subset_indices.npz",
+              "source": "task:T1.2"
+            },
+            {
+              "path": "data/FashionMNIST",
+              "source": "dataset:D1"
+            }
+          ],
+          "compute": {
+            "kind": "cuda_gpu",
+            "est_minutes": 60,
+            "timeout_minutes": 90
+          },
+          "outputs": [
+            {
+              "path": "results/results_seed42.csv",
+              "format": "csv",
+              "description": "Per-epoch metrics for all 14 (size × condition) runs with seed=42; columns: seed, size, condition, epoch, train_loss, val_acc, test_acc"
+            },
+            {
+              "path": "results/gpu_log_seed42.txt",
+              "format": "text",
+              "description": "CUDA device name and summary for seed 42 GPU training job"
+            }
+          ],
+          "retries": 1,
+          "objective": "Execute all 14 CNN training runs for seed=42 on a CUDA GPU, recording per-epoch training loss and validation accuracy plus final test accuracy, saving incrementally to results/results_seed42.csv.",
+          "resources": [
+            "D1",
+            "PyTorch"
+          ],
+          "depends_on": [
+            "T1.1",
+            "T1.2"
+          ],
+          "max_cost_usd": 0.5,
+          "human_required": false,
+          "acceptance_checks": [
+            "results/results_seed42.csv exists with exactly 70 data rows (14 runs × 5 epochs)",
+            "All 7 sizes and both conditions 'noaug' and 'aug' appear in results_seed42.csv",
+            "results/gpu_log_seed42.txt contains a non-empty CUDA device name string",
+            "No NaN values in train_loss or val_acc columns of results_seed42.csv"
+          ]
+        },
+        {
+          "id": "T2.2",
+          "agent": "A3",
+          "steps": [
+            "Write src/gpu_train_seed123.py mirroring src/gpu_train_seed42.py exactly but with seed=123, output file results/results_seed123.csv, and log file results/gpu_log_seed123.txt.",
+            "Submit via run_gpu_jobs with name='seed123_train' and timeout_minutes=90.",
+            "Wait for the GPU job to complete and read logs/gpu/seed123_train.log for errors.",
+            "Verify results/results_seed123.csv has 70 rows with all expected configurations and no NaN values.",
+            "Confirm results/gpu_log_seed123.txt contains a non-empty device name string."
+          ],
+          "title": "Run 14 training experiments for seed 123 (all sizes × both conditions)",
+          "tools": [
+            "write_file",
+            "read_file",
+            "run_python",
+            "run_shell",
+            "run_gpu_jobs",
+            "wait"
+          ],
+          "inputs": [
+            {
+              "path": "src/train_fmnist.py",
+              "source": "task:T1.1"
+            },
+            {
+              "path": "config/config.json",
+              "source": "task:T1.1"
+            },
+            {
+              "path": "data/subset_indices.npz",
+              "source": "task:T1.2"
+            },
+            {
+              "path": "data/FashionMNIST",
+              "source": "dataset:D1"
+            }
+          ],
+          "compute": {
+            "kind": "cuda_gpu",
+            "est_minutes": 60,
+            "timeout_minutes": 90
+          },
+          "outputs": [
+            {
+              "path": "results/results_seed123.csv",
+              "format": "csv",
+              "description": "Per-epoch metrics for all 14 (size × condition) runs with seed=123; columns: seed, size, condition, epoch, train_loss, val_acc, test_acc"
+            },
+            {
+              "path": "results/gpu_log_seed123.txt",
+              "format": "text",
+              "description": "CUDA device name and summary for seed 123 GPU training job"
+            }
+          ],
+          "retries": 1,
+          "objective": "Execute all 14 CNN training runs for seed=123 on a CUDA GPU, identical procedure to T2.1 but with seed=123, saving results to results/results_seed123.csv.",
+          "resources": [
+            "D1",
+            "PyTorch"
+          ],
+          "depends_on": [
+            "T1.1",
+            "T1.2",
+            "T2.1"
+          ],
+          "max_cost_usd": 0.5,
+          "human_required": false,
+          "acceptance_checks": [
+            "results/results_seed123.csv exists with exactly 70 data rows (14 runs × 5 epochs)",
+            "All 7 sizes and both conditions appear in results_seed123.csv",
+            "results/gpu_log_seed123.txt contains a non-empty CUDA device name string",
+            "No NaN values in train_loss or val_acc columns"
+          ]
+        },
+        {
+          "id": "T3.1",
+          "agent": "A4",
+          "steps": [
+            "Load results/results_seed42.csv and results/results_seed123.csv with pandas; concatenate into a single DataFrame.",
+            "Verify exactly 140 rows (28 runs × 5 epochs) are present; print any missing (size, condition, seed) combinations as warnings.",
+            "Save concatenated DataFrame as analysis/results_all.csv.",
+            "Filter to epoch==5 rows (70 rows); pivot to wide format with index=[size, seed] and columns=[condition]; resulting columns are acc_noaug and acc_aug; save as analysis/test_acc_summary.csv with columns: size, seed, acc_noaug, acc_aug.",
+            "Flag any acc_noaug at size=60000 outside [0.85,0.93] as a calibration warning and print to stdout.",
+            "Read results/gpu_log_seed42.txt and results/gpu_log_seed123.txt; extract device name strings and save them to analysis/gpu_device_info.txt for downstream use."
+          ],
+          "title": "Merge run logs into master results table",
+          "tools": [
+            "read_file",
+            "write_file",
+            "run_python",
+            "install_packages"
+          ],
+          "inputs": [
+            {
+              "path": "results/results_seed42.csv",
+              "source": "task:T2.1"
+            },
+            {
+              "path": "results/results_seed123.csv",
+              "source": "task:T2.2"
+            },
+            {
+              "path": "results/gpu_log_seed42.txt",
+              "source": "task:T2.1"
+            },
+            {
+              "path": "results/gpu_log_seed123.txt",
+              "source": "task:T2.2"
+            }
+          ],
+          "compute": {
+            "kind": "cpu",
+            "est_minutes": 5,
+            "timeout_minutes": 15
+          },
+          "outputs": [
+            {
+              "path": "analysis/results_all.csv",
+              "format": "csv",
+              "description": "Master table: all 140 epoch-level rows from both seeds; columns: seed, size, condition, epoch, train_loss, val_acc, test_acc"
+            },
+            {
+              "path": "analysis/test_acc_summary.csv",
+              "format": "csv",
+              "description": "Final test accuracy per (size, seed) in wide format; columns: size, seed, acc_noaug, acc_aug"
+            },
+            {
+              "path": "analysis/gpu_device_info.txt",
+              "format": "text",
+              "description": "GPU device names extracted from gpu_log_seed42.txt and gpu_log_seed123.txt for both training runs"
+            }
+          ],
+          "retries": 2,
+          "objective": "Concatenate the two seed CSV files, verify all 140 epoch-level rows are present, and produce the pivoted final test accuracy summary table.",
+          "resources": [],
+          "depends_on": [
+            "T2.1",
+            "T2.2"
+          ],
+          "max_cost_usd": 0.4,
+          "human_required": false,
+          "acceptance_checks": [
+            "analysis/results_all.csv has exactly 140 data rows",
+            "analysis/test_acc_summary.csv has exactly 14 rows (7 sizes × 2 seeds)",
+            "analysis/test_acc_summary.csv has columns: size, seed, acc_noaug, acc_aug",
+            "No missing (size, condition, seed) combinations at epoch 5",
+            "analysis/gpu_device_info.txt is non-empty and contains at least one CUDA device name string"
+          ]
+        },
+        {
+          "id": "T3.2",
+          "agent": "A4",
+          "steps": [
+            "Load analysis/test_acc_summary.csv.",
+            "Convert acc_noaug and acc_aug to percentage points if stored as fractions (multiply by 100); compute delta = acc_aug - acc_noaug for each (size, seed) row.",
+            "Group by size: compute delta_seed42, delta_seed123, delta_mean=(delta_seed42+delta_seed123)/2, delta_range=|delta_seed42-delta_seed123|, acc_noaug_mean=(acc_noaug_42+acc_noaug_123)/2, acc_aug_mean=(acc_aug_42+acc_aug_123)/2.",
+            "Explicitly print and flag (with '*** NEGATIVE DELTA ***' marker) any size where delta_mean < 0.",
+            "Save to analysis/delta_by_size.csv with columns: size, delta_seed42, delta_seed123, delta_mean, delta_range, acc_noaug_mean, acc_aug_mean; print the full table."
+          ],
+          "title": "Compute augmentation benefit Δ and descriptive statistics per training size",
+          "tools": [
+            "read_file",
+            "write_file",
+            "run_python"
+          ],
+          "inputs": [
+            {
+              "path": "analysis/test_acc_summary.csv",
+              "source": "task:T3.1"
+            }
+          ],
+          "compute": {
+            "kind": "cpu",
+            "est_minutes": 5,
+            "timeout_minutes": 15
+          },
+          "outputs": [
+            {
+              "path": "analysis/delta_by_size.csv",
+              "format": "csv",
+              "description": "Augmentation benefit Δ statistics per training size in percentage points: per-seed and mean deltas, delta range, mean accuracies for both conditions"
+            }
+          ],
+          "retries": 2,
+          "objective": "Compute Δ = acc_aug − acc_noaug per (size, seed) and aggregate to mean, range, and per-seed values for each of the 7 training sizes in percentage points.",
+          "resources": [],
+          "depends_on": [
+            "T3.1"
+          ],
+          "max_cost_usd": 0.3,
+          "human_required": false,
+          "acceptance_checks": [
+            "analysis/delta_by_size.csv has exactly 7 rows",
+            "analysis/delta_by_size.csv has all required columns: size, delta_seed42, delta_seed123, delta_mean, delta_range, acc_noaug_mean, acc_aug_mean",
+            "All delta values are finite floats (no NaN or Inf)"
+          ]
+        },
+        {
+          "id": "T3.3",
+          "agent": "A4",
+          "steps": [
+            "Load analysis/delta_by_size.csv.",
+            "Create predictor X = numpy.log2(size) (7 values) and response Y = delta_mean; fit OLS using scipy.stats.linregress or statsmodels.OLS; extract intercept a, slope b, R², p-value, and 95% CI for slope.",
+            "Compute N_star = 2**(-a/b); if b >= 0, set N_star_note='no_crossover_positive_slope'; if N_star < 500, set N_star_note='extrapolated_below_range'; if N_star > 60000, set N_star_note='extrapolated_above_range'; else set N_star_note='within_tested_range'.",
+            "Run 5000-iteration bootstrap: for each iteration, resample 7 (X,Y) pairs with replacement, fit OLS, compute N_star_boot = 2**(-a_boot/b_boot) (clip to [1,1e9] to handle degenerate fits); collect into a list.",
+            "Compute bootstrap 2.5th and 97.5th percentiles as 95% CI; save 5000-row distribution to analysis/bootstrap_N_star.csv with columns: iter, N_star_boot.",
+            "Save analysis/regression_results.json with keys: a, b, r2, slope_p_value, slope_ci_low, slope_ci_high, N_star, N_star_ci_low, N_star_ci_high, N_star_note; flag R2 < 0.5 in the note field."
+          ],
+          "title": "Fit log-linear regression and estimate crossover N*",
+          "tools": [
+            "read_file",
+            "write_file",
+            "run_python",
+            "install_packages"
+          ],
+          "inputs": [
+            {
+              "path": "analysis/delta_by_size.csv",
+              "source": "task:T3.2"
+            }
+          ],
+          "compute": {
+            "kind": "cpu",
+            "est_minutes": 5,
+            "timeout_minutes": 15
+          },
+          "outputs": [
+            {
+              "path": "analysis/regression_results.json",
+              "format": "json",
+              "description": "OLS regression coefficients (a, b, R²), 95% CI for slope, estimated N* with bootstrap CI, and interpretive flags"
+            },
+            {
+              "path": "analysis/bootstrap_N_star.csv",
+              "format": "csv",
+              "description": "5000-row bootstrap distribution of N* values for CI computation; columns: iter, N_star_boot"
+            }
+          ],
+          "retries": 2,
+          "objective": "Fit OLS regression Δ = a + b·log₂(N) to the 7 mean-Δ values, estimate N* = 2^(−a/b), and compute a bootstrap 95% CI for N* using 5000 resampling iterations.",
+          "resources": [
+            "statsmodels"
+          ],
+          "depends_on": [
+            "T3.2"
+          ],
+          "max_cost_usd": 0.5,
+          "human_required": false,
+          "acceptance_checks": [
+            "analysis/regression_results.json is valid JSON with keys: a, b, r2, N_star, N_star_ci_low, N_star_ci_high, N_star_note",
+            "analysis/bootstrap_N_star.csv has exactly 5000 data rows",
+            "R² value in regression_results.json is a float between 0 and 1"
+          ]
+        },
+        {
+          "id": "T3.4",
+          "agent": "A4",
+          "steps": [
+            "Load analysis/delta_by_size.csv and analysis/results_all.csv.",
+            "Compute Spearman ρ between delta_mean and size using scipy.stats.spearmanr on the 7 data points; record ρ and two-tailed p-value.",
+            "For each of the 7 sizes, check whether delta_seed42 and delta_seed123 have the same sign (concordant); count the number of concordant sizes and compute concordance fraction.",
+            "From analysis/results_all.csv, filter to epoch==1; for each size, compare aug vs noaug train_loss for both seeds (4 comparisons per size group); count how many of the 14 (size × seed) aug runs have epoch-1 train_loss greater than the corresponding noaug run; record fraction.",
+            "Write all findings to analysis/trend_diagnostics.txt with section headers: [SPEARMAN], [CONCORDANCE], [EPOCH1_LOSS]; include numerical values and brief interpretations."
+          ],
+          "title": "Monotonicity and trend diagnostic checks",
+          "tools": [
+            "read_file",
+            "write_file",
+            "run_python",
+            "install_packages"
+          ],
+          "inputs": [
+            {
+              "path": "analysis/delta_by_size.csv",
+              "source": "task:T3.2"
+            },
+            {
+              "path": "analysis/results_all.csv",
+              "source": "task:T3.1"
+            }
+          ],
+          "compute": {
+            "kind": "cpu",
+            "est_minutes": 5,
+            "timeout_minutes": 15
+          },
+          "outputs": [
+            {
+              "path": "analysis/trend_diagnostics.txt",
+              "format": "text",
+              "description": "Spearman ρ and p-value, seed concordance count and fraction, epoch-1 loss comparison fraction, with interpretations"
+            }
+          ],
+          "retries": 2,
+          "objective": "Compute Spearman rank correlation of mean Δ vs training size, assess seed concordance on direction, and check epoch-1 loss patterns to diagnose augmentation difficulty signal.",
+          "resources": [],
+          "depends_on": [
+            "T3.1",
+            "T3.2"
+          ],
+          "max_cost_usd": 0.4,
+          "human_required": false,
+          "acceptance_checks": [
+            "analysis/trend_diagnostics.txt is non-empty and contains string 'rho' or 'Spearman'",
+            "analysis/trend_diagnostics.txt contains concordance fraction",
+            "analysis/trend_diagnostics.txt contains epoch-1 loss comparison result"
+          ]
+        },
+        {
+          "id": "T4.1",
+          "agent": "A5",
+          "steps": [
+            "Install matplotlib, seaborn, pandas; load analysis/results_all.csv.",
+            "Create figures/ directory.",
+            "For each size N in [500,1000,2500,5000,10000,30000,60000]: create a matplotlib figure with 2 subplots; for noaug condition plot seed42 and seed123 train_loss as thin dashed blue lines and their mean as thick solid blue; for aug condition plot seed42 and seed123 as thin dashed orange and mean as thick solid orange; mirror structure for val_acc in right panel; add legend, xlabel='Epoch', ylabel, title=f'N={N}'; save as figures/curves_size{N}.png at dpi=150.",
+            "Create a combined figure with 7 rows × 2 columns (figsize=(12,28)) embedding all 7 size panels in ascending size order; add a supertitle; save as figures/fig_curves_all.png at dpi=150.",
+            "Verify all 8 PNG files exist and have os.path.getsize > 10000 bytes."
+          ],
+          "title": "Plot per-epoch training loss and validation accuracy curves",
+          "tools": [
+            "read_file",
+            "write_file",
+            "run_python",
+            "install_packages"
+          ],
+          "inputs": [
+            {
+              "path": "analysis/results_all.csv",
+              "source": "task:T3.1"
+            }
+          ],
+          "compute": {
+            "kind": "cpu",
+            "est_minutes": 10,
+            "timeout_minutes": 20
+          },
+          "outputs": [
+            {
+              "path": "figures/fig_curves_all.png",
+              "format": "png",
+              "description": "Combined 7×2 multi-panel figure: training loss and validation accuracy curves for all sizes and conditions"
+            },
+            {
+              "path": "figures/curves_size500.png",
+              "format": "png",
+              "description": "Training loss and validation accuracy curves for N=500, both conditions and seeds"
+            },
+            {
+              "path": "figures/curves_size1000.png",
+              "format": "png",
+              "description": "Training loss and validation accuracy curves for N=1000"
+            },
+            {
+              "path": "figures/curves_size2500.png",
+              "format": "png",
+              "description": "Training loss and validation accuracy curves for N=2500"
+            },
+            {
+              "path": "figures/curves_size5000.png",
+              "format": "png",
+              "description": "Training loss and validation accuracy curves for N=5000"
+            },
+            {
+              "path": "figures/curves_size10000.png",
+              "format": "png",
+              "description": "Training loss and validation accuracy curves for N=10000"
+            },
+            {
+              "path": "figures/curves_size30000.png",
+              "format": "png",
+              "description": "Training loss and validation accuracy curves for N=30000"
+            },
+            {
+              "path": "figures/curves_size60000.png",
+              "format": "png",
+              "description": "Training loss and validation accuracy curves for N=60000"
+            }
+          ],
+          "retries": 1,
+          "objective": "Generate 2-panel (train loss left, val accuracy right) per-epoch curve figures for each of the 7 training sizes, showing both seeds as thin dashed lines and condition means as thick solid lines, plus a combined 7-row multi-panel figure.",
+          "resources": [],
+          "depends_on": [
+            "T3.1"
+          ],
+          "max_cost_usd": 0.5,
+          "human_required": false,
+          "acceptance_checks": [
+            "All 8 PNG files exist under figures/ and each has file size > 10 KB",
+            "figures/fig_curves_all.png has size > 100 KB indicating a multi-panel figure",
+            "Each per-size PNG has 2 subplots (verified by successful save without error)"
+          ]
+        },
+        {
+          "id": "T4.2",
+          "agent": "A5",
+          "steps": [
+            "Load analysis/delta_by_size.csv, analysis/regression_results.json, analysis/bootstrap_N_star.csv.",
+            "Create a matplotlib figure; set x-axis to log₂(size) values with custom tick labels showing actual N values.",
+            "Scatter delta_seed42 as circles and delta_seed123 as squares (both in light grey); plot delta_mean as a thick black connected line with filled markers.",
+            "Draw OLS regression line: generate x_range = linspace(log2(500),log2(60000),200); y_pred = a + b*x_range; shade ±1.96*SE band (or use bootstrap 5th/95th percentile of regression predictions) as semi-transparent blue.",
+            "Add horizontal dashed line at y=0 labeled 'Δ=0'; add vertical dashed line at x=log2(N_star) with annotation box showing f'N*={N_star:.0f} [{N_star_ci_low:.0f}, {N_star_ci_high:.0f}]'; skip vertical line if N_star is extrapolated.",
+            "Add legend, axis labels (x: 'Training set size N', y: 'Augmentation benefit Δ (pp)'), grid; save as figures/fig_delta_vs_size.png at dpi=150."
+          ],
+          "title": "Plot augmentation benefit Δ vs log training size with regression line",
+          "tools": [
+            "read_file",
+            "write_file",
+            "run_python",
+            "install_packages"
+          ],
+          "inputs": [
+            {
+              "path": "analysis/delta_by_size.csv",
+              "source": "task:T3.2"
+            },
+            {
+              "path": "analysis/regression_results.json",
+              "source": "task:T3.3"
+            },
+            {
+              "path": "analysis/bootstrap_N_star.csv",
+              "source": "task:T3.3"
+            }
+          ],
+          "compute": {
+            "kind": "cpu",
+            "est_minutes": 5,
+            "timeout_minutes": 15
+          },
+          "outputs": [
+            {
+              "path": "figures/fig_delta_vs_size.png",
+              "format": "png",
+              "description": "Primary result figure: augmentation benefit Δ (pp) vs log₂(N) with regression line, CI band, N* vertical annotation, and Δ=0 reference line"
+            }
+          ],
+          "retries": 1,
+          "objective": "Create the primary result figure: Δ in percentage points vs log₂(N) with individual seed scatter points, connected mean line, OLS regression line with 95% CI shading, Δ=0 reference, and annotated N*.",
+          "resources": [],
+          "depends_on": [
+            "T3.2",
+            "T3.3"
+          ],
+          "max_cost_usd": 0.4,
+          "human_required": false,
+          "acceptance_checks": [
+            "figures/fig_delta_vs_size.png exists with file size > 20 KB",
+            "Figure was generated without runtime errors",
+            "PNG file is a valid image file readable by PIL or matplotlib"
+          ]
+        },
+        {
+          "id": "T4.3",
+          "agent": "A5",
+          "steps": [
+            "Load analysis/test_acc_summary.csv, analysis/delta_by_size.csv, analysis/regression_results.json, analysis/trend_diagnostics.txt, and analysis/gpu_device_info.txt.",
+            "Create figures/fig_test_acc_bars.png: grouped bar chart with x=training_size (7 groups), hue=condition (noaug=blue, aug=orange), bar height=mean accuracy across seeds; overlay individual seed accuracy values as scatter dots; add legend, axis labels, grid; save at dpi=150.",
+            "Create paper/ directory; write paper/table_results.tex as a LaTeX booktabs tabular with columns: N, noaug seed42 (%), noaug seed123 (%), aug seed42 (%), aug seed123 (%), Δ mean (pp), Δ range (pp); 7 data rows plus header and rules.",
+            "Read regression_results.json and trend_diagnostics.txt to extract: a, b, R², N_star, N_star_ci_low, N_star_ci_high, N_star_note, Spearman_rho, Spearman_p, concordance_fraction; read analysis/gpu_device_info.txt for GPU device names.",
+            "Write results/SUMMARY.md with sections: ## Experiment Overview (sizes, conditions, seeds, architecture summary); ## Augmentation Benefit by Training Size (markdown table of delta_by_size.csv); ## Regression Analysis (equation Δ=a+b·log₂(N) with values, R², N* with 95% CI, N_star_note); ## Monotonicity Diagnostics (Spearman ρ, p-value, concordance count); ## Baseline Accuracy (noaug acc at N=60000 for both seeds); ## Flags (any negative Δ sizes noted explicitly); ## Compute (GPU device names from analysis/gpu_device_info.txt)."
+          ],
+          "title": "Generate summary bar chart, LaTeX results table, and results SUMMARY.md",
+          "tools": [
+            "read_file",
+            "write_file",
+            "run_python",
+            "install_packages"
+          ],
+          "inputs": [
+            {
+              "path": "analysis/test_acc_summary.csv",
+              "source": "task:T3.1"
+            },
+            {
+              "path": "analysis/delta_by_size.csv",
+              "source": "task:T3.2"
+            },
+            {
+              "path": "analysis/regression_results.json",
+              "source": "task:T3.3"
+            },
+            {
+              "path": "analysis/trend_diagnostics.txt",
+              "source": "task:T3.4"
+            },
+            {
+              "path": "analysis/gpu_device_info.txt",
+              "source": "task:T3.1"
+            }
+          ],
+          "compute": {
+            "kind": "cpu",
+            "est_minutes": 10,
+            "timeout_minutes": 20
+          },
+          "outputs": [
+            {
+              "path": "figures/fig_test_acc_bars.png",
+              "format": "png",
+              "description": "Grouped bar chart of final test accuracy by training size and augmentation condition with individual seed values as overlaid dots"
+            },
+            {
+              "path": "paper/table_results.tex",
+              "format": "latex",
+              "description": "LaTeX booktabs table of test accuracies and Δ values for all 7 sizes, 2 seeds, and both conditions"
+            },
+            {
+              "path": "results/SUMMARY.md",
+              "format": "markdown",
+              "description": "Structured summary of all key numerical findings: regression equation, N* with CI, R², Spearman ρ, per-size Δ table, baseline accuracies, GPU device info, and any negative-Δ flags"
+            }
+          ],
+          "retries": 1,
+          "objective": "Produce a grouped bar chart of final test accuracy, a LaTeX booktabs results table, and a structured results/SUMMARY.md with all key numbers for the report writer.",
+          "resources": [],
+          "depends_on": [
+            "T3.1",
+            "T3.2",
+            "T3.3",
+            "T3.4"
+          ],
+          "max_cost_usd": 0.6,
+          "human_required": false,
+          "acceptance_checks": [
+            "figures/fig_test_acc_bars.png exists with file size > 10 KB",
+            "paper/table_results.tex contains a tabular environment with exactly 7 data rows",
+            "results/SUMMARY.md is non-empty and contains both the regression equation with numerical values and the N* estimate",
+            "results/SUMMARY.md contains a markdown table with Δ values for all 7 training sizes",
+            "results/SUMMARY.md contains GPU device name information from analysis/gpu_device_info.txt"
+          ]
+        }
+      ],
+      "title": "How Augmentation Benefit Scales with Training Set Size for a Small CNN on Fashion-MNIST",
+      "agents": [
+        {
+          "id": "A1",
+          "name": "ML Engineer",
+          "tools": [
+            "write_file",
+            "read_file",
+            "run_python",
+            "run_shell",
+            "install_packages"
+          ],
+          "model_tier": "standard",
+          "instructions": "You implement and test deep learning code. Write src/train_fmnist.py as a self-contained importable module exporting SmallCNN, get_transforms(), train_one_epoch(), evaluate_accuracy(), and a CLI entry point. Ensure the CNN architecture exactly matches the spec: two conv blocks with BN, Dropout, MaxPool; a head with 256 units. Write config/config.json with all hyperparameters. Run a quick forward-pass test to confirm the model produces (batch,10) outputs before declaring success. Keep code clean, modular, and importable by GPU job scripts."
+        },
+        {
+          "id": "A2",
+          "name": "Data Engineer",
+          "tools": [
+            "write_file",
+            "read_file",
+            "run_python",
+            "run_shell",
+            "install_packages"
+          ],
+          "model_tier": "standard",
+          "instructions": "You prepare reproducible datasets for machine learning experiments. Download Fashion-MNIST via torchvision, extract training labels, and apply stratified sampling for all 7 training sizes (500,1000,2500,5000,10000,30000,60000) with seeds 42 and 123, using a 90/10 train/val split. Save index arrays to data/subset_indices.npz. Verify and log per-class counts for the two smallest sizes to data/class_balance_check.txt, asserting ±1 balance tolerance per class at N=500."
+        },
+        {
+          "id": "A3",
+          "name": "GPU Training Engineer",
+          "tools": [
+            "write_file",
+            "read_file",
+            "run_python",
+            "run_shell",
+            "install_packages",
+            "run_gpu_jobs",
+            "wait"
+          ],
+          "model_tier": "standard",
+          "instructions": "You orchestrate GPU training experiments. Write self-contained GPU job scripts that install their own dependencies, import src/train_fmnist.py, load subset_indices.npz, and run all required configurations, saving results incrementally to CSV after each run. Use run_gpu_jobs with 90-minute timeouts. After each job completes, verify row counts in the output CSV and confirm device name is logged. T2.1 runs seed 42 and T2.2 runs seed 123 sequentially on the shared GPU."
+        },
+        {
+          "id": "A4",
+          "name": "Statistician",
+          "tools": [
+            "read_file",
+            "write_file",
+            "run_python",
+            "install_packages",
+            "post_note",
+            "read_notes"
+          ],
+          "model_tier": "reasoning",
+          "instructions": "You conduct statistical analysis of experimental results. Merge CSV files, compute augmentation benefit Δ = acc_aug − acc_noaug per (size,seed) combination, and fit an OLS log-linear regression Δ = a + b·log₂(N). Compute bootstrap (5000 iterations) confidence intervals for the crossover N* = 2^(−a/b). Run Spearman rank correlation for monotonicity testing. Flag any negative Δ values and report whether R² < 0.5 or N* falls outside the tested range. Save all numerical results to structured JSON and CSV files for downstream use."
+        },
+        {
+          "id": "A5",
+          "name": "Visualization Engineer",
+          "tools": [
+            "read_file",
+            "write_file",
+            "run_python",
+            "install_packages"
+          ],
+          "model_tier": "standard",
+          "instructions": "You produce publication-quality figures and summary documents. Use matplotlib and seaborn to create: per-size training/validation curve panels (7 sizes, 2-panel each, both seeds plus mean), a main Δ-vs-log(N) figure with regression line and CI band annotated with N*, and a grouped bar chart of final test accuracy. Save all figures as PNG at ≥150 dpi. The final output is results/SUMMARY.md containing all key numerical results in structured markdown format for the report writer."
+        }
+      ],
+      "summary": "Five focused agents execute eleven tasks across four phases. A1 (ML Engineer) and A2 (Data Engineer) work in parallel to freeze the training codebase and generate stratified subset indices. A3 (GPU Training Engineer) then submits two sequential CUDA GPU jobs—seed 42 then seed 123—each training 14 CNN configurations (7 sizes × 2 augmentation conditions) for 5 epochs and saving per-epoch metrics to CSV. A4 (Statistician) merges results, computes augmentation benefit Δ per training size, fits a log-linear OLS regression, estimates the crossover N* with bootstrap CIs, and runs monotonicity diagnostics. A5 (Visualization Engineer) produces all publication PNG figures and the results/SUMMARY.md, with training-curve plots starting as soon as results are merged and the main Δ-vs-size figure following regression completion.",
+      "datasets": [
+        {
+          "id": "D1",
+          "url": "https://github.com/zalandoresearch/fashion-mnist",
+          "name": "Fashion-MNIST",
+          "notes": "60,000 training + 10,000 test 28×28 grayscale images, 10 clothing categories. ~30 MB compressed. Normalisation: mean=0.2860, std=0.3530 from full training set. Direct S3: http://fashion-mnist.s3-website.eu-central-1.amazonaws.com/",
+          "format": "IDX binary (gzip), automatically decoded by torchvision into tensors",
+          "license": "MIT License (Zalando SE)",
+          "verified": true,
+          "access_method": "torchvision.datasets.FashionMNIST(root='data/', train=True, download=True) auto-downloads from S3 endpoint; no authentication required"
+        }
+      ],
+      "checkpoints": [
+        {
+          "reason": "Human verifies data/class_balance_check.txt confirms ±1 per-class balance at N=500 and that subset_indices.npz contains all 28 expected keys before expensive GPU training begins",
+          "after_task": "T1.2"
+        },
+        {
+          "reason": "Human reviews analysis/delta_by_size.csv (augmentation benefit per size), analysis/regression_results.json (N* estimate and R²), and analysis/trend_diagnostics.txt (Spearman ρ, concordance) before publication figures and SUMMARY.md are finalized",
+          "after_task": "T3.4"
+        }
+      ],
+      "execution_notes": [
+        "T2.1 and T2.2 share a single GPU and run sequentially (T2.2 depends_on T2.1 for ordering); an agent may alternatively pack both seeds into one run_gpu_jobs call within T2.1 to save GPU startup overhead, then have T2.2 perform CPU-side verification only.",
+        "All figures are saved as PNG at ≥150 dpi (not PDF); the approved plan mentions PDF but the blueprint requires PNG for publication figures.",
+        "src/train_fmnist.py must be importable from the GPU job environment; the GPU job script must pip-install torch and torchvision internally since the GPU runs a fresh workspace copy.",
+        "Normalization statistics are fixed at mean=0.2860, std=0.3530 and must NOT be recomputed per subset to avoid data leakage; they are hardcoded in config.json and get_transforms().",
+        "If N* bootstrap CI is very wide or N_star_note is 'extrapolated', results/SUMMARY.md must state this clearly and T4.2 should skip the N* vertical annotation line.",
+        "T5.1 (paper writing) is excluded per blueprint rules; results/SUMMARY.md from T4.3 provides all structured inputs for the subsequent Report stage.",
+        "GPU timeout is 90 minutes per job; estimated actual runtime is 45–60 minutes per seed batch on T4/L4 at Fashion-MNIST scale with 14 runs.",
+        "No specialty binaries or MATLAB equivalents required; the entire pipeline uses pip-installable Python packages only.",
+        "T3.1 now reads results/gpu_log_seed42.txt and results/gpu_log_seed123.txt (both outputs of T2.1 and T2.2 respectively, which T3.1 depends on) and writes the device names to analysis/gpu_device_info.txt, which T4.3 then reads as a formal declared input. This ensures the dependency graph formally guarantees GPU device info is available to T4.3."
+      ],
+      "python_packages": [
+        "torch>=2.0",
+        "torchvision>=0.15",
+        "numpy>=1.24",
+        "pandas>=2.0",
+        "scipy>=1.10",
+        "scikit-learn>=1.3",
+        "statsmodels>=0.14",
+        "matplotlib>=3.7",
+        "seaborn>=0.12"
+      ],
+      "llm_usd_estimate": 4.9,
+      "system_requirements": [],
+      "compute_hours_estimate": 2.5
+    },
+    "plan_run_id": "f201709e9292",
+    "capabilities": [
+      "background",
+      "conda",
+      "cpu",
+      "cuda_gpu",
+      "files",
+      "internet",
+      "python",
+      "shell"
+    ]
+  },
+  "error": null,
+  "started_at": "2026-10-09 22:57:51.259371+00:00",
+  "finished_at": "2026-10-09 23:09:24.410642+00:00"
+}

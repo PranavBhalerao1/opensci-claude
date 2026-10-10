@@ -1,0 +1,50 @@
+[
+  {
+    "id": "14754c8e3848",
+    "project_id": "6d8c3c93c209",
+    "run_id": "b6ad5c225521",
+    "gpu": "L4",
+    "job": "seed42_train",
+    "seconds": 206.0,
+    "cost": 0.0088,
+    "created_at": "2026-10-09 23:19:48.402945+00:00",
+    "provider": null,
+    "user_id": "56ec46c1-8aa1-467d-a4c9-7a76a7248153"
+  },
+  {
+    "id": "d660a69002c9",
+    "project_id": "6d8c3c93c209",
+    "run_id": "b6ad5c225521",
+    "gpu": "L4",
+    "job": "(session overhead)",
+    "seconds": 240.2,
+    "cost": 0.0103,
+    "created_at": "2026-10-09 23:19:49.684533+00:00",
+    "provider": null,
+    "user_id": "56ec46c1-8aa1-467d-a4c9-7a76a7248153"
+  },
+  {
+    "id": "2fafc51b9ab4",
+    "project_id": "6d8c3c93c209",
+    "run_id": "b6ad5c225521",
+    "gpu": "L4",
+    "job": "seed123_train",
+    "seconds": 209.0,
+    "cost": 0.0089,
+    "created_at": "2026-10-09 23:25:17.859350+00:00",
+    "provider": null,
+    "user_id": "56ec46c1-8aa1-467d-a4c9-7a76a7248153"
+  },
+  {
+    "id": "ce94eb1223b7",
+    "project_id": "6d8c3c93c209",
+    "run_id": "b6ad5c225521",
+    "gpu": "L4",
+    "job": "(session overhead)",
+    "seconds": 43.6,
+    "cost": 0.0019,
+    "created_at": "2026-10-09 23:25:18.966949+00:00",
+    "provider": null,
+    "user_id": "56ec46c1-8aa1-467d-a4c9-7a76a7248153"
+  }
+]

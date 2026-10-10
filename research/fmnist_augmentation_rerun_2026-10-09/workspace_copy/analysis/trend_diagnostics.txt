@@ -1,0 +1,79 @@
+======================================================================
+MONOTONICITY AND TREND DIAGNOSTIC REPORT
+Study: Augmentation Benefit vs Training Set Size — Fashion-MNIST CNN
+Generated: 2026-10-09
+Inputs: analysis/delta_by_size.csv, analysis/results_all.csv
+======================================================================
+
+[SPEARMAN]
+----------------------------------------
+Variable X : training set size N  (7 levels: [np.int64(500), np.int64(1000), np.int64(2500), np.int64(5000), np.int64(10000), np.int64(30000), np.int64(60000)])
+Variable Y : mean augmentation benefit Δ = acc_aug − acc_noaug (pp)
+
+  Spearman rho (rho) = 0.714286
+  Two-tailed p-value = 0.071344  (n = 7)
+
+Interpretation:
+  Spearman ρ = 0.7143 (positive), indicating that mean Δ
+  tends to become LESS NEGATIVE as training size N increases.
+  The association is not statistically significant at α = 0.05.
+  With only 7 data points the test has limited power; the trend
+  direction is nonetheless consistent with the log-linear OLS model.
+  Note: p = 0.0713 is marginally significant (< 0.10), suggesting
+  a moderate-to-strong monotone relationship at a lenient threshold.
+
+[CONCORDANCE]
+----------------------------------------
+Per-size check: do delta_seed42 and delta_seed123 share the same sign?
+
+     Size   delta_seed42   delta_seed123   Concordant
+      500         -6.910          -9.200          YES
+     1000         -7.490          -3.590          YES
+     2500         -4.220          -5.320          YES
+     5000         -6.450          -6.650          YES
+    10000         -6.560          -5.710          YES
+    30000         -4.020          -4.450          YES
+    60000         -2.880          -2.730          YES
+
+  Concordant sizes     : 7 / 7
+  Concordance fraction : 1.0000  (100.0%)
+
+Interpretation:
+  All 7/7 sizes are concordant (concordance fraction = 1.00).
+  Both seeds independently produce negative Δ at every training size,
+  confirming the harmful-augmentation finding is not a seed artefact.
+
+[EPOCH1_LOSS]
+----------------------------------------
+Per-(seed, size): is epoch-1 train_loss(aug) > train_loss(noaug)?
+
+   Seed     Size    loss_aug   loss_noaug   aug>noaug
+     42      500    2.467665     2.327104         YES
+     42     1000    1.852387     1.533441         YES
+     42     2500    1.587793     1.250451         YES
+     42     5000    1.303327     0.952465         YES
+     42    10000    1.109933     0.807541         YES
+     42    30000    0.888559     0.599686         YES
+     42    60000    0.771512     0.505514         YES
+    123      500    2.468723     2.057552         YES
+    123     1000    1.963257     1.662571         YES
+    123     2500    1.629939     1.236877         YES
+    123     5000    1.369496     1.061774         YES
+    123    10000    1.101256     0.783566         YES
+    123    30000    0.889538     0.614401         YES
+    123    60000    0.782007     0.509964         YES
+
+  aug > noaug count    : 14 / 14
+  Fraction aug > noaug : 1.0000  (100.0%)
+
+Interpretation:
+  In all 14/14 (seed × size) configurations, the augmented run
+  shows HIGHER epoch-1 training loss than its noaug counterpart.
+  This confirms augmentation increases per-step difficulty: transforms
+  (random crops, horizontal flips) produce harder examples, slowing
+  convergence. At 5 epochs the model cannot recover, explaining the
+  universally negative Δ across all sizes.
+
+======================================================================
+END OF REPORT
+======================================================================

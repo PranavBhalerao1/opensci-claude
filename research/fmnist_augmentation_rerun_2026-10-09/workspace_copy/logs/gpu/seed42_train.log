@@ -1,0 +1,117 @@
+Using device: NVIDIA L4
+
+[1/14] seed=42  size=500  condition=noaug
+  epoch 1/5  loss=2.3271  val_acc=0.3200
+  epoch 2/5  loss=1.2157  val_acc=0.6200
+  epoch 3/5  loss=1.1474  val_acc=0.6600
+  epoch 4/5  loss=0.8977  val_acc=0.7000
+  epoch 5/5  loss=1.0599  val_acc=0.7400  test_acc=0.7320
+
+[2/14] seed=42  size=500  condition=aug
+  epoch 1/5  loss=2.4677  val_acc=0.4200
+  epoch 2/5  loss=1.7447  val_acc=0.3800
+  epoch 3/5  loss=1.6548  val_acc=0.5200
+  epoch 4/5  loss=1.3943  val_acc=0.6200
+  epoch 5/5  loss=1.4242  val_acc=0.7000  test_acc=0.6629
+
+[3/14] seed=42  size=1000  condition=noaug
+  epoch 1/5  loss=1.5334  val_acc=0.5900
+  epoch 2/5  loss=1.0375  val_acc=0.7200
+  epoch 3/5  loss=0.7176  val_acc=0.7100
+  epoch 4/5  loss=0.7066  val_acc=0.7500
+  epoch 5/5  loss=0.6425  val_acc=0.7400  test_acc=0.7823
+
+[4/14] seed=42  size=1000  condition=aug
+  epoch 1/5  loss=1.8524  val_acc=0.4700
+  epoch 2/5  loss=1.3360  val_acc=0.6200
+  epoch 3/5  loss=1.1000  val_acc=0.6300
+  epoch 4/5  loss=1.0360  val_acc=0.6700
+  epoch 5/5  loss=0.9554  val_acc=0.6700  test_acc=0.7074
+
+[5/14] seed=42  size=2500  condition=noaug
+  epoch 1/5  loss=1.2505  val_acc=0.7600
+  epoch 2/5  loss=0.7171  val_acc=0.8400
+  epoch 3/5  loss=0.6287  val_acc=0.8400
+  epoch 4/5  loss=0.5623  val_acc=0.8560
+  epoch 5/5  loss=0.5240  val_acc=0.8320  test_acc=0.8008
+
+[6/14] seed=42  size=2500  condition=aug
+  epoch 1/5  loss=1.5878  val_acc=0.7280
+  epoch 2/5  loss=1.0639  val_acc=0.7560
+  epoch 3/5  loss=0.9231  val_acc=0.7480
+  epoch 4/5  loss=0.8664  val_acc=0.7600
+  epoch 5/5  loss=0.8456  val_acc=0.7760  test_acc=0.7586
+
+[7/14] seed=42  size=5000  condition=noaug
+  epoch 1/5  loss=0.9525  val_acc=0.8160
+  epoch 2/5  loss=0.5992  val_acc=0.7980
+  epoch 3/5  loss=0.5253  val_acc=0.8440
+  epoch 4/5  loss=0.4718  val_acc=0.8620
+  epoch 5/5  loss=0.4412  val_acc=0.8580  test_acc=0.8420
+
+[8/14] seed=42  size=5000  condition=aug
+  epoch 1/5  loss=1.3033  val_acc=0.7460
+  epoch 2/5  loss=0.9132  val_acc=0.7680
+  epoch 3/5  loss=0.8140  val_acc=0.7780
+  epoch 4/5  loss=0.7690  val_acc=0.7900
+  epoch 5/5  loss=0.7130  val_acc=0.7880  test_acc=0.7775
+
+[9/14] seed=42  size=10000  condition=noaug
+  epoch 1/5  loss=0.8075  val_acc=0.8100
+  epoch 2/5  loss=0.5162  val_acc=0.8360
+  epoch 3/5  loss=0.4488  val_acc=0.8410
+  epoch 4/5  loss=0.4180  val_acc=0.8510
+  epoch 5/5  loss=0.3711  val_acc=0.8670  test_acc=0.8808
+
+[10/14] seed=42  size=10000  condition=aug
+  epoch 1/5  loss=1.1099  val_acc=0.7650
+  epoch 2/5  loss=0.7875  val_acc=0.7890
+  epoch 3/5  loss=0.7126  val_acc=0.8010
+  epoch 4/5  loss=0.6722  val_acc=0.8030
+  epoch 5/5  loss=0.6482  val_acc=0.8120  test_acc=0.8152
+
+[11/14] seed=42  size=30000  condition=noaug
+  epoch 1/5  loss=0.5997  val_acc=0.8573
+  epoch 2/5  loss=0.4029  val_acc=0.8930
+  epoch 3/5  loss=0.3478  val_acc=0.9103
+  epoch 4/5  loss=0.3186  val_acc=0.9147
+  epoch 5/5  loss=0.2915  val_acc=0.9227  test_acc=0.9069
+
+[12/14] seed=42  size=30000  condition=aug
+  epoch 1/5  loss=0.8886  val_acc=0.8010
+  epoch 2/5  loss=0.6577  val_acc=0.8263
+  epoch 3/5  loss=0.5988  val_acc=0.8320
+  epoch 4/5  loss=0.5564  val_acc=0.8773
+  epoch 5/5  loss=0.5190  val_acc=0.8837  test_acc=0.8667
+
+[13/14] seed=42  size=60000  condition=noaug
+  epoch 1/5  loss=0.5055  val_acc=0.8855
+  epoch 2/5  loss=0.3458  val_acc=0.9095
+  epoch 3/5  loss=0.2972  val_acc=0.9098
+  epoch 4/5  loss=0.2681  val_acc=0.9203
+  epoch 5/5  loss=0.2484  val_acc=0.9228  test_acc=0.9140
+
+[14/14] seed=42  size=60000  condition=aug
+  epoch 1/5  loss=0.7715  val_acc=0.8198
+  epoch 2/5  loss=0.5807  val_acc=0.8403
+  epoch 3/5  loss=0.5164  val_acc=0.8680
+  epoch 4/5  loss=0.4710  val_acc=0.8860
+  epoch 5/5  loss=0.4428  val_acc=0.8915  test_acc=0.8852
+
+=== DONE: results_seed42.csv has 70 rows (expected 70) ===
+   seed  size condition  epoch  train_loss  val_acc  test_acc
+0    42   500     noaug      1    2.327104     0.32       NaN
+1    42   500     noaug      2    1.215714     0.62       NaN
+2    42   500     noaug      3    1.147402     0.66       NaN
+3    42   500     noaug      4    0.897664     0.70       NaN
+4    42   500     noaug      5    1.059870     0.74     0.732
+...
+    seed   size condition  epoch  train_loss   val_acc  test_acc
+65    42  60000       aug      1    0.771512  0.819833       NaN
+66    42  60000       aug      2    0.580672  0.840333       NaN
+67    42  60000       aug      3    0.516412  0.868000       NaN
+68    42  60000       aug      4    0.471008  0.886000       NaN
+69    42  60000       aug      5    0.442805  0.891500    0.8852
+
+gpu_log written to /workspace/results/gpu_log_seed42.txt
+NVIDIA L4

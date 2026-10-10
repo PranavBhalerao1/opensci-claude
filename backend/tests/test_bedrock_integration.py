@@ -60,6 +60,38 @@ def test_live_text_request(run_id):
     _report("text", run_id)
 
 
+def test_live_long_output_budget_is_accepted_when_streamed(run_id, monkeypatch):
+    """The blueprint and plan request llm.LONG_MAX_TOKENS (64K, Sonnet 4.6's Bedrock output maximum) over
+    InvokeModelWithResponseStream. A tiny answer: billing is for tokens generated, not the budget."""
+    monkeypatch.setattr(llm, "_LONG_REFUSED", set())
+    response = asyncio.run(llm._attempt(settings.model_reasoning, "Reply with exactly: OK",
+                                        [{"role": "user", "content": "Ready?"}], llm.LONG_MAX_TOKENS, "low", {}))
+    assert llm._LONG_REFUSED == set(), "Bedrock refused the 64K budget; parse() fell back to MAX_TOKENS"
+    assert response.stop_reason == "end_turn" and "OK" in llm._text(response)
+    _report("long budget", run_id)
+
+
+def test_live_judge_budget_streams_with_the_schema_enforced(run_id, monkeypatch):
+    """The judge and its verifier request judge.JUDGE_MAX_TOKENS (64K) with the schema enforced
+    server-side (output_config.format), so unlike the plan and blueprint (freeform JSON) their
+    streamed request carries a grammar. A tiny schema at low effort: billing is for tokens generated."""
+    from pydantic import BaseModel
+
+    from app.agents import judge
+
+    class Answer(BaseModel):
+        prime: bool
+        reason: str
+
+    monkeypatch.setattr(llm, "_LONG_REFUSED", set())
+    out = asyncio.run(llm.parse(model=settings.model_judge, instructions="Answer briefly.",
+                                messages=[{"role": "user", "content": "Is 7 a prime number?"}], schema=Answer,
+                                reasoning_effort="low", max_tokens=judge.JUDGE_MAX_TOKENS))
+    assert llm._LONG_REFUSED == set(), "Bedrock refused the 64K budget; parse() fell back to MAX_TOKENS"
+    assert out.prime is True and out.reason
+    _report("judge budget", run_id)
+
+
 def test_live_structured_output(run_id):
     abstract = (
         "Title: Graph neural networks for molecular property prediction\nYear: 2021\nVenue: NeurIPS\n\nAbstract:\n"

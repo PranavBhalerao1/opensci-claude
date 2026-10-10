@@ -1,0 +1,76 @@
+{
+  "id": "g5",
+  "risks": [
+    "With only 2 seeds, per-class accuracy differences may fall within random seed noise and be unreproducible with additional seeds.",
+    "Conclusions must be framed as exploratory because permutation inference is not valid with only 2 seeds, limiting publishability.",
+    "Fashion-MNIST's 1,000-image per class test set means per-class accuracy estimates have standard errors of approximately 0.6–0.9 percentage points."
+  ],
+  "title": "Per-class accuracy impact of augmentation on Fashion-MNIST garments",
+  "run_id": "5d17777bf628",
+  "scores": {
+    "impact": {
+      "why": "Explains the mechanism behind aggregate accuracy changes and provides actionable guidance about which garment classes benefit from each augmentation type.",
+      "score": 4
+    },
+    "novelty": {
+      "why": "None of the prior works examine per-class accuracy deltas from basic image augmentation specifically on Fashion-MNIST, nor do they analyze how horizontal-flip augmentation differentially affects morphologically similar or asymmetric garment classes (e.g., shirt vs. T-shirt/top). The closest works address class-wise augmentation effects in other domains (batik motifs, liver lesions) but not this specific dataset or hypothesis about flip-induced label ambiguity.",
+      "score": 4
+    },
+    "feasibility": {
+      "why": "Analysis is derived entirely from models already trained in the core experiment, requiring only CPU-based inference and plotting with no additional GPU runs.",
+      "score": 5
+    },
+    "testability": {
+      "why": "Per-class accuracy delta is directly measurable from stored predictions, though with 2 seeds significance assessment is limited to exploratory framing.",
+      "score": 4
+    }
+  },
+  "overall": 4.3,
+  "approach": "Extract per-class precision, recall, F1, and full confusion matrices from augmented and non-augmented trained models across seeds 42 and 123 (four models total). Compute Δaccuracy and Δconfusion-cell for each of the 10 classes and each of the 100 class pairs, then visualize as a per-class accuracy delta bar chart and annotated delta confusion matrix; all analysis runs on CPU using stored model predictions from the core experiment's GPU runs.",
+  "gap_type": "missing_evaluation",
+  "question": "Does basic image augmentation disproportionately improve or reduce accuracy on specific Fashion-MNIST garment classes, particularly for morphologically similar or asymmetric classes?",
+  "why_open": "(Yee 2026) notes that morphologically distinctive categories such as trousers, bags, and footwear show high discriminative performance but does not study how augmentation changes per-class accuracy. All papers reporting augmentation effects on Fashion-MNIST (Greeshma et al. 2019; Mukhamediev 2024; Hassan et al. 2025; Kayed et al. 2020) aggregate accuracy into a single number, obscuring which garment classes drive gains or losses. (Agarwal et al. 2025) found that augmentation did not consistently improve accuracy for the best-performing model on CIFAR-10, suggesting class-level heterogeneity, but no analogous per-class study exists for Fashion-MNIST. Fashion-MNIST has known confusable class pairs such as T-shirt versus shirt versus pullover where flip-induced distortions might introduce label-ambiguous training examples and hurt recognition.",
+  "hypothesis": "Augmentation will disproportionately help symmetric garment classes (trousers, pullovers, coats) for which horizontal flips are valid invariances, while potentially reducing accuracy for fine-grained confusable classes such as shirt versus T-shirt/top where flipped images introduce label ambiguity.",
+  "data_needed": "Fashion-MNIST test set (10,000 images, 10 balanced classes); predictions from the four trained models produced in the core experiment.",
+  "novelty_check": {
+    "status": "novel",
+    "closest": [
+      {
+        "url": "https://www.semanticscholar.org/paper/ecbdca6ae97132b46ee9c6c52949fa7addd4465d",
+        "year": 2025,
+        "title": "Optimizing nitik batik classification through comparative analysis of image augmentation",
+        "overlap": "Analyzes how different augmentation techniques including flips affect per-class classification performance, but on batik motifs with a random forest rather than Fashion-MNIST CNNs.",
+        "in_review": false
+      },
+      {
+        "url": "https://www.semanticscholar.org/paper/be883e7cdc0cc99f4f0d504aaa9b2a37e962c507",
+        "year": 2025,
+        "title": "Class-Wise Combination of Mixture-Based Data Augmentation for Class Imbalance Learning of Focal Liver Lesions in Abdominal CT Images",
+        "overlap": "Applies class-wise augmentation strategies and evaluates per-class outcomes via confusion matrices, but on focal liver lesions in CT images rather than fashion garment categories.",
+        "in_review": false
+      },
+      {
+        "url": "https://www.semanticscholar.org/paper/bc2efedca7d28b3b390da32b75f9b5a8d948c082",
+        "year": 2025,
+        "title": "Compositional feature augmentation for improving multi-class classification",
+        "overlap": "Addresses class-specific feature representation and multi-class classification accuracy, but proposes a compositional feature augmentation framework unrelated to image flips or Fashion-MNIST.",
+        "in_review": false
+      }
+    ],
+    "explanation": "None of the prior works examine per-class accuracy deltas from basic image augmentation specifically on Fashion-MNIST, nor do they analyze how horizontal-flip augmentation differentially affects morphologically similar or asymmetric garment classes (e.g., shirt vs. T-shirt/top). The closest works address class-wise augmentation effects in other domains (batik motifs, liver lesions) but not this specific dataset or hypothesis about flip-induced label ambiguity."
+  },
+  "compute_needed": "Inference of four trained models on 10,000 test images runs in seconds on CPU; no additional GPU time required beyond the core experiment's four runs.",
+  "novelty_queries": [
+    "per-class augmentation effect Fashion-MNIST CNN",
+    "class-wise accuracy augmentation flip garment classification",
+    "augmentation impact individual class Fashion-MNIST analysis"
+  ],
+  "supporting_paper_ids": [
+    "d9811187e7b0",
+    "286274c89da9",
+    "4547edfd3536",
+    "0f1f5f52211a",
+    "e5cd16d4dfbf",
+    "2444783adaac"
+  ]
+}

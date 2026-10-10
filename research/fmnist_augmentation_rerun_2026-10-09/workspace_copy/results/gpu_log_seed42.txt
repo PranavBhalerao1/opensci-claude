@@ -1,0 +1,9 @@
+device: NVIDIA L4
+seed: 42
+torch version: 2.11.0+cu130
+
+total rows in CSV: 70
+sizes present: [500, 1000, 2500, 5000, 10000, 30000, 60000]
+conditions present: ['aug', 'noaug']
+seeds present: [42]
+STATUS: COMPLETE

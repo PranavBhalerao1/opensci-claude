@@ -1,0 +1,2430 @@
+{
+  "overview": {
+    "themes": [
+      {
+        "name": "CNN Architecture Benchmarking on Fashion-MNIST",
+        "paper_ids": [
+          "54637c9524d4",
+          "2444783adaac",
+          "d9811187e7b0",
+          "df9ea3a65422",
+          "e01935a9b771",
+          "fc420bf8b599",
+          "30dbb26f0428",
+          "36c6a874d1d8",
+          "dd9a710202db",
+          "787c77cf7a29",
+          "93ca86853753",
+          "5a54cd465128",
+          "5951185a3ff5",
+          "2c450211857f",
+          "6578f27a033f",
+          "3bf5f5d90522",
+          "ba81ffc2acb4",
+          "486c6cd8e765",
+          "edf3ec64602b",
+          "6598f048785a",
+          "c27e56db7825",
+          "49c43c4f964c"
+        ],
+        "description": "A large body of work systematically evaluates CNN architectures of varying depth and complexity on Fashion-MNIST, establishing performance baselines. Studies range from simple two-block CNNs achieving ~88–90% accuracy to optimized residual networks reaching 96%+. These provide important context for interpreting results from a small CNN."
+      },
+      {
+        "name": "Effect of Data Augmentation on CNN Generalization",
+        "paper_ids": [
+          "e6e95e4de057",
+          "6350fee7a645",
+          "3eb4438c8ea2",
+          "2ecc33f6eeb5",
+          "692cabc191fd",
+          "df0dd693189d",
+          "6d0a83ee4e75",
+          "9daca3e27e73",
+          "d0d141fc7a67",
+          "b0f26d959cb9"
+        ],
+        "description": "Several studies directly measure how standard geometric augmentations (flips, rotations, translations, shifts) affect CNN classification accuracy and overfitting. The consistent finding is that augmentation improves generalization, particularly for small datasets or short training runs, though the magnitude varies by architecture and domain."
+      },
+      {
+        "name": "Advanced and Adaptive Augmentation Strategies",
+        "paper_ids": [
+          "6c8fe7f21a68",
+          "963e346e427a",
+          "fa57c19fd172",
+          "366415343941",
+          "5d7cecdcc906",
+          "301cd325f8be",
+          "34f1096131c1",
+          "ac6ba621dcd7"
+        ],
+        "description": "A distinct research thread moves beyond basic geometric transforms toward class-conditional, policy-optimized, or generative augmentation methods. These approaches (WeMix, MFG Augment, LMix, class-adaptive policies, VAEs) seek to correct distribution shift introduced by augmentation or adapt transforms per class, and consistently outperform naive augmentation on standard benchmarks."
+      },
+      {
+        "name": "Hyperparameter and Regularization Tuning on Fashion-MNIST",
+        "paper_ids": [
+          "0f1f5f52211a",
+          "c654d6fdfde9",
+          "32cdb749e05e",
+          "e4722fd3c0a6",
+          "fa1b916ec939",
+          "db6705c2f796",
+          "339d652309bf",
+          "db7c6aeb4084",
+          "6598f048785a",
+          "5c9b6e4a6b01",
+          "4e85caba864c"
+        ],
+        "description": "Multiple studies treat Fashion-MNIST as a testbed for examining the interaction between hyperparameters (filter size, batch size, dropout rate, learning rate, normalization placement) and model accuracy. These papers highlight that architecture choices and regularization can dominate augmentation effects, complicating isolated analysis."
+      },
+      {
+        "name": "Transfer Learning and Lightweight CNNs",
+        "paper_ids": [
+          "520014e5d694",
+          "9466f72d392d",
+          "7bf8d9723b33",
+          "486c6cd8e765",
+          "ec8e439a13a4"
+        ],
+        "description": "A pragmatic thread addresses deployment constraints by building efficient lightweight CNNs or fine-tuning pre-trained models, often combining augmentation with transfer learning. These studies show that augmentation's benefit is architecture- and data-scale-dependent, and diminishes when pre-trained representations are available."
+      },
+      {
+        "name": "Quantum and Hybrid CNN Architectures",
+        "paper_ids": [
+          "edf3ec64602b",
+          "24251a4a2b1f"
+        ],
+        "description": "An emerging niche applies quantum computing concepts to CNN design on Fashion-MNIST, replacing classical convolutional filters with quantum circuits. While parameter-efficient, these approaches currently underperform classical CNNs on complex tasks and remain limited by hardware constraints."
+      }
+    ],
+    "summary": "The use of convolutional neural networks (CNNs) for image classification on Fashion-MNIST is a well-established benchmark, with dozens of studies reporting accuracies ranging from roughly 88% for simple architectures up to ~99.65% for heavily optimized models. Data augmentation — including basic geometric transforms like flips, rotations, and translations — is widely recognized as a practical regularization tool that reduces overfitting and improves generalization, especially in low-data or short-training regimes.\n\nDespite the abundance of Fashion-MNIST studies, clean controlled comparisons isolating the effect of basic augmentation on a small CNN are surprisingly rare: most papers either apply augmentation as one component in a larger optimization pipeline, or omit it entirely. The field has matured toward increasingly complex architectures and augmentation strategies (Mixup, CutOut, AutoAugment), which makes the proposed study's focused, reproducible, seed-controlled design a useful empirical baseline contribution.",
+    "open_problems": [
+      "Isolating the contribution of basic augmentation from other simultaneously varied factors (architecture depth, regularization, optimizer) remains rare in the literature",
+      "Most Fashion-MNIST studies do not report results across multiple fixed random seeds, making it hard to distinguish genuine improvement from seed-dependent variance",
+      "The regime in which simple augmentation (flip/rotation/translation) actually helps small CNNs vs. larger or pre-trained models is not well characterized",
+      "Short training runs (~5 epochs) may not give augmentation enough time to reduce overfitting, and optimal epoch count for observing augmentation benefit is underexplored",
+      "Fashion-MNIST accuracy gains from augmentation appear modest (~1–2%) in short runs, raising the question of whether improvements are practically meaningful given measurement noise",
+      "The interaction between augmentation strength (degree of rotation/translation) and dataset difficulty has not been systematically studied on Fashion-MNIST",
+      "Reproducibility is inconsistently ensured: many papers omit random seed details, preventing direct comparison of results across studies"
+    ],
+    "common_methods": [
+      "Convolutional Neural Networks (CNN)",
+      "Random horizontal flip augmentation",
+      "Random rotation augmentation",
+      "Random translation/shift augmentation",
+      "Dropout regularization",
+      "Batch Normalization",
+      "MaxPooling",
+      "ReLU activation",
+      "Softmax output layer",
+      "SGD / Adam optimizer",
+      "Train/validation/test splits",
+      "Fixed random seeds for reproducibility"
+    ],
+    "common_datasets": [
+      "Fashion-MNIST (60,000 train / 10,000 test)",
+      "MNIST",
+      "CIFAR-10",
+      "Caltech-101",
+      "ImageNet (subset)",
+      "Remote sensing scene datasets (NWPU-RS45)",
+      "Stanford Dogs"
+    ]
+  },
+  "papers": [
+    {
+      "title": "Hyperparameter Optimization and Regularization on Fashion-MNIST Classification",
+      "year": 2019,
+      "venue": "International Journal of Recent Technology and Engineering (IJRTE)",
+      "authors": [
+        "K. V. Greeshma",
+        "K P Sreekumar"
+      ],
+      "doi": "10.35940/ijrte.b3092.078219",
+      "url": "https://doi.org/10.35940/ijrte.b3092.078219",
+      "notes": {
+        "tasks": [
+          "image classification"
+        ],
+        "methods": [
+          "CNN",
+          "data augmentation",
+          "hyperparameter optimization",
+          "regularization",
+          "cropping",
+          "rotation",
+          "flipping",
+          "shifting"
+        ],
+        "metrics": [
+          "accuracy"
+        ],
+        "problem": "How do hyperparameter optimization methods and regularization techniques affect CNN performance on the Fashion-MNIST benchmark?",
+        "datasets": [
+          "Fashion-MNIST"
+        ],
+        "study_type": "empirical",
+        "limitations": [
+          "No comparison with state-of-the-art results reported with specific numbers",
+          "Limited to a single dataset"
+        ],
+        "contribution": "Explores hyperparameter optimization and regularization techniques for CNN-based image classification on Fashion-MNIST with data augmentation.",
+        "key_findings": [
+          "Proposed deep ConvNet architectures with data augmentation achieve impressive results on Fashion-MNIST",
+          "Data augmentation techniques such as cropping, rotation, flipping, and shifting help address insufficient training samples"
+        ]
+      }
+    },
+    {
+      "title": "CNN Model for Image Classification on MNIST and Fashion-MNIST Dataset",
+      "year": 2020,
+      "venue": "Journal of scientific research",
+      "authors": [
+        "Shivam S. Kadam",
+        "Amol C. Adamuthe",
+        "Ashwini Patil"
+      ],
+      "doi": "10.37398/jsr.2020.640251",
+      "url": "https://www.semanticscholar.org/paper/82e47d3e77ea7c54a1ab0ff61fa36eaa86f2d361",
+      "notes": {
+        "tasks": [
+          "image classification"
+        ],
+        "methods": [
+          "CNN"
+        ],
+        "metrics": [
+          "accuracy"
+        ],
+        "problem": "How do CNN architecture choices and hyperparameters affect image classification accuracy on MNIST and Fashion-MNIST?",
+        "datasets": [
+          "MNIST",
+          "Fashion-MNIST"
+        ],
+        "study_type": "empirical",
+        "limitations": [
+          "Limited to two benchmark datasets",
+          "No comparison with non-CNN baselines"
+        ],
+        "contribution": "Systematic evaluation of five CNN architectures with varying hyperparameters for image classification on MNIST and Fashion-MNIST",
+        "key_findings": [
+          "All five architectures achieve >99% accuracy on MNIST",
+          "Architecture 3 gives best results on Fashion-MNIST",
+          "Activation function, optimizer, and dropout rate have the most impact on accuracy"
+        ]
+      }
+    },
+    {
+      "title": "State-of-the-Art Results with the Fashion-MNIST Dataset",
+      "year": 2024,
+      "venue": "Mathematics",
+      "authors": [
+        "Ravil I. Mukhamediev"
+      ],
+      "doi": "10.3390/math12203174",
+      "url": "https://doi.org/10.3390/math12203174",
+      "notes": {
+        "tasks": [
+          "image classification"
+        ],
+        "methods": [
+          "CNN-3-128",
+          "data augmentation",
+          "classical machine learning models"
+        ],
+        "metrics": [
+          "accuracy"
+        ],
+        "problem": "How well can classical ML models and simple CNNs classify Fashion-MNIST images, and how does the number of trainable parameters affect classification quality?",
+        "datasets": [
+          "Fashion-MNIST"
+        ],
+        "study_type": "empirical",
+        "limitations": [
+          "Experiments limited to Fashion-MNIST; generalizability to other datasets not demonstrated"
+        ],
+        "contribution": "A CNN with three convolutional layers (CNN-3-128) achieves 99.65% accuracy on Fashion-MNIST, setting a new state-of-the-art result.",
+        "key_findings": [
+          "CNN-3-128 achieved 99.65% accuracy on the Fashion-MNIST test set",
+          "There is a dependence between the number of adjustable parameters in a CNN and the maximum achievable classification quality"
+        ]
+      }
+    },
+    {
+      "title": "CNN-Based Image Classification on the Fashion-MNIST Dataset",
+      "year": 2026,
+      "venue": "International Journal of Emerging Multidisciplinaries Computer Science & Artificial Intelligence",
+      "authors": [
+        "Abdul Salam Shah Sayed Chia Chen Yee"
+      ],
+      "doi": "10.54938/ijemdcsai.2026.04.2.612",
+      "url": "https://doi.org/10.54938/ijemdcsai.2026.04.2.612",
+      "notes": {
+        "tasks": [
+          "image classification",
+          "multi-class classification"
+        ],
+        "methods": [
+          "CNN",
+          "ReLU",
+          "max pooling",
+          "dropout",
+          "softmax",
+          "Adam",
+          "sparse categorical cross-entropy",
+          "TensorFlow",
+          "Keras"
+        ],
+        "metrics": [
+          "classification accuracy"
+        ],
+        "problem": "How well does a standard CNN architecture classify grayscale fashion images across ten categories with high intra- and inter-class visual similarity?",
+        "datasets": [
+          "Fashion-MNIST"
+        ],
+        "study_type": "empirical",
+        "limitations": [
+          "Single relatively simple architecture evaluated",
+          "No data augmentation applied",
+          "Attention-based or more complex architectures not explored"
+        ],
+        "contribution": "Empirical evaluation of a sequential CNN for multi-class image classification on Fashion-MNIST achieving 88.85% test accuracy",
+        "key_findings": [
+          "Achieved 88.85% test accuracy with no major overfitting",
+          "Morphologically distinctive categories (trousers, bags, footwear) showed high discriminative performance",
+          "Systematic inter-class confusion observed among upper-body garments (shirts, T-shirts, pullovers)"
+        ]
+      }
+    },
+    {
+      "title": "Convolutional Neural Networks and Vision Transformers for Fashion MNIST Classification: A Literature Review",
+      "year": 2024,
+      "venue": "arXiv.org",
+      "authors": [
+        "Sonia Bbouzidi",
+        "Ghazala Hcini",
+        "Imen Jdey",
+        "Fadoua Drira"
+      ],
+      "doi": "10.48550/arxiv.2406.03478",
+      "url": "https://www.semanticscholar.org/paper/bdab194193de47951c2f6ab2415ec317e873e13f",
+      "notes": {
+        "tasks": [
+          "image classification",
+          "clothing classification"
+        ],
+        "methods": [
+          "CNN",
+          "ViT"
+        ],
+        "metrics": [],
+        "problem": "Which architecture, CNN or ViT, is more appropriate for classifying Fashion MNIST images in e-commerce, and how do their combinations perform?",
+        "datasets": [
+          "Fashion MNIST"
+        ],
+        "study_type": "review",
+        "limitations": [
+          "No new experiments conducted; conclusions are based solely on existing literature"
+        ],
+        "contribution": "A literature review comparing CNNs and Vision Transformers for clothing image classification on Fashion MNIST, identifying factors influencing performance and the potential of hybrid architectures.",
+        "key_findings": [
+          "CNNs excel at recognizing local patterns while ViTs are effective at capturing global context",
+          "Combining CNNs and ViTs can leverage their complementary strengths for improved classification performance",
+          "Performance is influenced by dataset characteristics, image dimensions, number of target classes, and hardware infrastructure"
+        ]
+      }
+    },
+    {
+      "title": "РЕЗУЛЬТАТИ НАЛАШТУВАННЯ ПАРАМЕТРІВ НЕЙРОННИХ ГЛИБОКИХ МЕРЕЖ ЩОДО РОЗПІЗНАВАННЯ FASHION MNIST DATASET",
+      "year": 2023,
+      "venue": "Applied Questions of Mathematical Modeling",
+      "authors": [
+        "Вік.В. Гнатушенко",
+        "Т. М. Фененко",
+        "О. Л. Дорош"
+      ],
+      "doi": "10.32782/mathematical-modelling/2022-5-2-2",
+      "url": "https://www.semanticscholar.org/paper/28ef1829716cd722bec677cab8393f60a0f09e9a",
+      "notes": {
+        "tasks": [
+          "image classification",
+          "clothing recognition"
+        ],
+        "methods": [
+          "CNN",
+          "BatchNormalization",
+          "Dropout",
+          "TensorFlow",
+          "Keras"
+        ],
+        "metrics": [
+          "accuracy",
+          "loss"
+        ],
+        "problem": "How do CNN architecture choices and training parameters affect recognition accuracy on the Fashion-MNIST dataset?",
+        "datasets": [
+          "Fashion-MNIST",
+          "MNIST"
+        ],
+        "study_type": "empirical",
+        "limitations": [
+          "Only 20 training epochs used",
+          "Limited to two selected sequential CNN architectures"
+        ],
+        "contribution": "Empirical study of CNN hyperparameter tuning (batch_size, BatchNormalization placement, filters, validation strategy, Dropout) to improve Fashion-MNIST recognition accuracy up to 94.16%",
+        "key_findings": [
+          "Achieved 94.16% recognition accuracy on Fashion-MNIST with an optimized CNN architecture",
+          "Using test data as validation set (valid_data) instead of validation_split improved accuracy by increasing effective training data",
+          "batch_size and Dropout layer tuning significantly influenced recognition accuracy and overfitting"
+        ]
+      }
+    },
+    {
+      "title": "Revolutionizing Digit Image Recognition: Pushing the Limits with Simple CNN and Challenging Image Augmentation Techniques on MNIST",
+      "year": 2023,
+      "venue": "Journal of Applied Data Sciences",
+      "authors": [
+        "Khodijah Hulliyah"
+      ],
+      "doi": "10.47738/jads.v4i3.104",
+      "url": "https://www.semanticscholar.org/paper/7b93eb83b0e0765a6fed722e2983c17e355ff077",
+      "notes": {
+        "tasks": [
+          "digit recognition",
+          "image classification"
+        ],
+        "methods": [
+          "CNN",
+          "ensemble CNN",
+          "image augmentation",
+          "rotation",
+          "shift",
+          "flipping"
+        ],
+        "metrics": [
+          "accuracy"
+        ],
+        "problem": "How can image augmentation techniques improve CNN-based handwritten digit recognition accuracy?",
+        "datasets": [
+          "MNIST"
+        ],
+        "study_type": "empirical",
+        "limitations": [
+          "Evaluated only on MNIST; more challenging datasets not explored",
+          "CNN architecture improvements not investigated in this work"
+        ],
+        "contribution": "Applies CNN with image augmentation techniques to achieve 99.81% accuracy on MNIST digit recognition.",
+        "key_findings": [
+          "CNN with image augmentation achieved maximum accuracy of 99.81% on MNIST",
+          "Ensemble of CNN models achieved 99.79% accuracy",
+          "Image augmentation techniques effectively reduced overfitting and improved performance"
+        ]
+      }
+    },
+    {
+      "title": "Convolutional Neural Networks for Image Classification",
+      "year": 2026,
+      "venue": "International Journal of Emerging Multidisciplinaries Computer Science & Artificial Intelligence",
+      "authors": [
+        "Abdul Salam Shah Sayed Gam Chui Ern"
+      ],
+      "doi": "10.54938/ijemdcsai.2026.04.2.610",
+      "url": "https://doi.org/10.54938/ijemdcsai.2026.04.2.610",
+      "notes": {
+        "tasks": [
+          "image classification",
+          "multi-label classification",
+          "textile sorting"
+        ],
+        "methods": [
+          "CNN",
+          "batch normalization",
+          "data augmentation",
+          "dropout",
+          "early stopping",
+          "Adam optimizer"
+        ],
+        "metrics": [
+          "accuracy",
+          "macro-average F1-score"
+        ],
+        "problem": "How can CNN-based image classification be applied to Fashion-MNIST and extended to real-world textile sorting for circular economy purposes?",
+        "datasets": [
+          "Fashion-MNIST"
+        ],
+        "study_type": "empirical",
+        "limitations": [
+          "Confusion among visually similar garment categories limits performance",
+          "Extension to real industrial systems relies on cited third-party pilot results rather than original experiments"
+        ],
+        "contribution": "A regularized CNN achieving ~90% accuracy on Fashion-MNIST is presented and its application to sustainable fashion/textile circular economy systems is outlined.",
+        "key_findings": [
+          "Model achieves ~90% test accuracy on the 10,000-sample Fashion-MNIST test set",
+          "High F1 scores for morphologically distinct categories (Trouser, Bag, Sandal: F1≥0.97) but lower for visually similar garments (Shirt: F1≈0.74)",
+          "CNN-based classifiers report 93% accuracy in intelligent textile sorting pilots and 95% accuracy in post-consumer fabric recycling pipelines at one item/second"
+        ]
+      }
+    },
+    {
+      "title": "Enhancing Image Classification with Augmentation: Data Augmentation Techniques for Improved Image Classification",
+      "year": 2025,
+      "venue": "arXiv.org",
+      "authors": [
+        "Saorj Kumar",
+        "Prince Asiamah",
+        "Oluwatoyin Jolaoso",
+        "Ugochukwu Esiowu"
+      ],
+      "doi": "10.48550/arxiv.2502.18691",
+      "url": "https://www.semanticscholar.org/paper/752d5eaad820e8e291cdebd8a38951e9b46cea03",
+      "notes": {
+        "tasks": [
+          "image classification",
+          "data augmentation",
+          "overfitting reduction"
+        ],
+        "methods": [
+          "EfficientNet-B0",
+          "pairwise channel transfer",
+          "object occlusion augmentation",
+          "mask-based augmentation",
+          "rotation",
+          "horizontal flip",
+          "vertical flip",
+          "resizing",
+          "translation",
+          "blur",
+          "color jitter",
+          "random erasing",
+          "ensemble augmentation"
+        ],
+        "metrics": [
+          "accuracy"
+        ],
+        "problem": "CNNs overfit on small datasets, and it is unclear which data augmentation techniques best mitigate this problem.",
+        "datasets": [
+          "Caltech-101"
+        ],
+        "study_type": "empirical",
+        "limitations": [
+          "Evaluation limited to a single dataset (Caltech-101)",
+          "Only one base model (EfficientNet-B0) used for comparison"
+        ],
+        "contribution": "Proposes three novel data augmentation techniques (pairwise channel transfer, object occlusion, novel masking) and evaluates 11 augmentation sets for improved image classification with CNNs.",
+        "key_findings": [
+          "An ensemble of diverse augmentation techniques achieves the best performance on Caltech-101.",
+          "The three novel augmentation techniques (channel transfer, object occlusion, masking) contribute to improved classification accuracy.",
+          "Diverse data augmentation is a viable means of enhancing small datasets to reduce overfitting."
+        ]
+      }
+    },
+    {
+      "title": "Information Bottleneck Theory on Convolutional Neural Networks",
+      "year": 2021,
+      "venue": "Neural Processing Letters",
+      "authors": [
+        "Junjie Li",
+        "Ding Liu"
+      ],
+      "doi": "10.1007/s11063-021-10445-6",
+      "url": "https://doi.org/10.1007/s11063-021-10445-6",
+      "notes": {
+        "tasks": [
+          "image classification",
+          "neural network interpretability"
+        ],
+        "methods": [
+          "Information Bottleneck",
+          "CNN"
+        ],
+        "metrics": [
+          "mutual information"
+        ],
+        "problem": "How does Information Bottleneck theory explain the dynamic training behavior of convolutional neural networks?",
+        "datasets": [
+          "MNIST",
+          "Fashion-MNIST"
+        ],
+        "study_type": "empirical",
+        "limitations": [
+          "Experiments limited to MNIST and Fashion-MNIST datasets."
+        ],
+        "contribution": "Applies Information Bottleneck theory to analyze the training dynamics of CNNs and investigates how architectural features affect IB behavior.",
+        "key_findings": [
+          "The compression phase predicted by IB theory is not observed in CNNs in all tested cases.",
+          "CNNs exhibit more complicated behavior than feedforward neural networks under IB theory."
+        ]
+      }
+    },
+    {
+      "title": "Classification of Garments from Fashion MNIST Dataset Using CNN LeNet-5 Architecture",
+      "year": 2020,
+      "venue": "2020 International Conference on Innovative Trends in Communication and Computer Engineering (ITCE)",
+      "authors": [
+        "Mohammed Kayed",
+        "Ahmed M. Anter",
+        "Hadeer Mohamed"
+      ],
+      "doi": "10.1109/itce48509.2020.9047776",
+      "url": "https://doi.org/10.1109/itce48509.2020.9047776",
+      "notes": {
+        "tasks": [
+          "image classification",
+          "garment classification"
+        ],
+        "methods": [
+          "LeNet-5",
+          "CNN"
+        ],
+        "metrics": [
+          "accuracy"
+        ],
+        "problem": "Classifying clothing items from images is challenging due to high inter-class similarity and complex category depth",
+        "datasets": [
+          "Fashion MNIST"
+        ],
+        "study_type": "empirical",
+        "limitations": [],
+        "contribution": "Applies LeNet-5 CNN architecture to Fashion MNIST garment classification, achieving over 98% accuracy",
+        "key_findings": [
+          "LeNet-5 achieved over 98% accuracy on Fashion MNIST",
+          "LeNet-5 outperformed classical CNN and other state-of-the-art models in the literature"
+        ]
+      }
+    },
+    {
+      "title": "Classification of fashion article images using convolutional neural networks",
+      "year": 2017,
+      "venue": "International Conference on Image Information Processing (ICIIP)",
+      "authors": [
+        "Shobhit Bhatnagar",
+        "Deepanway Ghosal",
+        "Maheshkumar H. Kolekar"
+      ],
+      "doi": "10.1109/iciip.2017.8313740",
+      "url": "https://doi.org/10.1109/iciip.2017.8313740",
+      "notes": {
+        "tasks": [
+          "image classification",
+          "fashion article classification"
+        ],
+        "methods": [
+          "CNN",
+          "batch normalization",
+          "residual skip connections"
+        ],
+        "metrics": [
+          "accuracy"
+        ],
+        "problem": "How to accurately classify fashion article images using deep learning.",
+        "datasets": [
+          "Fashion-MNIST"
+        ],
+        "study_type": "method",
+        "limitations": [],
+        "contribution": "Three CNN architectures with batch normalization and residual skip connections achieving ~2% accuracy improvement on Fashion-MNIST classification.",
+        "key_findings": [
+          "Proposed CNN models achieve ~2% accuracy improvement over existing state-of-the-art on Fashion-MNIST."
+        ]
+      }
+    },
+    {
+      "title": "Remote sensing image scene classification using CNN-MLP with data augmentation",
+      "year": 2020,
+      "venue": "Optik (Stuttgart)",
+      "authors": [
+        "Osama A. Shawky",
+        "Ahmed Hagag",
+        "E. El-Dahshan",
+        "Manal A. Ismail"
+      ],
+      "doi": "10.1016/j.ijleo.2020.165356",
+      "url": "https://www.semanticscholar.org/paper/7a3b196f7e593590582b63fc070149a807313e4c",
+      "notes": {
+        "tasks": [
+          "remote sensing image scene classification"
+        ],
+        "methods": [
+          "CNN-MLP",
+          "CNN",
+          "MLP",
+          "Adagrad",
+          "data augmentation",
+          "transfer learning"
+        ],
+        "metrics": [
+          "classification accuracy"
+        ],
+        "problem": "How to improve VHR remote sensing image scene classification by better capturing object relationships within images.",
+        "datasets": [
+          "UC-Merced",
+          "AID",
+          "NWPU-RESISC45"
+        ],
+        "study_type": "method",
+        "limitations": [
+          "Evaluated only on three datasets",
+          "Limited discussion of computational cost"
+        ],
+        "contribution": "A CNN-MLP model combining pre-trained CNN feature extraction with an Adagrad-optimized MLP classifier and data augmentation for remote sensing scene classification.",
+        "key_findings": [
+          "CNN-MLP outperforms state-of-the-art methods on UC-Merced, AID, and NWPU-RESISC45 datasets",
+          "Using MLP with Adagrad optimizer as a deep classifier improves upon standard CNN fully connected layers",
+          "Data augmentation helps mitigate limited training samples per class"
+        ]
+      }
+    },
+    {
+      "title": "Deep CNN and Data Augmentation for Skin Lesion Classification",
+      "year": 2018,
+      "venue": "Asian Conference on Intelligent Information and Database Systems",
+      "authors": [
+        "Tri-Cong Pham",
+        "Chi-Mai Luong",
+        "M. Visani",
+        "Van-Dung Hoang"
+      ],
+      "doi": "10.1007/978-3-319-75420-8_54",
+      "url": "https://www.semanticscholar.org/paper/bdea06b8b46d87cf677a6014f9a35b8c0e078347",
+      "notes": {
+        "tasks": [
+          "skin lesion classification"
+        ],
+        "methods": [
+          "deep CNN",
+          "data augmentation"
+        ],
+        "metrics": [
+          "accuracy"
+        ],
+        "problem": "How to improve skin lesion classification performance under limited data conditions.",
+        "datasets": [
+          "ISIC"
+        ],
+        "study_type": "method",
+        "limitations": [],
+        "contribution": "A deep CNN model with data augmentation for improved skin lesion classification.",
+        "key_findings": [
+          "Data augmentation helps overcome data limitation and improves skin lesion classification performance with deep CNN."
+        ]
+      }
+    },
+    {
+      "title": "Rectified Exponential Units for Convolutional Neural Networks",
+      "year": 2019,
+      "venue": "IEEE Access",
+      "authors": [
+        "Ying Yao",
+        "Jianlin Su",
+        "Peng Shan",
+        "Ligang Miao",
+        "Xiaolian Wang",
+        "Silong Peng"
+      ],
+      "doi": "10.1109/access.2019.2928442",
+      "url": "https://doi.org/10.1109/access.2019.2928442",
+      "notes": {
+        "tasks": [
+          "image classification"
+        ],
+        "methods": [
+          "REU",
+          "PREU",
+          "ReLU",
+          "ELU",
+          "Swish",
+          "LeNet-5",
+          "Network in Network",
+          "ResNet"
+        ],
+        "metrics": [
+          "error rate"
+        ],
+        "problem": "How to design an activation function that improves upon ReLU and other variants in convolutional neural networks.",
+        "datasets": [
+          "Fashion-MNIST",
+          "CIFAR-10",
+          "CIFAR-100",
+          "Tiny ImageNet"
+        ],
+        "study_type": "method",
+        "limitations": [],
+        "contribution": "Proposes Rectified Exponential Unit (REU) and its parametric variant (PREU) as novel activation functions for CNNs that combine flexible exponent and multiplicative form.",
+        "key_findings": [
+          "REU achieves relative error improvements over ReLU of 7.74% and 6.08% on CIFAR-10 and CIFAR-100 with ResNet",
+          "PREU achieves relative error improvements of 9.24% and 9.32% on CIFAR-10 and CIFAR-100 with ResNet"
+        ]
+      }
+    },
+    {
+      "title": "Effect of filter sizes on image classification in CNN: a case study on CFIR10 and Fashion-MNIST datasets",
+      "year": 2021,
+      "venue": "IAES International Journal of Artificial Intelligence (IJ-AI)",
+      "authors": [
+        "O. M. Khanday",
+        "S. Dadvandipour",
+        "Mohd Aaqib Lone"
+      ],
+      "doi": "10.11591/ijai.v10.i4.pp872-878",
+      "url": "https://www.semanticscholar.org/paper/002b36be02d48478130885ebba8b5fee8f336587",
+      "notes": {
+        "tasks": [
+          "image classification"
+        ],
+        "methods": [
+          "CNN"
+        ],
+        "metrics": [
+          "accuracy"
+        ],
+        "problem": "How does CNN filter size affect image classification accuracy?",
+        "datasets": [
+          "CIFAR-10",
+          "Fashion-MNIST"
+        ],
+        "study_type": "empirical",
+        "limitations": [
+          "Only three filter sizes tested",
+          "Single architecture evaluated"
+        ],
+        "contribution": "Empirical study showing how varying CNN filter sizes (3×3, 5×5, 7×7) affects image classification accuracy on CIFAR-10 and Fashion-MNIST.",
+        "key_findings": [
+          "Accuracy is inversely proportional to filter size",
+          "3×3 filters achieved 73.04% accuracy on CIFAR-10 and 93.68% on Fashion-MNIST"
+        ]
+      }
+    },
+    {
+      "title": "Class-Adaptive Data Augmentation for Image Classification",
+      "year": 2023,
+      "venue": "IEEE Access",
+      "authors": [
+        "Jisun Yoo",
+        "Seokho Kang"
+      ],
+      "doi": "10.1109/access.2023.3258179",
+      "url": "https://www.semanticscholar.org/paper/382bc40f97828a64c6fd2ceea5c87027529924a6",
+      "notes": {
+        "tasks": [
+          "image classification",
+          "data augmentation policy search"
+        ],
+        "methods": [
+          "CNN",
+          "class-adaptive data augmentation",
+          "policy optimization"
+        ],
+        "metrics": [
+          "classification accuracy"
+        ],
+        "problem": "How to find appropriate data augmentation policies that vary per class to better reflect class-specific characteristics in image classification.",
+        "datasets": [
+          "CIFAR-10",
+          "benchmark image classification datasets"
+        ],
+        "study_type": "method",
+        "limitations": [
+          "Requires an initial training phase without augmentation before deriving policies, increasing overall training cost.",
+          "Evaluated primarily on benchmark datasets; generalization to more diverse real-world datasets is unclear."
+        ],
+        "contribution": "A class-adaptive data augmentation method that derives class-specific augmentation policies by maximizing transformation degree while preserving label consistency in CNNs.",
+        "key_findings": [
+          "Class-specific augmentation policies achieve comparable or higher classification accuracy than uniform augmentation baselines.",
+          "Derived class-specific policies are consistent with domain knowledge of each dataset."
+        ]
+      }
+    },
+    {
+      "title": "Effect of data-augmentation on fine-tuned CNN model performance",
+      "year": 2021,
+      "venue": "IAES International Journal of Artificial Intelligence (IJ-AI)",
+      "authors": [
+        "Ramaprasad Poojary",
+        "Roma Raina",
+        "A. Mondal"
+      ],
+      "doi": "10.11591/ijai.v10.i1.pp84-92",
+      "url": "https://www.semanticscholar.org/paper/ae3baa716c7aa4ddfc7e8e1ecb62fe653ba396c5",
+      "notes": {
+        "tasks": [
+          "image classification"
+        ],
+        "methods": [
+          "VGG16",
+          "ResNet50",
+          "data augmentation",
+          "fine-tuning",
+          "Keras"
+        ],
+        "metrics": [
+          "accuracy",
+          "loss"
+        ],
+        "problem": "How does data augmentation affect the performance of fine-tuned CNN models when training data is limited?",
+        "datasets": [
+          "Kaggle Cats vs Dogs"
+        ],
+        "study_type": "empirical",
+        "limitations": [
+          "Custom dataset limited to binary classification (cats vs dogs)",
+          "Results may not generalize to other domains or larger datasets"
+        ],
+        "contribution": "Empirical analysis showing data augmentation improves fine-tuned CNN (VGG16, ResNet50) classification performance on a cats vs. dogs dataset",
+        "key_findings": [
+          "ResNet50 with data augmentation achieved 90% test accuracy vs 82% without data augmentation",
+          "Both VGG16 and ResNet50 achieved better test accuracy when data augmentation was employed",
+          "ResNet50 outperformed VGG16 in all experimental conditions"
+        ]
+      }
+    },
+    {
+      "title": "Classification of Fashion-MNIST Dataset by Using Lenet-5",
+      "year": 2024,
+      "venue": "Science and Technology of Engineering Chemistry and Environmental Protection",
+      "authors": [
+        "Jiahao Guo"
+      ],
+      "doi": "10.61173/8nf5y380",
+      "url": "https://doi.org/10.61173/8nf5y380",
+      "notes": {
+        "tasks": [
+          "image classification",
+          "clothing recognition"
+        ],
+        "methods": [
+          "LeNet-5",
+          "one-hot encoding",
+          "Softmax"
+        ],
+        "metrics": [
+          "training accuracy",
+          "validation accuracy"
+        ],
+        "problem": "How effective is the classic LeNet-5 architecture on the Fashion-MNIST dataset for clothing image classification?",
+        "datasets": [
+          "Fashion-MNIST"
+        ],
+        "study_type": "empirical",
+        "limitations": [
+          "Only one model (LeNet-5) evaluated without comparison to more modern architectures"
+        ],
+        "contribution": "Applies LeNet-5 CNN to Fashion-MNIST image classification and evaluates its effectiveness as a benchmark task.",
+        "key_findings": [
+          "LeNet-5 achieves 95% training accuracy on Fashion-MNIST",
+          "LeNet-5 achieves 90% validation accuracy, indicating good generalization"
+        ]
+      }
+    },
+    {
+      "title": "An Analysis of Convolutional Neural Network for Fashion Images Classification (Fashion-MNIST)",
+      "year": 2019,
+      "venue": "Advances in Intelligent Systems and Computing",
+      "authors": [
+        "K. Meshkini",
+        "J. Platoš",
+        "Hassan Ghassemain"
+      ],
+      "doi": "10.1007/978-3-030-50097-9_10",
+      "url": "https://www.semanticscholar.org/paper/24d79251f82899dbf6f8c5874603bc61a1591bf1",
+      "notes": {
+        "tasks": [
+          "image classification"
+        ],
+        "methods": [
+          "CNN"
+        ],
+        "metrics": [
+          "accuracy"
+        ],
+        "problem": "How to improve CNN performance for fashion image classification using Fashion-MNIST?",
+        "datasets": [
+          "Fashion-MNIST"
+        ],
+        "study_type": "empirical",
+        "limitations": [],
+        "contribution": "Proposes a simple CNN architecture modification to improve and accelerate learning on Fashion-MNIST classification.",
+        "key_findings": [
+          "Proposed modification to CNN architecture improves and accelerates the learning process on Fashion-MNIST."
+        ]
+      }
+    },
+    {
+      "title": "Classification of Standard FASHION MNIST Dataset Using Deep Learning Based CNN Algorithms",
+      "year": 2022,
+      "venue": "International Symposium on Multidisciplinary Studies and Innovative Technologies (ISMSIT)",
+      "authors": [
+        "Edmira Xhaferra",
+        "Elda Cina",
+        "Luçiana Toti"
+      ],
+      "doi": "10.1109/ismsit56059.2022.9932737",
+      "url": "https://doi.org/10.1109/ismsit56059.2022.9932737",
+      "notes": {
+        "tasks": [
+          "image classification",
+          "clothing recognition"
+        ],
+        "methods": [
+          "CNN-C1",
+          "CNN-C2",
+          "CNN"
+        ],
+        "metrics": [
+          "accuracy"
+        ],
+        "problem": "How to improve CNN-based image classification on Fashion MNIST while mitigating model overfitting.",
+        "datasets": [
+          "Fashion MNIST"
+        ],
+        "study_type": "empirical",
+        "limitations": [
+          "Only two custom architectures compared; no benchmark against well-known models like ResNet or VGG"
+        ],
+        "contribution": "Two CNN architectures (CNN-C1 and CNN-C2) are proposed and compared for Fashion MNIST image classification, with CNN-C2 achieving 93.11% accuracy.",
+        "key_findings": [
+          "CNN-C2 outperforms CNN-C1 and achieves 93.11% accuracy on Fashion MNIST"
+        ]
+      }
+    },
+    {
+      "title": "Classifying Garments from Fashion-MNIST Dataset Through CNNs",
+      "year": 2021,
+      "venue": null,
+      "authors": [
+        "Alisson S. Henrique",
+        "A. M. da Rocha Fernandes",
+        "R. Lyra",
+        "V. Leithardt",
+        "S. D. Correia",
+        "P. Crocker",
+        "R. Dazzi"
+      ],
+      "doi": "10.25046/aj0601109",
+      "url": "https://www.semanticscholar.org/paper/59402441f241a01afb3487912d35f75dd7af4c6b",
+      "notes": {
+        "tasks": [
+          "image classification",
+          "garment classification"
+        ],
+        "methods": [
+          "CNN",
+          "dropout",
+          "SVM"
+        ],
+        "metrics": [
+          "accuracy"
+        ],
+        "problem": "How to accurately classify garment images from the Fashion-MNIST dataset using CNNs.",
+        "datasets": [
+          "Fashion-MNIST"
+        ],
+        "study_type": "empirical",
+        "limitations": [],
+        "contribution": "Four CNN models for Fashion-MNIST garment classification achieving 99.1% accuracy, outperforming prior best of 89.7% with SVM.",
+        "key_findings": [
+          "Best CNN model (cnn-dropout-3) achieved 99.1% accuracy, improving over the 89.7% SVM baseline from the original Fashion-MNIST paper."
+        ]
+      }
+    },
+    {
+      "title": "Circular Shift: An Effective Data Augmentation Method For Convolutional Neural Network On Image Classification",
+      "year": 2020,
+      "venue": "International Conference on Information Photonics",
+      "authors": [
+        "Kailai Zhang",
+        "Zheng Cao",
+        "Ji Wu"
+      ],
+      "doi": "10.1109/icip40778.2020.9191303",
+      "url": "https://www.semanticscholar.org/paper/a96ec86f284dca927934812c3f0626d12905299a",
+      "notes": {
+        "tasks": [
+          "image classification",
+          "data augmentation"
+        ],
+        "methods": [
+          "circular shift",
+          "VGG",
+          "ResNet",
+          "DenseNet",
+          "CNN"
+        ],
+        "metrics": [
+          "classification accuracy"
+        ],
+        "problem": "Common augmentation methods like rotation, crop, and flip can degrade performance for small images or objects with dispersed features.",
+        "datasets": [
+          "CIFAR-10",
+          "CIFAR-100",
+          "SVHN"
+        ],
+        "study_type": "method",
+        "limitations": [
+          "Evaluated only on small image datasets",
+          "No theoretical analysis of why circular shift outperforms other augmentations"
+        ],
+        "contribution": "A circular shift data augmentation method for CNNs that shifts images cyclically to provide variation without losing information.",
+        "key_findings": [
+          "Circular shift augmentation consistently improves classification performance across different CNN-based models",
+          "Circular shift can be combined with existing augmentation methods for further performance gains",
+          "Circular shift avoids information loss that can occur with crop or rotation on small images"
+        ]
+      }
+    },
+    {
+      "title": "Understanding how noise affects the accuracy of CNN image classification",
+      "year": 2026,
+      "venue": "Journal of Applied Technology and Innovation",
+      "authors": [
+        "Yi-Xian Lau",
+        "W. Sim",
+        "Kiansing Chew",
+        "Y. Ng",
+        "Zailan Arabee Abdul Salam"
+      ],
+      "doi": "10.65136/jati.v5i1.213",
+      "url": "https://www.semanticscholar.org/paper/a8847a45e22388b7246f9c057dc3f4676eab070c",
+      "notes": {
+        "tasks": [
+          "image classification"
+        ],
+        "methods": [
+          "CNN"
+        ],
+        "metrics": [
+          "accuracy"
+        ],
+        "problem": "How does the presence or absence of noise augmentation affect CNN image classification accuracy?",
+        "datasets": [],
+        "study_type": "empirical",
+        "limitations": [
+          "Abstract does not specify datasets used",
+          "No numerical results reported in abstract"
+        ],
+        "contribution": "Empirical evaluation of how noise augmentation affects CNN image classification accuracy in training and testing",
+        "key_findings": [
+          "Noise augmentation affects CNN classification accuracy in both training and testing phases"
+        ]
+      }
+    },
+    {
+      "title": "Using Ultrasound Image Augmentation and Ensemble Predictions to Prevent Machine-Learning Model Overfitting",
+      "year": 2023,
+      "venue": "Diagnostics",
+      "authors": [
+        "Eric J. Snider",
+        "Sofia I. Hernandez-Torres",
+        "Ryan P. Hennessey"
+      ],
+      "doi": "10.3390/diagnostics13030417",
+      "url": "https://www.semanticscholar.org/paper/2f452186e64d86d62ffce7856e605379ef34a3a5",
+      "notes": {
+        "tasks": [
+          "shrapnel detection",
+          "ultrasound image classification"
+        ],
+        "methods": [
+          "ShrapML",
+          "affine transformations",
+          "MixUp",
+          "leave-one-subject-out cross-validation",
+          "ensemble bagging",
+          "Grad-CAM"
+        ],
+        "metrics": [
+          "accuracy"
+        ],
+        "problem": "How to improve generalization of deep learning ultrasound image classifiers when training data is limited and subject variability is high.",
+        "datasets": [
+          "tissue phantom ultrasound image sets"
+        ],
+        "study_type": "empirical",
+        "limitations": [
+          "Evaluated only on tissue phantoms, not clinical subjects",
+          "Limited dataset size necessitating augmentation"
+        ],
+        "contribution": "Demonstrates that image augmentation and ensemble (bagging) predictions reduce overfitting and improve ultrasound shrapnel classification accuracy from <70% to >85%.",
+        "key_findings": [
+          "Baseline LOSO test accuracy was <70% and variable",
+          "Affine augmentation or MixUp improved accuracy to ~75%",
+          "Top-3 LOSO confidence bagging improved accuracy to >85% on two blind tissue phantoms"
+        ]
+      }
+    },
+    {
+      "title": "WeMix: How to Better Utilize Data Augmentation",
+      "year": 2020,
+      "venue": "arXiv (Cornell University)",
+      "authors": [
+        "Yi Xu",
+        "Asaf Noy",
+        "Ming Lin",
+        "Qi Qian",
+        "Hao Li",
+        "Rong Jin"
+      ],
+      "doi": "10.48550/arxiv.2010.01267",
+      "url": "http://arxiv.org/abs/2010.01267",
+      "notes": {
+        "tasks": [
+          "image classification",
+          "data augmentation"
+        ],
+        "methods": [
+          "WeMix",
+          "AugDrop",
+          "MixLoss",
+          "Mixup"
+        ],
+        "metrics": [
+          "accuracy"
+        ],
+        "problem": "Conventional data augmentation creates a biased data distribution that leads to suboptimal model performance.",
+        "datasets": [],
+        "study_type": "method",
+        "limitations": [
+          "Evaluation datasets not specified in abstract"
+        ],
+        "contribution": "WeMix combines AugDrop and MixLoss to correct data bias introduced by data augmentation, improving generalization.",
+        "key_findings": [
+          "Data augmentation introduces data bias where augmented distribution differs from original distribution",
+          "AugDrop and MixLoss each theoretically guarantee bias correction and improve data augmentation",
+          "WeMix combining both algorithms shows consistent empirical improvements over standard augmentation"
+        ]
+      }
+    },
+    {
+      "title": "ROTATION-GAMMA CORRECTION AUGMENTATION ON CNN-DENSE BLOCK FOR SOIL IMAGE CLASSIFICATION",
+      "year": 2023,
+      "venue": "Applied Computer Science",
+      "authors": [
+        "Sri Indra Maiyanti",
+        "Anita Desiani",
+        "Syafrina Lamin",
+        "P. Puspitahati",
+        "M. Arhami",
+        "N. Gofar",
+        "Destika Cahyana"
+      ],
+      "doi": "10.35784/acs-2023-27",
+      "url": "https://www.semanticscholar.org/paper/440f2e7c413ad2522d856e72d57e0ee091cac525",
+      "notes": {
+        "tasks": [
+          "soil image classification",
+          "image augmentation"
+        ],
+        "methods": [
+          "CNN",
+          "DenseNet dense block",
+          "rotation augmentation",
+          "gamma correction augmentation"
+        ],
+        "metrics": [
+          "accuracy",
+          "precision",
+          "recall",
+          "F1-score"
+        ],
+        "problem": "How to accurately classify soil images by color with limited training data while addressing vanishing/exploding gradient problems in CNNs.",
+        "datasets": [
+          "custom soil image dataset"
+        ],
+        "study_type": "method",
+        "limitations": [
+          "Classification is not based on standard soil taxonomy (e.g., Entisols, Histosols) but on arbitrary color-based categories",
+          "Small original dataset of only 156 images"
+        ],
+        "contribution": "A rotation-gamma correction augmentation combined with a CNN-Dense block architecture for soil image classification by color achieving above 90% on all metrics.",
+        "key_findings": [
+          "Augmentation increased training data from 156 to 2500 images",
+          "All performance metrics (accuracy, precision, recall, F1-score) exceeded 90%",
+          "CNN-Dense block with rotation-gamma correction augmentation is robust for color-based soil classification"
+        ]
+      }
+    },
+    {
+      "title": "A novel CNN+LSTM classification model based on fashion-MNIST",
+      "year": 2022,
+      "venue": "Neural Networks, Information and Communication Engineering",
+      "authors": [
+        "Ya-Ran Ji"
+      ],
+      "doi": "10.1117/12.2639667",
+      "url": "https://www.semanticscholar.org/paper/2cddf0233f7656256f4166566ba9677815a9ec7d",
+      "notes": {
+        "tasks": [
+          "image classification"
+        ],
+        "methods": [
+          "CNN",
+          "LSTM",
+          "CNN+LSTM"
+        ],
+        "metrics": [
+          "accuracy"
+        ],
+        "problem": "How to improve image classification accuracy on the Fashion-MNIST dataset by combining CNN and LSTM architectures",
+        "datasets": [
+          "Fashion-MNIST",
+          "MNIST"
+        ],
+        "study_type": "method",
+        "limitations": [
+          "91.36% accuracy acknowledged as still needing improvement"
+        ],
+        "contribution": "A hybrid CNN+LSTM model for image classification on Fashion-MNIST achieving 91.36% accuracy",
+        "key_findings": [
+          "The CNN+LSTM hybrid model achieves 91.36% classification accuracy on Fashion-MNIST, outperforming compared baseline models"
+        ]
+      }
+    },
+    {
+      "title": "Evaluating unified training optimisations for MobileNetV2: Efficiency-accuracy trade-offs in fine-grained dog breed classification",
+      "year": 2025,
+      "venue": "Discover Applied Sciences",
+      "authors": [
+        "O. Martins",
+        "C. Oosthuizen",
+        "Dawood A. Desai"
+      ],
+      "doi": "10.1007/s42452-025-07798-1",
+      "url": "https://www.semanticscholar.org/paper/3d531f6ade6ab41cf03b73b284250b6201846a7f",
+      "notes": {
+        "tasks": [
+          "fine-grained dog breed classification",
+          "image classification"
+        ],
+        "methods": [
+          "MobileNetV2",
+          "MobileNetV3Small",
+          "EfficientNetB0",
+          "transfer learning",
+          "dynamic data augmentation",
+          "dropout regularisation",
+          "adaptive learning-rate scheduling",
+          "early stopping",
+          "ANOVA",
+          "Tukey's HSD",
+          "Cohen's d"
+        ],
+        "metrics": [
+          "Top-1 accuracy",
+          "training time",
+          "inference latency"
+        ],
+        "problem": "How to efficiently train MobileNetV2 for fine-grained classification under small-data and resource-constrained settings without significant accuracy loss.",
+        "datasets": [
+          "Stanford Dogs"
+        ],
+        "study_type": "empirical",
+        "limitations": [
+          "Evaluated on a small subset of Stanford Dogs (1290 images, 8 breeds), limiting generalisability.",
+          "Results may not generalise to other fine-grained or large-scale datasets."
+        ],
+        "contribution": "A unified training optimisation pipeline for MobileNetV2 combining transfer learning, dynamic augmentation, dropout, adaptive LR scheduling, and early stopping that reduces training time by 50–70% with only 1.4% accuracy drop on fine-grained dog breed classification.",
+        "key_findings": [
+          "Optimised pipeline reduces training time by 50–70% (609 s vs. 1213 s) and inference latency by 10% (0.028 s vs. 0.031 s per image) with only 1.4% accuracy drop (98.6% vs. 100.0%).",
+          "Statistical tests confirm significant efficiency gains (p < 0.001) and marginal accuracy loss (p = 0.0008).",
+          "MobileNetV2 with the optimised pipeline outperforms MobileNetV3Small and EfficientNetB0 under identical small-data conditions."
+        ]
+      }
+    },
+    {
+      "title": "Optimal Design of Deep Residual Network Based on Image Classification of Fashion-MNIST Dataset",
+      "year": 2020,
+      "venue": "Journal of Physics, Conference Series",
+      "authors": [
+        "Yu-Si Tang",
+        "Han-Guo Cui",
+        "Shu-Yong Liu"
+      ],
+      "doi": "10.1088/1742-6596/1624/5/052011",
+      "url": "https://www.semanticscholar.org/paper/f763e837ca9550008bccba525baf7d31c4bc9812",
+      "notes": {
+        "tasks": [
+          "image classification"
+        ],
+        "methods": [
+          "ResNet",
+          "deep residual network"
+        ],
+        "metrics": [
+          "accuracy"
+        ],
+        "problem": "How to design an optimal deep residual network architecture and training process for Fashion-MNIST classification.",
+        "datasets": [
+          "Fashion-MNIST"
+        ],
+        "study_type": "empirical",
+        "limitations": [
+          "Study limited to Fashion-MNIST dataset",
+          "Hyper-parameter search scope not fully specified"
+        ],
+        "contribution": "An optimized deep residual network design achieving 96.21% accuracy on Fashion-MNIST image classification.",
+        "key_findings": [
+          "Optimal model achieved 96.21% accuracy on Fashion-MNIST",
+          "Widening the network and using advanced training processes improves model performance"
+        ]
+      }
+    },
+    {
+      "title": "Empirical Evaluation of the Effectiveness of Variational Autoencoders on Data Augmentation for the Image Classification Problem",
+      "year": 2020,
+      "venue": "International Journal of Intelligent Systems and Applications in Engineering",
+      "authors": [
+        "Özge Öztımur Karadağ",
+        "Özlem Erdaş"
+      ],
+      "doi": "10.18201/ijisae.2020261593",
+      "url": "https://doi.org/10.18201/ijisae.2020261593",
+      "notes": {
+        "tasks": [
+          "image classification",
+          "data augmentation"
+        ],
+        "methods": [
+          "VAE",
+          "CNN",
+          "flipping",
+          "rotation"
+        ],
+        "metrics": [
+          "classification accuracy"
+        ],
+        "problem": "Whether variational autoencoders can effectively augment training data to improve image classification performance",
+        "datasets": [
+          "CIFAR-10"
+        ],
+        "study_type": "empirical",
+        "limitations": [
+          "Only one generative model (VAE) evaluated",
+          "Only one dataset (CIFAR-10) used"
+        ],
+        "contribution": "Empirical evaluation of VAE-based data augmentation compared to transformation-based methods for image classification",
+        "key_findings": [
+          "VAE augmentation is as effective as transformation-based augmentation methods",
+          "The contribution of data augmentation is sensitive to the size of the dataset"
+        ]
+      }
+    },
+    {
+      "title": "Dysgraphia Handwriting Image Augmentation for CNN Model Classification",
+      "year": 2024,
+      "venue": "IEEE International Conference on Control System, Computing and Engineering",
+      "authors": [
+        "Nurhani Harun",
+        "I. Isa",
+        "S. A. Ramlan",
+        "Muhammad Khusairi Osman",
+        "M. I. F. Maruzuki"
+      ],
+      "doi": "10.1109/iccsce61582.2024.10696383",
+      "url": "https://www.semanticscholar.org/paper/56e5a9e39ad7cc0694c95f8ba60a7f1014d6fc65",
+      "notes": {
+        "tasks": [
+          "dysgraphia detection",
+          "handwriting classification",
+          "image augmentation"
+        ],
+        "methods": [
+          "CNN",
+          "image augmentation",
+          "rotation augmentation",
+          "brightness augmentation"
+        ],
+        "metrics": [
+          "accuracy"
+        ],
+        "problem": "How to improve CNN classification of dysgraphia handwriting when large labeled datasets are scarce.",
+        "datasets": [
+          "dysgraphia handwriting image dataset"
+        ],
+        "study_type": "empirical",
+        "limitations": [
+          "Small original dataset requiring augmentation",
+          "Only rotation and brightness augmentation techniques explored",
+          "No intelligence-based augmentation implemented yet"
+        ],
+        "contribution": "A CNN-based dysgraphia handwriting classification model using rotation and brightness augmentation to address limited training data.",
+        "key_findings": [
+          "Augmented data achieved 77% accuracy compared to 73% without augmentation, a 4% improvement.",
+          "Rotation and brightness augmentation significantly improved CNN classification of four dysgraphia handwriting classes."
+        ]
+      }
+    },
+    {
+      "title": "Fashion-MNIST Classification Based on CNN Image Recognition",
+      "year": 2023,
+      "venue": "Highlights in Science Engineering and Technology",
+      "authors": [
+        "Zhengliang Chen",
+        "Mingrui Lv",
+        "Shiqi Tian",
+        "Shangyuan Yin"
+      ],
+      "doi": "10.54097/hset.v34i.5463",
+      "url": "https://www.semanticscholar.org/paper/4b9fc6437f67cde692e3c08e7aa4aa8e39f50b98",
+      "notes": {
+        "tasks": [
+          "image classification"
+        ],
+        "methods": [
+          "DenseNet121",
+          "MobileNet",
+          "ResNet50",
+          "CNN"
+        ],
+        "metrics": [
+          "accuracy"
+        ],
+        "problem": "Which classic CNN architecture achieves the highest classification accuracy on Fashion-MNIST with limited training samples?",
+        "datasets": [
+          "Fashion-MNIST"
+        ],
+        "study_type": "empirical",
+        "limitations": [
+          "Small dataset of 70,000 images limits generalizability",
+          "Only three CNN architectures compared"
+        ],
+        "contribution": "Empirical comparison of DenseNet121, MobileNet, and ResNet50 on Fashion-MNIST image classification, finding DenseNet121 most accurate.",
+        "key_findings": [
+          "DenseNet121 outperforms MobileNet and ResNet50 on Fashion-MNIST under controlled training conditions"
+        ]
+      }
+    },
+    {
+      "title": "A Multi-Scale Convolutional Neural Network for Rotation-Invariant Recognition",
+      "year": 2022,
+      "venue": "Electronics",
+      "authors": [
+        "T. Hong",
+        "Ming-Jhe Hu",
+        "Tang-Kai Yin",
+        "Shyue-Liang Wang"
+      ],
+      "doi": "10.3390/electronics11040661",
+      "url": "https://www.semanticscholar.org/paper/b7bea71aa13963da7ca1bac3dc7be46c64f4c472",
+      "notes": {
+        "tasks": [
+          "rotation-invariant image recognition",
+          "image classification"
+        ],
+        "methods": [
+          "RIMS-CNN",
+          "CNN",
+          "D4 group equivariance",
+          "multi-scale features",
+          "shared weights"
+        ],
+        "metrics": [
+          "accuracy"
+        ],
+        "problem": "How to effectively recognize rotated objects in images without relying solely on data augmentation.",
+        "datasets": [
+          "MNIST",
+          "FASHION-MNIST",
+          "CIFAR-10",
+          "CIFAR-100"
+        ],
+        "study_type": "method",
+        "limitations": [
+          "Only considers D4 (90-degree) rotations, not arbitrary angle rotations"
+        ],
+        "contribution": "Proposes RIMS-CNN, a multi-scale CNN with dihedral group D4 equivariance for rotation-invariant image recognition.",
+        "key_findings": [
+          "RIMS-CNN achieves significant improvements over baseline models on all four benchmark datasets",
+          "Learning inherent convolution kernels for rotational features outperforms data augmentation with randomly rotated images"
+        ]
+      }
+    },
+    {
+      "title": "Class-Conditional Data Augmentation Applied to Image Classification",
+      "year": 2019,
+      "venue": "International Conference on Computer Analysis of Images and Patterns",
+      "authors": [
+        "Eduardo Aguilar",
+        "P. Radeva"
+      ],
+      "doi": "10.1007/978-3-030-29891-3_17",
+      "url": "https://www.semanticscholar.org/paper/c6afbe0ebdd9a2811706077f4e068a4b906a55b7",
+      "notes": {
+        "tasks": [
+          "image classification",
+          "data augmentation"
+        ],
+        "methods": [
+          "class-conditional data augmentation"
+        ],
+        "metrics": [],
+        "problem": "How to improve image classification robustness and reduce model uncertainty through data augmentation.",
+        "datasets": [],
+        "study_type": "method",
+        "limitations": [],
+        "contribution": "A class-conditional data augmentation procedure that improves classification robustness and reduces epistemic uncertainty.",
+        "key_findings": [
+          "Class-conditional data augmentation improves classification results and reduces epistemic uncertainty."
+        ]
+      }
+    },
+    {
+      "title": "Building Efficient Lightweight CNN Models",
+      "year": 2025,
+      "venue": "arXiv (Cornell University)",
+      "authors": [
+        "Nathan Isong"
+      ],
+      "doi": "10.48550/arxiv.2501.15547",
+      "url": "http://arxiv.org/abs/2501.15547",
+      "notes": {
+        "tasks": [
+          "image classification",
+          "handwritten digit recognition"
+        ],
+        "methods": [
+          "CNN",
+          "dual-input-output model",
+          "transfer learning",
+          "progressive unfreezing",
+          "data augmentation"
+        ],
+        "metrics": [
+          "accuracy",
+          "model size",
+          "number of parameters",
+          "inference time",
+          "latency"
+        ],
+        "problem": "How to build CNNs that maintain competitive accuracy while meeting the computational and memory constraints of resource-limited environments.",
+        "datasets": [
+          "MNIST",
+          "Fashion-MNIST",
+          "CIFAR-10"
+        ],
+        "study_type": "method",
+        "limitations": [
+          "Lower performance on complex datasets like CIFAR-10",
+          "Methodology evaluated only on classification tasks",
+          "Architectural scalability for more complex datasets needs further improvement"
+        ],
+        "contribution": "A two-stage training methodology combining dual-input-output models and transfer learning with progressive unfreezing to build lightweight CNNs with competitive accuracy.",
+        "key_findings": [
+          "Achieved 99% accuracy on MNIST and 89% on Fashion-MNIST with only 14,862 parameters and 0.17 MB model size.",
+          "CIFAR-10 accuracy was 65% with fewer than 20,000 parameters, showing scalability limits on complex datasets.",
+          "Progressive unfreezing enabled faster convergence and improved accuracy during fine-tuning."
+        ]
+      }
+    },
+    {
+      "title": "Robustness of Convolutional Neural Networks to Partial Test-Set Image Corruption on Fashion-MNIST",
+      "year": 2026,
+      "venue": "Applied and Computational Engineering",
+      "authors": [
+        "Anthony Huang"
+      ],
+      "doi": "10.54254/2755-2721/2026.ast35278",
+      "url": "https://doi.org/10.54254/2755-2721/2026.ast35278",
+      "notes": {
+        "tasks": [
+          "image classification",
+          "robustness to corruption"
+        ],
+        "methods": [
+          "custom 4-layer CNN",
+          "ResNet-18",
+          "t-SNE"
+        ],
+        "metrics": [
+          "accuracy",
+          "mean predictive entropy"
+        ],
+        "problem": "How robust are CNN image classifiers when only a portion of the test set is corrupted?",
+        "datasets": [
+          "Fashion-MNIST",
+          "ImageNet"
+        ],
+        "study_type": "empirical",
+        "limitations": [
+          "Only one specific corruption type (Gaussian blur + contrast enhancement) tested",
+          "Models trained only on clean data with no data augmentation or corruption-aware training",
+          "Single run results reported without statistical significance testing"
+        ],
+        "contribution": "Empirical comparison of a custom 4-layer CNN and pretrained ResNet-18 on Fashion-MNIST under varying fractions of Gaussian blur + contrast enhancement corruption",
+        "key_findings": [
+          "Custom CNN accuracy dropped from 91.31% (clean) to 10.82% at 100% corruption; ResNet-18 dropped from 88.10% to 20.44%",
+          "Entropy rose from 0.1729 to 0.5379 for the custom model and from 0.1517 to 0.3073 for ResNet-18 as corruption fraction increased",
+          "ResNet-18 was more robust, possibly due to its deeper residual structure and ImageNet pretraining preserving coarse shape information"
+        ]
+      }
+    },
+    {
+      "title": "Evaluation of CNN Models with Fashion MNIST Data",
+      "year": 2019,
+      "venue": null,
+      "authors": [
+        "Yue Zhang"
+      ],
+      "doi": "10.31274/cc-20240624-654",
+      "url": "https://www.semanticscholar.org/paper/a45618132ce4f9e7bd327511a94e9c8dd33f4b7e",
+      "notes": {
+        "tasks": [
+          "image classification",
+          "clothing classification"
+        ],
+        "methods": [
+          "LeNet-5",
+          "AlexNet",
+          "VGG-16",
+          "ResNet",
+          "TensorFlow"
+        ],
+        "metrics": [
+          "accuracy"
+        ],
+        "problem": "Which CNN architecture performs best on the Fashion MNIST dataset?",
+        "datasets": [
+          "Fashion MNIST"
+        ],
+        "study_type": "empirical",
+        "limitations": [
+          "No numerical results reported in abstract",
+          "Single dataset evaluation limits generalizability"
+        ],
+        "contribution": "Empirical comparison of four CNN architectures on the Fashion MNIST classification task",
+        "key_findings": [
+          "ResNet achieved the best classification accuracy among the four evaluated CNN models on Fashion MNIST"
+        ]
+      }
+    },
+    {
+      "title": "An Architecture Combining Convolutional Neural Network (CNN) with Batch Normalization for Apparel Image Classification",
+      "year": 2020,
+      "venue": "2020 IEEE International Symposium on Sustainable Energy, Signal Processing and Cyber Security (iSSSC)",
+      "authors": [
+        "Pooja Tupe",
+        "P. M. Vibhute",
+        "M. Sayyad"
+      ],
+      "doi": "10.1109/isssc50941.2020.9358882",
+      "url": "https://www.semanticscholar.org/paper/2c4252ef0c900bfdfe02a19bb3f6acd1daa467a1",
+      "notes": {
+        "tasks": [
+          "image classification",
+          "apparel classification"
+        ],
+        "methods": [
+          "CNN",
+          "Batch Normalization",
+          "Dropout",
+          "Early Stopping"
+        ],
+        "metrics": [
+          "accuracy",
+          "precision"
+        ],
+        "problem": "How to improve accuracy and prevent overfitting in CNN-based apparel image classification",
+        "datasets": [
+          "Fashion MNIST"
+        ],
+        "study_type": "method",
+        "limitations": [],
+        "contribution": "A CNN architecture combining batch normalization and dropout with early stopping for apparel image classification on Fashion MNIST",
+        "key_findings": [
+          "Proposed CNN models with Batch Normalization and Dropout outperform existing state-of-the-art methods in accuracy and precision on Fashion MNIST"
+        ]
+      }
+    },
+    {
+      "title": "Improving remote sensing scene classification using quality-based data augmentation",
+      "year": 2023,
+      "venue": "International Journal of Remote Sensing",
+      "authors": [
+        "Rowida Alharbi",
+        "H. Alhichri",
+        "R. Ouni",
+        "Y. Bazi",
+        "Maazen S. Alsabaan"
+      ],
+      "doi": "10.1080/01431161.2023.2184213",
+      "url": "https://www.semanticscholar.org/paper/d0a5c0c74835e06b7fa8b2f0a19d5b96713dd2d0",
+      "notes": {
+        "tasks": [
+          "remote sensing scene classification",
+          "data augmentation"
+        ],
+        "methods": [
+          "QSS",
+          "CNN",
+          "entropy criterion",
+          "breaking-ties criterion",
+          "True Label Probability (TLP)"
+        ],
+        "metrics": [
+          "classification accuracy"
+        ],
+        "problem": "How to improve CNN-based remote sensing scene classification by augmenting training data with higher-quality samples rather than randomly selected ones.",
+        "datasets": [
+          "UCMerced",
+          "Optimal31",
+          "RSSCN7",
+          "AID",
+          "NWPU-RS45"
+        ],
+        "study_type": "method",
+        "limitations": [
+          "Underperformed on NWPU-RS45 in one experimental case",
+          "Online generation adds computational overhead during training"
+        ],
+        "contribution": "A quality-based sample selection (QSS) data augmentation technique that selects the best geometrically transformed images during CNN training using prediction-probability criteria to improve remote sensing scene classification.",
+        "key_findings": [
+          "QSS outperformed all previous methods on four of five datasets for both train-test splits",
+          "For 10%-90% split, QSS achieved accuracies of 94.51, 81.72, 89.89, 94.09, and 93.98 on UCMerced, Optimal31, RSSCN7, AID, and NWPU-RS45 respectively",
+          "For 20%-80% split, QSS achieved 97.09, 88.37, 94.01, 95.71, and 94.71 on the same datasets"
+        ]
+      }
+    },
+    {
+      "title": "Transcribed Digits and Apparel Classification using Convolutional Neural Network",
+      "year": 2021,
+      "venue": "International Conference on Communication Information and Computing Technology (ICCICT)",
+      "authors": [
+        "Parul Chutani",
+        "Karamjit Bhatia",
+        "Sagar Gulati",
+        "N Arora"
+      ],
+      "doi": "10.1109/iccict50803.2021.9510145",
+      "url": "https://doi.org/10.1109/iccict50803.2021.9510145",
+      "notes": {
+        "tasks": [
+          "image classification",
+          "digit recognition",
+          "apparel classification"
+        ],
+        "methods": [
+          "CNN"
+        ],
+        "metrics": [
+          "accuracy"
+        ],
+        "problem": "How effectively can CNNs classify handwritten digits and apparel images on standard benchmark datasets?",
+        "datasets": [
+          "MNIST",
+          "Fashion-MNIST"
+        ],
+        "study_type": "empirical",
+        "limitations": [
+          "Limited to two benchmark datasets",
+          "No comparison with other model architectures"
+        ],
+        "contribution": "Demonstrates CNN-based image classification on MNIST and Fashion-MNIST benchmark datasets with exploration of CNN structure and hyperparameters.",
+        "key_findings": [
+          "CNN models were successfully applied to both MNIST and Fashion-MNIST datasets demonstrating effectiveness for image classification tasks"
+        ]
+      }
+    },
+    {
+      "title": "Convolutional Neural Network for Fashion Images Classification (Fashion-MNIST)",
+      "year": 2026,
+      "venue": "Journal of Applied Technology and Innovation",
+      "authors": [
+        "Tang Jian Shiun",
+        "Tey Jia Yi",
+        "Pu-Jun Yu",
+        "Por Jia Xin",
+        "Voon Pei Yi",
+        "Zailan Arabee Abdul Salam"
+      ],
+      "doi": "10.65136/jati.v7i1.139",
+      "url": "https://www.semanticscholar.org/paper/f15d8ca5db7b07c4f30a7ffec5d333189e0e58af",
+      "notes": {
+        "tasks": [
+          "image classification",
+          "fashion item recognition"
+        ],
+        "methods": [
+          "CNN"
+        ],
+        "metrics": [
+          "accuracy"
+        ],
+        "problem": "How do various parameters affect the accuracy of CNN models trained for fashion image classification?",
+        "datasets": [
+          "Fashion-MNIST"
+        ],
+        "study_type": "empirical",
+        "limitations": [
+          "Limited to Fashion-MNIST dataset; no comparison with other state-of-the-art models reported in abstract."
+        ],
+        "contribution": "A CNN-based study identifying parameters affecting accuracy for fashion image classification using the Fashion-MNIST dataset.",
+        "key_findings": [
+          "Parameters such as network architecture choices affect CNN model accuracy on Fashion-MNIST classification tasks."
+        ]
+      }
+    },
+    {
+      "title": "LiteNet-CNN: A novel efficient lightweight image classification network",
+      "year": 2025,
+      "venue": "2025 International Conference on Emerging Trends in Industry 4.0 Technologies (ICETI4T)",
+      "authors": [
+        "Ishika Manghwani",
+        "Anmol Singh",
+        "Mohammed Maviya Qureshi",
+        "Himani Deshpande"
+      ],
+      "doi": "10.1109/iceti4t63625.2025.11132218",
+      "url": "https://www.semanticscholar.org/paper/1ea1c4280942d5468486618f4249cb791d455b53",
+      "notes": {
+        "tasks": [
+          "image classification"
+        ],
+        "methods": [
+          "LiteNet-CNN",
+          "AlexNet",
+          "LeNet",
+          "CNN"
+        ],
+        "metrics": [
+          "precision",
+          "recall",
+          "accuracy"
+        ],
+        "problem": "How to design efficient neural networks for resource-constrained environments like mobile devices with minimal parameters but strong classification performance",
+        "datasets": [
+          "Fashion MNIST"
+        ],
+        "study_type": "method",
+        "limitations": [
+          "Evaluated only on Fashion MNIST dataset",
+          "Test accuracy of 88.66% may not be sufficient for all applications"
+        ],
+        "contribution": "LiteNet-CNN, a lightweight CNN with only 41,610 parameters, achieving competitive image classification performance on resource-constrained devices",
+        "key_findings": [
+          "LiteNet-CNN reduces trainable parameters by ~78.56% vs AlexNet and 6.34% vs LeNet, resulting in 41,610 parameters",
+          "Achieves 98.42% precision, 97.84% recall, and 88.66% test accuracy on Fashion MNIST",
+          "Training accuracy of 90.04% on Fashion MNIST"
+        ]
+      }
+    },
+    {
+      "title": "Game Theory Meets Data Augmentation",
+      "year": 2024,
+      "venue": "IEEE Transactions on Artificial Intelligence",
+      "authors": [
+        "Yuhan Kang",
+        "Samira Zare",
+        "Alex Tong Lin",
+        "Zhu Han",
+        "Stanley Osher",
+        "Hien Van Nguyen"
+      ],
+      "doi": "10.1109/tai.2024.3384129",
+      "url": "https://doi.org/10.1109/tai.2024.3384129",
+      "notes": {
+        "tasks": [
+          "image classification",
+          "data augmentation"
+        ],
+        "methods": [
+          "MFG Augment",
+          "Mean-Field Game theory"
+        ],
+        "metrics": [
+          "classification accuracy",
+          "affinity score",
+          "diversity score"
+        ],
+        "problem": "How to improve data augmentation for deep learning, especially when dataset size is small.",
+        "datasets": [
+          "MNIST",
+          "CIFAR-10",
+          "ImageNet"
+        ],
+        "study_type": "method",
+        "limitations": [],
+        "contribution": "MFG Augment, a data augmentation method based on Mean-Field Game theory that synthesizes continuous paths between image distributions to generate augmented samples.",
+        "key_findings": [
+          "MFG Augment achieves better generalization and higher classification accuracy than benchmark augmentation methods",
+          "MFG Augment significantly improves test accuracy when dataset size is small",
+          "MFG Augment consistently shows better affinity and diversity scores"
+        ]
+      }
+    },
+    {
+      "title": "Deep Revamped Quantum Convolutional Neural Network on Fashion MNIST Dataset",
+      "year": 2024,
+      "venue": "Data and Metadata",
+      "authors": [
+        "Meshal Alharbi",
+        "A. Sultan"
+      ],
+      "doi": "10.56294/dm2024.358",
+      "url": "https://www.semanticscholar.org/paper/1f0f7870a2343d21bb08cb1a83f5598cb51664a5",
+      "notes": {
+        "tasks": [
+          "image classification"
+        ],
+        "methods": [
+          "DRQCNN",
+          "CNN",
+          "ANN",
+          "quantum circuits"
+        ],
+        "metrics": [
+          "accuracy",
+          "F1-score",
+          "precision",
+          "recall"
+        ],
+        "problem": "Conventional neural networks suffer from overfitting and poor interpretability on low-quality images in classification tasks.",
+        "datasets": [
+          "Fashion MNIST"
+        ],
+        "study_type": "method",
+        "limitations": [
+          "Evaluation limited to Fashion MNIST dataset",
+          "No comparison with state-of-the-art classical deep learning models beyond ANN"
+        ],
+        "contribution": "A Deep Revamped Quantum CNN (DRQCNN) using quantum circuits as convolutional filters for image classification on Fashion MNIST.",
+        "key_findings": [
+          "DRQCNN outperforms traditional ANN on image classification metrics on Fashion MNIST"
+        ]
+      }
+    },
+    {
+      "title": "Investigation of the Impact of Hyperparameters on the Accuracy of Neural Network Predictions Using the Fashion-MNIST Dataset",
+      "year": 2026,
+      "venue": "Digital Transformation",
+      "authors": [
+        "D. Klimenka",
+        "А. Kazlova"
+      ],
+      "doi": "10.35596/1729-7648-2026-32-2-44-52",
+      "url": "https://www.semanticscholar.org/paper/08ff9b023518d74fe09f890adf86fe5f5ea429aa",
+      "notes": {
+        "tasks": [
+          "image classification",
+          "hyperparameter tuning"
+        ],
+        "methods": [
+          "CNN",
+          "Conv2D",
+          "MaxPooling2D"
+        ],
+        "metrics": [
+          "accuracy"
+        ],
+        "problem": "How do hyperparameters such as Conv2D layers, pooling, neurons, activation functions, batch size, and epochs impact CNN classification accuracy?",
+        "datasets": [
+          "Fashion-MNIST"
+        ],
+        "study_type": "empirical",
+        "limitations": [
+          "Limited to Fashion-MNIST dataset",
+          "Only CNN architecture considered"
+        ],
+        "contribution": "Empirical analysis of how various CNN hyperparameters affect prediction accuracy on the Fashion-MNIST dataset",
+        "key_findings": [
+          "Varying hyperparameters such as number of Conv2D layers, filters, kernel size, pooling stride, fully connected neurons, activation functions, batch size, and epochs significantly impacts CNN prediction accuracy on Fashion-MNIST"
+        ]
+      }
+    },
+    {
+      "title": "A Novel Deep Neural Network Model for Image Classification",
+      "year": 2019,
+      "venue": "International Journal of Engineering and Advanced Technology",
+      "authors": [
+        "N. Karthika",
+        "B. Janet",
+        "Himanshu Shukla"
+      ],
+      "doi": "10.35940/ijeat.f8832.088619",
+      "url": "https://doi.org/10.35940/ijeat.f8832.088619",
+      "notes": {
+        "tasks": [
+          "image classification"
+        ],
+        "methods": [
+          "CNN",
+          "LSTM"
+        ],
+        "metrics": [
+          "accuracy"
+        ],
+        "problem": "Which CNN and RNN architectures achieve best image classification accuracy on standard benchmark datasets?",
+        "datasets": [
+          "Fashion-MNIST",
+          "CIFAR-10"
+        ],
+        "study_type": "empirical",
+        "limitations": [
+          "Limited architecture variants explored",
+          "No comparison to state-of-the-art models"
+        ],
+        "contribution": "Comparison of CNN and LSTM architectures for image classification on Fashion-MNIST and CIFAR-10",
+        "key_findings": [
+          "CNN1 achieves greater accuracy on Fashion-MNIST",
+          "CNN3, LSTM1, and LSTM2 perform better than other models on CIFAR-10"
+        ]
+      }
+    },
+    {
+      "title": "Revolutionizing Image Recognition: Next-Generation CNN Architectures for Handwritten Digits and Objects",
+      "year": 2024,
+      "venue": "IEEE Symposium on Wireless Technology and Applications",
+      "authors": [
+        "Md Nurul Absur",
+        "Kazi Fahim Ahmad Nasif",
+        "Sourya Saha",
+        "Sifat Nawrin Nova"
+      ],
+      "doi": "10.1109/iswta62130.2024.10651815",
+      "url": "https://www.semanticscholar.org/paper/99f20275f515e8359213ad697f357c4fe034bcda",
+      "notes": {
+        "tasks": [
+          "handwritten digit recognition",
+          "image classification",
+          "object recognition"
+        ],
+        "methods": [
+          "CNN",
+          "SVM",
+          "Random Forest"
+        ],
+        "metrics": [
+          "accuracy"
+        ],
+        "problem": "How to improve handwritten digit and fashion object recognition accuracy beyond traditional machine learning methods like SVM and Random Forests.",
+        "datasets": [
+          "MNIST",
+          "Fashion MNIST"
+        ],
+        "study_type": "method",
+        "limitations": [],
+        "contribution": "Two custom CNN architectures achieving 98.71% on MNIST and 91.39% on Fashion MNIST, outperforming traditional ML methods for image recognition.",
+        "key_findings": [
+          "Custom CNN achieved 98.71% accuracy on MNIST without bias",
+          "Custom CNN achieved 91.39% accuracy on Fashion MNIST without bias",
+          "CNNs require less preprocessing than SVM or Random Forest methods"
+        ]
+      }
+    },
+    {
+      "title": "Reevaluating CNN Filter Dimensions: Experimental Findings on CIFAR-10 and Fashion-MNIST for Modern Network Architectures",
+      "year": 2026,
+      "venue": "2026 7th International Conference on Intelligent Communication Technologies and Virtual Mobile Networks (ICICV)",
+      "authors": [
+        "Annapoorani S",
+        "A. Anbumozhi",
+        "S. B",
+        "D. J"
+      ],
+      "doi": "10.1109/icicv68925.2026.11554743",
+      "url": "https://www.semanticscholar.org/paper/263ec99eea73bf18cba972f16bad9c4ca43e67b2",
+      "notes": {
+        "tasks": [
+          "image classification"
+        ],
+        "methods": [
+          "CNN",
+          "VGG",
+          "ResNet"
+        ],
+        "metrics": [
+          "test accuracy",
+          "training time",
+          "computational cost"
+        ],
+        "problem": "How does convolutional filter size affect CNN classification accuracy and computational efficiency?",
+        "datasets": [
+          "CIFAR-10",
+          "Fashion-MNIST"
+        ],
+        "study_type": "empirical",
+        "limitations": [
+          "Simple controlled CNN architecture may not generalize to all modern architectures",
+          "Only three filter sizes tested"
+        ],
+        "contribution": "Empirical evaluation showing that smaller 3×3 convolutional filters outperform larger filters in accuracy and efficiency on CIFAR-10 and Fashion-MNIST",
+        "key_findings": [
+          "3×3 filters achieved best accuracy on CIFAR-10 (73.04%) and Fashion-MNIST (92.68%)",
+          "Larger filters (5×5, 7×7) required more computation time and higher costs",
+          "Inverse relationship found between filter size and classification accuracy"
+        ]
+      }
+    },
+    {
+      "title": "Image Classification Using Convolutional Neural Networks",
+      "year": 2026,
+      "venue": "Preprints.org",
+      "authors": [
+        "Goo Yun Hai",
+        "Abdul Salam Shah",
+        "Noor Ul Amin"
+      ],
+      "doi": "10.20944/preprints202605.1647.v1",
+      "url": "https://doi.org/10.20944/preprints202605.1647.v1",
+      "notes": {
+        "tasks": [
+          "image classification",
+          "network intrusion detection"
+        ],
+        "methods": [
+          "CNN",
+          "HOG+SVM",
+          "Batch Normalization",
+          "Dropout",
+          "Adam",
+          "MaxPooling",
+          "ReLU",
+          "Attention-CNN-LSTM"
+        ],
+        "metrics": [
+          "accuracy",
+          "number of parameters"
+        ],
+        "problem": "How to efficiently classify images with a lightweight CNN while drawing parallels to deep learning-based network intrusion detection.",
+        "datasets": [
+          "Fashion-MNIST"
+        ],
+        "study_type": "method",
+        "limitations": [
+          "Only evaluated on Fashion-MNIST",
+          "NIDS generalization is conceptual, not experimentally validated in this paper"
+        ],
+        "contribution": "A lightweight CNN achieving 90.20% accuracy on Fashion-MNIST with 0.11M parameters, with architectural insights generalized to CNN-based network intrusion detection systems.",
+        "key_findings": [
+          "CNN achieved 90.20% test accuracy on Fashion-MNIST with 0.11M parameters",
+          "Outperforms HOG+SVM baseline (85% accuracy)",
+          "State-of-the-art CNN-based IDS achieve 94.8–99.67% detection accuracy"
+        ]
+      }
+    },
+    {
+      "title": "ECA110-Pooling: A Comparative Analysis of Pooling Strategies in Convolutional Neural Networks",
+      "year": 2025,
+      "venue": "Big Data and Cognitive Computing",
+      "authors": [
+        "Doru Constantin",
+        "Costel Bălcău"
+      ],
+      "doi": "10.3390/bdcc9120306",
+      "url": "https://doi.org/10.3390/bdcc9120306",
+      "notes": {
+        "tasks": [
+          "image classification"
+        ],
+        "methods": [
+          "ECA110-Pooling",
+          "MaxPooling",
+          "AveragePooling",
+          "MedianPooling",
+          "MinPooling",
+          "KernelPooling",
+          "CNN"
+        ],
+        "metrics": [
+          "Top-1 accuracy",
+          "error rate",
+          "F1-score",
+          "parameter count",
+          "training time"
+        ],
+        "problem": "How does a cellular-automata-inspired pooling operator compare to conventional pooling strategies and SOTA architectures in image classification?",
+        "datasets": [
+          "ImageNet",
+          "CIFAR-10",
+          "Fashion-MNIST"
+        ],
+        "study_type": "method",
+        "limitations": [
+          "Evaluated on a subset of ImageNet rather than the full dataset",
+          "Rule selection (Rule 110) not exhaustively compared against other cellular automata rules"
+        ],
+        "contribution": "ECA110-Pooling, a novel rule-based pooling operator for CNNs inspired by elementary cellular automata, is introduced and validated against conventional and SOTA pooling methods.",
+        "key_findings": [
+          "ECA110-Pooling consistently achieves higher Top-1 accuracy, lower error rates, and stronger F1-scores than traditional pooling operators",
+          "ECA110-Pooling maintains computational efficiency comparable to MaxPooling",
+          "ECA110-Pooling delivers competitive accuracy with substantially fewer parameters and reduced training time compared to SOTA models"
+        ]
+      }
+    },
+    {
+      "title": "LMix:Regularization Strategy for Convolutional Neural Networks",
+      "year": 2022,
+      "venue": "Research Square",
+      "authors": [
+        "Linyu Yan",
+        "Kunpeng Zheng",
+        "Jinyao Xia",
+        "Ke Li",
+        "Hefei Ling"
+      ],
+      "doi": "10.21203/rs.3.rs-1630095/v1",
+      "url": "https://doi.org/10.21203/rs.3.rs-1630095/v1",
+      "notes": {
+        "tasks": [
+          "image classification",
+          "data augmentation",
+          "adversarial robustness"
+        ],
+        "methods": [
+          "LMix",
+          "CutMix",
+          "Mixup",
+          "CutOut",
+          "CNN"
+        ],
+        "metrics": [
+          "accuracy"
+        ],
+        "problem": "Existing mixed sample augmentation strategies either distort data distribution (interpolation) or obscure too much information (masking)",
+        "datasets": [
+          "CIFAR-10",
+          "CIFAR-100",
+          "Fashion-MNIST",
+          "SVHN",
+          "Tiny-ImageNet"
+        ],
+        "study_type": "method",
+        "limitations": [
+          "Only evaluated on relatively small-scale datasets; no large-scale ImageNet experiments"
+        ],
+        "contribution": "LMix, a mixed sample data augmentation method combining random masking and high-frequency filtering to improve generalization and robustness of CNNs",
+        "key_findings": [
+          "LMix improves generalization over state-of-the-art architectures on multiple benchmark datasets",
+          "LMix enhances robustness against adversarial samples compared to baseline augmentation methods"
+        ]
+      }
+    },
+    {
+      "title": "Towards Data-Efficient Neural Network Training",
+      "year": 2026,
+      "venue": null,
+      "authors": [
+        "Jiahang Jiang"
+      ],
+      "doi": "10.14711/thesis-hdl169542",
+      "url": "https://doi.org/10.14711/thesis-hdl169542",
+      "notes": {
+        "tasks": [
+          "dataset distillation",
+          "sequential recommendation",
+          "data augmentation",
+          "overfitting prevention",
+          "pre-training"
+        ],
+        "methods": [
+          "Diversity-Driven Trajectory Matching (DTM)",
+          "MLP-Driven Refinement (MDR)",
+          "random smoothing",
+          "convolution-based smoothing kernels",
+          "trajectory matching",
+          "contrastive learning"
+        ],
+        "metrics": [
+          "gradient variance",
+          "convergence rate in Sobolev spaces"
+        ],
+        "problem": "How can neural network training be made more data-efficient across both large-scale and data-scarce regimes while improving generalization, privacy, and computational efficiency?",
+        "datasets": [],
+        "study_type": "method",
+        "limitations": [
+          "Empirical validation details and benchmark comparisons are not provided in the abstract."
+        ],
+        "contribution": "A thesis proposing three data-efficient training methodologies—dataset distillation (DTM), embedding refinement (MDR), and adaptive random smoothing augmentation—to address bottlenecks at both large and small data scales.",
+        "key_findings": [
+          "DTM integrates expert alignment with peer-induced contrastive signals to foster broader parameter exploration and yield robust condensed data.",
+          "MDR enriches item embeddings with critical feature interactions to address sparsity in sequential recommendation.",
+          "Adaptive convolution-based random smoothing enables optimal convergence rates in Sobolev spaces of low intrinsic dimension and mixed smoothness."
+        ]
+      }
+    },
+    {
+      "title": "Quantum Convolutional Neural Networks for Visual Pattern Recognition",
+      "year": 2026,
+      "venue": "International Conference on Advanced Research in Computing (ICARC)",
+      "authors": [
+        "Niroji Thayalan",
+        "Vinayagamoorthy Balalojanan",
+        "Vithiyasahar Vigneswaran",
+        "Theevika Sukirthan",
+        "Kanagasabai Thiruthanigesan",
+        "Sinnathamby Mahesan",
+        "Roshan Ragel"
+      ],
+      "doi": "10.1109/icarc68737.2026.11453832",
+      "url": "https://doi.org/10.1109/icarc68737.2026.11453832",
+      "notes": {
+        "tasks": [
+          "image classification",
+          "visual pattern recognition"
+        ],
+        "methods": [
+          "QCNN",
+          "CNN",
+          "parametrised quantum circuits",
+          "amplitude encoding"
+        ],
+        "metrics": [
+          "accuracy"
+        ],
+        "problem": "How do quantum convolutional neural networks compare to classical CNNs for visual pattern recognition in terms of accuracy, parameter efficiency, and noise resilience?",
+        "datasets": [
+          "MNIST",
+          "FashionMNIST",
+          "CIFAR-10"
+        ],
+        "study_type": "empirical",
+        "limitations": [
+          "Underperforms classical CNNs on complex datasets",
+          "Limited by current quantum hardware capabilities",
+          "Only tested on grayscale and downsampled images"
+        ],
+        "contribution": "A hybrid QCNN architecture for visual pattern recognition that demonstrates parameter efficiency and noise resilience compared to classical CNNs across multiple benchmark datasets.",
+        "key_findings": [
+          "QCNN achieves 93.2% accuracy on MNIST, 88.5% on FashionMNIST, and 67.8% on CIFAR-10",
+          "QCNN does not surpass classical CNNs in raw accuracy but shows notable parameter efficiency and noise resilience",
+          "Performance degrades on complex datasets like CIFAR-10 due to current quantum hardware limitations"
+        ]
+      }
+    },
+    {
+      "title": "G2G - From Data Generation to Model Generalisation",
+      "year": 2026,
+      "venue": "ResearchSpace (University of Auckland)",
+      "authors": [
+        "Bowen Chen"
+      ],
+      "doi": null,
+      "url": "https://hdl.handle.net/2292/75023",
+      "notes": {
+        "tasks": [
+          "feature attribution",
+          "few-shot classification",
+          "pattern extraction",
+          "animal re-identification",
+          "ecological monitoring"
+        ],
+        "methods": [
+          "data augmentation",
+          "feature attribution",
+          "few-shot classification",
+          "self-supervised learning",
+          "synthetic data generation",
+          "animal re-identification"
+        ],
+        "metrics": [],
+        "problem": "How can data generation, restructuring, and augmentation strategies improve model generalisation beyond training distributions more effectively than model-centric approaches?",
+        "datasets": [],
+        "study_type": "other",
+        "limitations": [
+          "Results are presented as case studies, which may limit generalisability across broader domains"
+        ],
+        "contribution": "A thesis proposing data-centric techniques—reconstruction, synthetic generation, self-supervised objectives, and artificial pattern creation—to improve model generalisation across diverse tasks.",
+        "key_findings": [
+          "Diverse data generation methods tailored to specific challenges can systematically improve robustness, interpretability, and performance",
+          "Generalisation is deeply influenced by how data is generated, structured, and presented during learning, not solely by model architecture"
+        ]
+      }
+    }
+  ]
+}

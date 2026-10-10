@@ -1,0 +1,44 @@
+{
+  "id": "d91d94788b31",
+  "project_id": "6d8c3c93c209",
+  "kind": "review",
+  "status": "done",
+  "phase": "done",
+  "counts": {
+    "fatal": 0,
+    "major": 1,
+    "issues": 7
+  },
+  "log": [
+    {
+      "t": "2026-10-10T00:29:59.733102+00:00",
+      "text": "Deterministic integrity checks"
+    },
+    {
+      "t": "2026-10-10T00:30:00.572926+00:00",
+      "text": "Assembling the evidence for an independent review"
+    },
+    {
+      "t": "2026-10-10T00:30:01.025567+00:00",
+      "text": "Evidence unchanged since the last valid review; reusing it"
+    },
+    {
+      "t": "2026-10-10T00:30:01.701602+00:00",
+      "text": "Review 3: major_revision → repair: 0 fatal and 1 major issues to repair."
+    }
+  ],
+  "result": {
+    "valid": true,
+    "reason": "0 fatal and 1 major issues to repair.",
+    "verdict": "major_revision",
+    "blocking": {
+      "FATAL": 0,
+      "MAJOR": 1
+    },
+    "decision": "repair",
+    "iteration": 3
+  },
+  "error": null,
+  "started_at": "2026-10-10 00:29:59.020488+00:00",
+  "finished_at": "2026-10-10 00:30:01.811705+00:00"
+}
