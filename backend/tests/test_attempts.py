@@ -350,23 +350,48 @@ def test_retry_runs_again_after_a_failed_attempt(env):
     assert "PREVIOUS ATTEMPT FAILED" in env.prompts[1]
 
 
-def test_execution_effort_escalates_on_repeated_retries(env):
-    """Model tiers all resolve to the same Sonnet 4.6 model now, so effort is the lever a
-    retry actually has: a standard-tier task starts at MEDIUM and escalates to HIGH."""
+@pytest.mark.parametrize("tier,policy", [("standard", "default"), ("reasoning", "default"), ("bulk", "default"),
+                                         ("standard", "minimal"), ("reasoning", "economy")])
+def test_execution_effort_is_high_on_every_attempt(env, tier, policy):
+    """Every execution-agent attempt runs at HIGH effort, whatever the tier or policy: the
+    first attempt and each retry alike, with adaptive thinking and the usual output budget."""
+    from app.llm import MAX_TOKENS, THINKING
+
     env.task["retries"] = 2
+    env.mp["agents"][0]["model_tier"] = tier
 
     async def fail(ctx):
         return AgentResult("failed", "try again")
 
     async def scenario():
         env.scripts[:] = [fail, fail, fail]
-        await env.attempt()
-        await env.attempt()
-        await env.attempt()
+        for _ in range(3):
+            await orchestrator._execute(env.pid, env.mp, env.task, env.sid, policy, None)
 
     asyncio.run(scenario())
-    assert [s.reasoning_effort for s in env.specs] == ["medium", "high", "high"]
+    assert [s.reasoning_effort for s in env.specs] == ["high", "high", "high"]
     assert env.state().status == "failed" and env.state().attempts == 3
+    assert THINKING == {"type": "adaptive"} and MAX_TOKENS == 32_000
+
+
+def test_spawned_subagents_run_at_high_effort(env, monkeypatch):
+    """Sub-agents spawned by an execution agent inherit its HIGH effort, bulk tier included."""
+    env.mp["agents"][0]["model_tier"] = "bulk"
+    env.mp["agents"][0]["tools"] = AGENT_TOOLS + ["spawn_subagents"]
+    env.task["tools"] = AGENT_TOOLS + ["spawn_subagents"]
+    specs = []
+
+    async def run_agent(spec, prompt, ctx, on_event=None):
+        specs.append(spec)
+        if "›" not in spec.name:  # the parent execution agent spawns two children
+            await ctx.spawn([{"name": "a", "instructions": "x", "outputs": []},
+                             {"name": "b", "instructions": "y", "outputs": []}])
+        return AgentResult("failed", "try again")
+
+    monkeypatch.setattr(orchestrator, "run_agent", run_agent)
+    asyncio.run(orchestrator._execute(env.pid, env.mp, env.task, env.sid, "minimal", None))
+    assert len(specs) == 3 and sum("›" in s.name for s in specs) == 2
+    assert [s.reasoning_effort for s in specs] == ["high", "high", "high"]
 
 
 def test_reaping_one_task_leaves_other_tasks_alone(env):

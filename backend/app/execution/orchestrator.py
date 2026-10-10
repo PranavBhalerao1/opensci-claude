@@ -461,7 +461,8 @@ async def _execute(project_id: str, mp: dict, task: dict, state_id: str, policy:
     if escalated:
         _append_event(state_id, {"type": "message", "step": 0, "text": f"Retrying with a stronger model ({model})",
                                  "cost": 0.0})
-    base_effort = "low" if agent["model_tier"] == "bulk" or policy == "minimal" else "medium"
+    # Every execution agent (any tier or policy; sub-agents inherit it) starts at high effort.
+    base_effort = "high"
     spec = AgentSpec(
         name=f"{agent['name']} ({task['id']})",
         instructions=COMMON_INSTRUCTIONS.format(
