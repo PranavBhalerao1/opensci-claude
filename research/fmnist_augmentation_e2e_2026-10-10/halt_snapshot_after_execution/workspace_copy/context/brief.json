@@ -1,0 +1,94 @@
+{
+  "title": "Data Augmentation Effect on CNN Fashion-MNIST Accuracy",
+  "domain": "Computer Science",
+  "summary": "This study trains a small convolutional neural network on Fashion-MNIST under two conditions — standard training and training with basic image augmentations — keeping all hyperparameters, architecture, and random seeds identical between conditions. Each condition is run with seeds 42 and 123 for approximately 5 epochs on a CUDA GPU via Google Colab, and test accuracy, training curves, and validation performance are recorded and compared. The goal is to assess whether simple augmentation meaningfully improves generalisation without overstating statistical conclusions given the limited number of seeds.",
+  "scope_in": [
+    "Fashion-MNIST dataset (60 000 train, 10 000 test images)",
+    "Two experimental conditions: no augmentation vs. augmentation (random horizontal flip, random crop/translation up to 10%, rotation up to 10°)",
+    "One small CNN architecture shared across both conditions",
+    "PyTorch implementation with identical optimizer (Adam or SGD), learning rate, batch size, and train/validation split",
+    "Training for ~5 epochs per condition per seed",
+    "Seeds 42 and 123 for both conditions (4 total runs)",
+    "GPU execution on CUDA device (T4 or L4) via Google Colab GPU job tool",
+    "Recording of CUDA device detection evidence and per-run metrics",
+    "Test accuracy, per-epoch training loss, validation accuracy curves",
+    "Summary table and figures comparing conditions across seeds"
+  ],
+  "scope_out": [
+    "Hyperparameter search or tuning across architectures",
+    "Advanced augmentation strategies (CutMix, Mixup, AutoAugment, etc.)",
+    "Datasets other than Fashion-MNIST",
+    "Frameworks other than PyTorch",
+    "CPU-only fallback training (GPU unavailability is treated as a blocker)",
+    "Statistical significance testing beyond descriptive comparison of two seeds",
+    "Deployment or inference optimisation"
+  ],
+  "subfields": [
+    "Deep Learning",
+    "Computer Vision",
+    "Empirical ML Methodology"
+  ],
+  "assumptions": [
+    "Augmentation set chosen as random horizontal flip, random crop (padding 4px), and random rotation (±10°) — common, simple transforms appropriate for clothing images",
+    "Adam optimiser assumed unless user specifies otherwise, as it is a standard default for small CNNs",
+    "Batch size of 64 assumed as a reasonable default balancing speed and stability",
+    "90/10 train/validation split of the 60 000 training images assumed",
+    "Small CNN architecture assumed to be 2–3 conv layers with max-pooling followed by 1–2 fully connected layers, keeping training time under 10 minutes per run on a T4",
+    "Learning rate of 1e-3 assumed as a standard Adam default"
+  ],
+  "constraints": [
+    "Must use PyTorch",
+    "Must run training on CUDA GPU via Colab; CPU substitution is not permitted",
+    "Exactly 5 epochs per run (approximately)",
+    "Seeds fixed to 42 and 123",
+    "Architecture, optimizer, learning rate, batch size, and split identical between conditions",
+    "Must record verifiable GPU evidence (torch.cuda.get_device_name output, device tensors on CUDA)",
+    "Do not overstate statistical significance given only two seeds",
+    "Use only real computed metrics — no fabricated numbers"
+  ],
+  "result_type": "empirical",
+  "key_concepts": [
+    {
+      "term": "Data augmentation",
+      "definition": "Artificially expanding the training set by applying label-preserving transformations (e.g., flips, small rotations, translations) to input images so the model sees more variation during training."
+    },
+    {
+      "term": "Convolutional Neural Network (CNN)",
+      "definition": "A neural network architecture that uses learnable filters to detect spatial patterns in images, making it well-suited for image classification tasks."
+    },
+    {
+      "term": "Fashion-MNIST",
+      "definition": "A publicly available benchmark dataset of 70,000 28×28 grayscale images across 10 clothing categories, used as a drop-in replacement for MNIST."
+    },
+    {
+      "term": "Generalisation",
+      "definition": "A model's ability to perform well on unseen test data rather than just the data it was trained on."
+    },
+    {
+      "term": "Random seed",
+      "definition": "A fixed starting value for the random number generator that makes training runs reproducible; using two seeds allows limited assessment of result stability."
+    },
+    {
+      "term": "Test accuracy",
+      "definition": "The fraction of held-out test images the model classifies correctly, used as the primary performance metric."
+    }
+  ],
+  "core_question": "Does applying simple image augmentation (random horizontal flips, small translations, and rotations) during training improve the test accuracy of a small CNN on Fashion-MNIST compared with identical training without augmentation?",
+  "data_resources": "Fashion-MNIST loaded via torchvision.datasets.FashionMNIST (public, auto-downloaded); no external data required.",
+  "user_expertise": "Specified by user; assumed comfortable with Python and ML concepts at a practical level.",
+  "search_keywords": [
+    "data augmentation convolutional neural network image classification",
+    "random flip rotation translation augmentation training generalisation",
+    "Fashion-MNIST benchmark CNN accuracy",
+    "PyTorch image augmentation torchvision transforms",
+    "effect of data augmentation on test accuracy",
+    "small CNN Fashion-MNIST training",
+    "overfitting regularisation data augmentation",
+    "empirical evaluation augmentation strategies",
+    "training set augmentation image recognition",
+    "CNN generalisation gap train test accuracy",
+    "torchvision FashionMNIST classification baseline",
+    "random crop horizontal flip CNN performance"
+  ],
+  "compute_resources": "CUDA GPU (T4 or L4) via Google Colab GPU job tool for all neural network training runs; standard CPU sandbox for data preprocessing and plotting. Estimated total GPU time: ~20–40 minutes for 4 runs of 5 epochs each."
+}

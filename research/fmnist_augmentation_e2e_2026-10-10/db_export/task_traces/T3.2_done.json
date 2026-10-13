@@ -1,0 +1,180 @@
+{
+  "id": "9db1a3fbf40c",
+  "project_id": "a2794d1959b5",
+  "blueprint_run_id": "42581927e395",
+  "task_id": "T3.2",
+  "agent": "A3",
+  "status": "done",
+  "attempts": 1,
+  "cost": 0.37665474,
+  "summary": "Computed the full 30-epoch accuracy gap trajectory and checkpoint statistics for T3.2. Loaded analysis/combined_metrics.csv (120 rows, 4 groups × 30 epochs), merged augmented vs non-augmented on (seed, epoch), and computed accuracy_gap = test_acc_aug − test_acc_noaug for all 60 pairs. Gap trajectory is uniformly negative (range −5.15 to −0.36 pp); the pre-specified crossover criterion (mean_gap > 0 for ≥ 3 consecutive epochs) is never satisfied within 30 epochs. Epoch-5 mean_gap = −2.70 pp → regime classified as underfitting-penalty-confirmed. Supporting evidence: Δtrain_loss at epoch 5 ≈ +0.187 pp (aug harder to fit), widens to +0.230 pp at epoch 20; Δval_acc at epoch 5 ≈ −2.43 pp, narrows to −1.09 pp at epoch 20 but never reverses. All 30/30 trajectory epochs and 8/8 checkpoint cells validated against raw per-epoch CSVs with exact match.",
+  "artifacts": [
+    "analysis/gap_trajectory.csv",
+    "analysis/checkpoint_stats.csv",
+    "scripts/compute_gap_trajectory.py"
+  ],
+  "checks": [
+    {
+      "check": "analysis/gap_trajectory.csv exists and has exactly 30 rows with columns epoch, gap_seed42, gap_seed123, mean_gap",
+      "passed": true,
+      "reason": "FACTS explicitly confirm 30 data rows (excluding header) and columns epoch,gap_seed42,gap_seed123,mean_gap in analysis/gap_trajectory.csv."
+    },
+    {
+      "check": "analysis/checkpoint_stats.csv exists and has exactly 4 rows for epochs 5, 10, 20, 30",
+      "passed": true,
+      "reason": "FACTS confirm 4 data rows (excluding header) and the preview shows exactly epochs 5, 10, 20, 30 in analysis/checkpoint_stats.csv."
+    },
+    {
+      "check": "No NaN values in either file",
+      "passed": true,
+      "reason": "All values shown in both file previews are numeric with no NaN entries, and the platform-confirmed row counts match expected counts without gaps indicating missing values."
+    },
+    {
+      "check": "gap values are consistent: gap_seed42 at epoch e matches aug_s42_test − noaug_s42_test in checkpoint_stats at checkpoint epochs",
+      "passed": true,
+      "reason": "Cross-checking verifiable epochs: epoch 5 (89.15−91.30=−2.15 matches gap_trajectory −2.1500), epoch 10 (90.27−92.18=−1.91 matches −1.9100), epoch 30 (91.28−92.65=−1.37 matches −1.3700), and checkpoint_stats gap_s42 at epoch 20 (−2.22) is internally consistent with its own aug/noaug columns."
+    }
+  ],
+  "issues": [],
+  "events": [
+    {
+      "t": "2026-10-10T07:41:54.597608+00:00",
+      "args": "{\"code\": \"\\nimport os, glob\\n\\n# Survey workspace\\nfor root, dirs, files in os.walk('.'):\\n    # Skip hidden dirs\\n    dirs[:] = [d for d in dirs if not d.startswith('.')]\\n    for f in files:\\n        path = os.path.join(root, f)\\n        print(path)\\n\"}",
+      "cost": 0.015037275,
+      "step": 1,
+      "tool": "run_python",
+      "type": "tool",
+      "result": "exit_code: 0\nstdout:\n./scripts/crossover_analysis.py\n./scripts/aggregate_metrics.py\n./data/metrics_seed42_aug.csv\n./data/gpu_and_data_validation.txt\n./data/metrics_seed123_aug.csv\n./data/metrics_seed42_noaug.csv\n./data/metrics_seed123_noaug.csv\n./data/fashion_mnist/FashionMNIST/raw/train-images-idx3-ubyte.gz\n./data/fashion_mnist/FashionMNIST/raw/t10k-images-idx3-ubyte.gz\n./data/fashion_mnist/FashionMNIST/raw/t10k-labels-idx1-ubyte\n./data/fashion_mnist/FashionMNIST/raw/train-labels-idx1-ubyte\n./d…"
+    },
+    {
+      "t": "2026-10-10T07:42:02.918969+00:00",
+      "args": "{\"code\": \"\\nimport pandas as pd\\nimport numpy as np\\n\\n# Load combined_metrics.csv\\ndf = pd.read_csv('analysis/combined_metrics.csv')\\nprint(\\\"Shape:\\\", df.shape)\\nprint(\\\"Columns:\\\", df.columns.tolist())\\nprint(\\\"\\\\nHead:\\\")\\nprint(df.head(10))\\nprint(\\\"\\\\nTail:\\\")\\nprint(df.tail(5))\\nprint(\\\"\\\\nDt…",
+      "cost": 0.02544069,
+      "step": 2,
+      "tool": "run_python",
+      "type": "tool",
+      "result": "exit_code: 0\nstdout:\nShape: (120, 6)\nColumns: ['seed', 'augmented', 'epoch', 'train_loss', 'val_acc', 'test_acc']\n\nHead:\n   seed  augmented  epoch  train_loss  val_acc  test_acc\n0    42      False      1    0.435521    88.84     88.23\n1    42      False      2    0.282679    89.64     89.34\n2    42      False      3    0.237785    91.50     90.95\n3    42      False      4    0.209328    90.94     90.35\n4    42      False      5    0.187928    91.12     91.30\n5    42      False      6    0.169337…"
+    },
+    {
+      "t": "2026-10-10T07:42:08.986002+00:00",
+      "args": "{\"code\": \"\\n# Inspect raw per-epoch CSVs to cross-validate\\nfor fname in ['data/metrics_seed42_noaug.csv', 'data/metrics_seed42_aug.csv',\\n              'data/metrics_seed123_noaug.csv', 'data/metrics_seed123_aug.csv']:\\n    d = pd.read_csv(fname)\\n    print(f\\\"\\\\n{fname}  shape={d.shape}\\\")\\n    pr…",
+      "cost": 0.035721014999999995,
+      "step": 3,
+      "tool": "run_python",
+      "type": "tool",
+      "result": "exit_code: 1\nstderr:\nTraceback (most recent call last):\n  File \"/home/user/workspace/.scratch/cell_1824ca_003.py\", line 5, in <module>\n    d = pd.read_csv(fname)\n        ^^\nNameError: name 'pd' is not defined. Did you mean: 'id'?\n"
+    },
+    {
+      "t": "2026-10-10T07:42:14.182449+00:00",
+      "args": "{\"code\": \"\\nimport pandas as pd\\nimport numpy as np\\n\\n# Inspect raw per-epoch CSVs to cross-validate\\nfor fname in ['data/metrics_seed42_noaug.csv', 'data/metrics_seed42_aug.csv',\\n              'data/metrics_seed123_noaug.csv', 'data/metrics_seed123_aug.csv']:\\n    d = pd.read_csv(fname)\\n    prin…",
+      "cost": 0.042372494999999996,
+      "step": 4,
+      "tool": "run_python",
+      "type": "tool",
+      "result": "exit_code: 0\nstdout:\n\ndata/metrics_seed42_noaug.csv  shape=(30, 5)\n   # seed=42 augment=False device=cuda start=2026-10-10T06:50:48  train_loss  train_acc  val_acc  test_acc\n0                                                              1    0.435521    84.2527    88.84     88.23\n1                                                              2    0.282679    89.5873    89.64     89.34\n2                                                              3    0.237785    91.2673    91.50     90.95\n    #…"
+    },
+    {
+      "t": "2026-10-10T07:42:25.455342+00:00",
+      "args": "{\"code\": \"\\nimport pandas as pd\\nimport numpy as np\\n\\n# ── Load combined metrics ──────────────────────────────────────────────────────\\ndf = pd.read_csv('analysis/combined_metrics.csv')\\nprint(\\\"combined_metrics.csv shape:\\\", df.shape)\\n\\n# ── Step 1: Separate augmented / non-augmented ───────────…",
+      "cost": 0.06133875,
+      "step": 5,
+      "tool": "run_python",
+      "type": "tool",
+      "result": "exit_code: 0\nstdout:\ncombined_metrics.csv shape: (120, 6)\n\nMerged shape: (60, 8)\nNaNs: 0\n\n-- Spot checks against raw CSVs --\n  seed=42 ep=5: aug=89.15  noaug=91.30  gap=-2.1500\n  seed=42 ep=30: aug=91.28  noaug=92.65  gap=-1.3700\n  seed=123 ep=5: aug=88.51  noaug=91.76  gap=-3.2500\n  seed=123 ep=30: aug=91.00  noaug=92.26  gap=-1.2600\n"
+    },
+    {
+      "t": "2026-10-10T07:42:33.296340+00:00",
+      "args": "{\"code\": \"\\nimport pandas as pd\\nimport numpy as np\\n\\n# ── Load combined metrics ──────────────────────────────────────────────────────\\ndf = pd.read_csv('analysis/combined_metrics.csv')\\n\\naug_df   = df[df['augmented'] == True ].copy()\\nnoaug_df = df[df['augmented'] == False].copy()\\n\\nmerged = pd…",
+      "cost": 0.07563929999999999,
+      "step": 6,
+      "tool": "run_python",
+      "type": "tool",
+      "result": "exit_code: 0\nstdout:\nGap trajectory (all 30 rows):\n    epoch  gap_seed42  gap_seed123  mean_gap\n0       1       -4.63        -5.66    -5.145\n1       2       -2.51        -3.09    -2.800\n2       3       -3.76        -3.50    -3.630\n3       4       -2.24        -3.52    -2.880\n4       5       -2.15        -3.25    -2.700\n5       6       -2.42        -2.96    -2.690\n6       7       -2.27        -1.50    -1.885\n7       8       -1.99        -3.05    -2.520\n8       9       -2.41        -1.75    -2.080…"
+    },
+    {
+      "t": "2026-10-10T07:42:43.459773+00:00",
+      "args": "{\"code\": \"\\nimport pandas as pd\\nimport numpy as np\\n\\ndf = pd.read_csv('analysis/combined_metrics.csv')\\n\\naug_df   = df[df['augmented'] == True ].copy()\\nnoaug_df = df[df['augmented'] == False].copy()\\n\\nmerged = pd.merge(\\n    aug_df  [['seed','epoch','test_acc','train_loss','val_acc']].rename(\\n…",
+      "cost": 0.09694839,
+      "step": 7,
+      "tool": "run_python",
+      "type": "tool",
+      "result": "exit_code: 0\nstdout:\n=== Crossover Analysis ===\nMean gap trajectory:\n  Epoch  1: mean_gap=-5.1450\n  Epoch  2: mean_gap=-2.8000\n  Epoch  3: mean_gap=-3.6300\n  Epoch  4: mean_gap=-2.8800\n  Epoch  5: mean_gap=-2.7000\n  Epoch  6: mean_gap=-2.6900\n  Epoch  7: mean_gap=-1.8850\n  Epoch  8: mean_gap=-2.5200\n  Epoch  9: mean_gap=-2.0800\n  Epoch 10: mean_gap=-1.9250\n  Epoch 11: mean_gap=-1.4250\n  Epoch 12: mean_gap=-2.5300\n  Epoch 13: mean_gap=-1.4850\n  Epoch 14: mean_gap=-1.7750\n  Epoch 15: mean_gap=-2.0…"
+    },
+    {
+      "t": "2026-10-10T07:42:53.455199+00:00",
+      "args": "{\"code\": \"\\nimport pandas as pd\\nimport numpy as np\\n\\ndf = pd.read_csv('analysis/combined_metrics.csv')\\n\\naug_df   = df[df['augmented'] == True ].copy()\\nnoaug_df = df[df['augmented'] == False].copy()\\n\\nmerged = pd.merge(\\n    aug_df  [['seed','epoch','test_acc','train_loss','val_acc']].rename(\\n…",
+      "cost": 0.12223695,
+      "step": 8,
+      "tool": "run_python",
+      "type": "tool",
+      "result": "exit_code: 0\nstdout:\n=== checkpoint_stats.csv ===\n epoch  noaug_s42_test  aug_s42_test  gap_s42  noaug_s123_test  aug_s123_test  gap_s123  mean_gap  noaug_s42_trainloss  aug_s42_trainloss  noaug_s123_trainloss  aug_s123_trainloss\n     5           91.30         89.15    -2.15            91.76          88.51     -3.25    -2.700             0.187928           0.376089              0.187989            0.373817\n    10           92.18         90.27    -1.91            92.04          90.10     -1.94   …"
+    },
+    {
+      "t": "2026-10-10T07:43:08.368092+00:00",
+      "args": "{\"code\": \"\\nimport pandas as pd\\nimport numpy as np\\n\\ndf = pd.read_csv('analysis/combined_metrics.csv')\\n\\naug_df   = df[df['augmented'] == True ].copy()\\nnoaug_df = df[df['augmented'] == False].copy()\\n\\nmerged = pd.merge(\\n    aug_df  [['seed','epoch','test_acc','train_loss','val_acc']].rename(\\n…",
+      "cost": 0.15877983,
+      "step": 9,
+      "tool": "run_python",
+      "type": "tool",
+      "result": "exit_code: 0\nstdout:\n=== Acceptance checks ===\n✓ gap_trajectory has 30 rows and 4 columns\n✓ gap_trajectory columns correct\n✓ gap_trajectory no NaN\n✓ checkpoint_stats has 4 rows for epochs 5,10,20,30\n✓ checkpoint_stats no NaN\n✓ gap_seed42 consistent between gap_trajectory and checkpoint_stats\n✓ gap_seed123 consistent between gap_trajectory and checkpoint_stats\n\nAll acceptance checks passed!\n"
+    },
+    {
+      "t": "2026-10-10T07:43:19.916006+00:00",
+      "args": "{\"code\": \"\\nimport pandas as pd\\nimport numpy as np\\nimport json, os\\n\\ndf = pd.read_csv('analysis/combined_metrics.csv')\\n\\naug_df   = df[df['augmented'] == True ].copy()\\nnoaug_df = df[df['augmented'] == False].copy()\\n\\nmerged = pd.merge(\\n    aug_df  [['seed','epoch','test_acc','train_loss','val…",
+      "cost": 0.19041429,
+      "step": 10,
+      "tool": "run_python",
+      "type": "tool",
+      "result": "exit_code: 0\nstdout:\nSaved analysis/gap_trajectory.csv\nSaved analysis/checkpoint_stats.csv\n\ngap_trajectory.csv  rows=30  cols=['epoch', 'gap_seed42', 'gap_seed123', 'mean_gap']  NaN=0\ncheckpoint_stats.csv  rows=4  cols=['epoch', 'noaug_s42_test', 'aug_s42_test', 'gap_s42', 'noaug_s123_test', 'aug_s123_test', 'gap_s123', 'mean_gap', 'noaug_s42_trainloss', 'aug_s42_trainloss', 'noaug_s123_trainloss', 'aug_s123_trainloss']  NaN=0\n\n=== gap_trajectory.csv (full) ===\n epoch  gap_seed42  gap_seed123  m…"
+    },
+    {
+      "t": "2026-10-10T07:43:40.798243+00:00",
+      "args": "{\"code\": \"\\nimport pandas as pd\\nimport numpy as np\\n\\n# ── Final comprehensive validation against raw CSVs ───────────────────────────\\nprint(\\\"=== Final validation against raw per-epoch CSVs ===\\\\n\\\")\\n\\nraw_noaug_42  = pd.read_csv('data/metrics_seed42_noaug.csv')\\nraw_aug_42    = pd.read_csv('dat…",
+      "cost": 0.24112159500000002,
+      "step": 11,
+      "tool": "run_python",
+      "type": "tool",
+      "result": "exit_code: 0\nstdout:\n=== Final validation against raw per-epoch CSVs ===\n\n  Ep 5 noaug_s42_test:  raw=91.30  csv=91.30  ✓\n  Ep 5 aug_s42_test:    raw=89.15  csv=89.15  ✓\n  Ep 5 noaug_s123_test: raw=91.76  csv=91.76  ✓\n  Ep 5 aug_s123_test:   raw=88.51  csv=88.51  ✓\n  Ep 5 noaug_s42_trainloss: raw=0.187928  csv=0.187928  ✓\n  Ep 5 aug_s42_trainloss:   raw=0.376089  csv=0.376089  ✓\n\n  Ep10 noaug_s42_test:  raw=92.18  csv=92.18  ✓\n  Ep10 aug_s42_test:    raw=90.27  csv=90.27  ✓\n  Ep10 noaug_s123_tes…"
+    },
+    {
+      "t": "2026-10-10T07:43:56.102186+00:00",
+      "args": "{\"code\": \"\\nimport pandas as pd, numpy as np\\n\\ngap_traj = pd.read_csv('analysis/gap_trajectory.csv')\\nckpt_df  = pd.read_csv('analysis/checkpoint_stats.csv')\\n\\nprint(\\\"=\\\" * 60)\\nprint(\\\"T3.2 COMPUTED VALUES — FULL STDOUT LOG\\\")\\nprint(\\\"=\\\" * 60)\\n\\nprint(\\\"\\\\n── 1. Accuracy Gap Trajectory (all 3…",
+      "cost": 0.28131411,
+      "step": 12,
+      "tool": "run_python",
+      "type": "tool",
+      "result": "exit_code: 0\nstdout:\n============================================================\nT3.2 COMPUTED VALUES — FULL STDOUT LOG\n============================================================\n\n── 1. Accuracy Gap Trajectory (all 30 epochs) ──────────────\n epoch  gap_seed42  gap_seed123  mean_gap\n     1       -4.63        -5.66    -5.145\n     2       -2.51        -3.09    -2.800\n     3       -3.76        -3.50    -3.630\n     4       -2.24        -3.52    -2.880\n     5       -2.15        -3.25    -2.700\n    …"
+    },
+    {
+      "t": "2026-10-10T07:44:10.282757+00:00",
+      "args": "{\"path\": \"scripts/compute_gap_trajectory.py\", \"content\": \"\\\"\\\"\\\"\\nT3.2 — Accuracy Gap Trajectory & Checkpoint Statistics\\n=======================================================\\nInputs : analysis/combined_metrics.csv\\nOutputs: analysis/gap_trajectory.csv   (30 rows)\\n         analysis/checkpoint_st…",
+      "cost": 0.324866685,
+      "step": 13,
+      "tool": "write_file",
+      "type": "tool",
+      "result": "Wrote 3879 chars to scripts/compute_gap_trajectory.py"
+    },
+    {
+      "t": "2026-10-10T07:44:17.836455+00:00",
+      "args": "{\"code\": \"\\n# Final file-existence and content check\\nimport os, pandas as pd\\n\\nfor path in ['analysis/gap_trajectory.csv', 'analysis/checkpoint_stats.csv']:\\n    size = os.path.getsize(path)\\n    df   = pd.read_csv(path)\\n    print(f\\\"{path}  size={size}B  rows={len(df)}  cols={len(df.columns)}  N…",
+      "cost": 0.34281192,
+      "step": 14,
+      "tool": "run_python",
+      "type": "tool",
+      "result": "exit_code: 0\nstdout:\nanalysis/gap_trajectory.csv  size=838B  rows=30  cols=4  NaN=0\n  columns: ['epoch', 'gap_seed42', 'gap_seed123', 'mean_gap']\n  head(3):\n epoch  gap_seed42  gap_seed123  mean_gap\n     1       -4.63        -5.66    -5.145\n     2       -2.51        -3.09    -2.800\n     3       -3.76        -3.50    -3.630\n  tail(2):\n epoch  gap_seed42  gap_seed123  mean_gap\n    29       -0.80         0.09    -0.355\n    30       -1.37        -1.26    -1.315\n\nanalysis/checkpoint_stats.csv  size=6…"
+    },
+    {
+      "t": "2026-10-10T07:44:35.481334+00:00",
+      "args": "{\"status\": \"success\", \"summary\": \"Computed the full 30-epoch accuracy gap trajectory and checkpoint statistics for T3.2. Loaded analysis/combined_metrics.csv (120 rows, 4 groups × 30 epochs), merged augmented vs non-augmented on (seed, epoch), and computed accuracy_gap = test_acc_aug − test_acc_noau…",
+      "cost": 0.37665474,
+      "step": 15,
+      "tool": "report_result",
+      "type": "tool",
+      "result": "Result recorded."
+    }
+  ],
+  "note": null,
+  "feedback": null,
+  "started_at": "2026-10-10 07:41:50.398582+00:00",
+  "finished_at": "2026-10-10 07:44:52.437263+00:00"
+}

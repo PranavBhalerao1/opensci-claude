@@ -1,0 +1,939 @@
+{
+  "schema": "openscientist.master_plan/v1",
+  "tasks": [
+    {
+      "id": "T1.1",
+      "agent": "A1",
+      "steps": [
+        "Create docs/ directory if absent.",
+        "Write docs/architecture_spec.md with the following architecture: Block1=Conv2d(1,32,kernel=3,padding=1)+ReLU+MaxPool2d(2); Block2=Conv2d(32,64,kernel=3,padding=1)+ReLU+MaxPool2d(2); Flatten to 64×7×7=3136; FC(3136,256)+ReLU+Dropout(0.25); FC(256,10). No BatchNorm anywhere.",
+        "Compute parameter count by layer: Conv1=1×32×9+32=320; Conv2=32×64×9+64=18496; FC1=3136×256+256=803072; FC2=256×10+10=2570; total=824458. Document each term.",
+        "Record optimizer: Adam lr=0.001, weight_decay=1e-4, batch_size=64. Record augmentation transforms for train only: RandomHorizontalFlip(p=0.5), RandomCrop(28,padding=3), RandomRotation(degrees=10); val/test use only ToTensor+Normalize(mean=0.2860,std=0.3530).",
+        "Document design rationale: no BatchNorm to prevent it masking underfitting signal; dropout only in FC; capacity chosen so training accuracy is expected below ~85% at epoch 5 on Fashion-MNIST."
+      ],
+      "title": "Write CNN architecture specification",
+      "tools": [
+        "write_file",
+        "run_python"
+      ],
+      "inputs": [],
+      "compute": {
+        "kind": "cpu",
+        "est_minutes": 3,
+        "timeout_minutes": 10
+      },
+      "outputs": [
+        {
+          "path": "docs/architecture_spec.md",
+          "format": "markdown",
+          "description": "CNN architecture specification with layer dimensions, total parameter count (~824K), optimizer settings, augmentation transforms, and design rationale"
+        }
+      ],
+      "retries": 1,
+      "objective": "Produce docs/architecture_spec.md documenting the small CNN's exact layer dimensions, parameter count, optimizer settings, augmentation pipeline, and design rationale.",
+      "resources": [],
+      "depends_on": [],
+      "max_cost_usd": 0.05,
+      "human_required": false,
+      "acceptance_checks": [
+        "docs/architecture_spec.md exists and is non-empty",
+        "File contains total parameter count",
+        "File explicitly states no BatchNorm and dropout=0.25 in FC only"
+      ]
+    },
+    {
+      "id": "T1.2",
+      "agent": "A1",
+      "steps": [
+        "Create src/ directory. Write src/train.py with: (1) argparse flags --seed (int), --augment (str 'true'/'false'), --epochs (int), --data_dir (str, default 'data/fashion_mnist'), --out_dir (str, default 'data'); (2) seed-fixing block: random.seed(seed), numpy.random.seed(seed), torch.manual_seed(seed), torch.cuda.manual_seed_all(seed), torch.backends.cudnn.deterministic=True; (3) dataset loading: FashionMNIST download=True, split 55K/5K with torch.utils.data.random_split using torch.Generator().manual_seed(seed), augmentation transforms applied only to train Subset via a wrapper Dataset; (4) SmallCNN class matching architecture_spec.md exactly; (5) Adam optimizer lr=0.001 weight_decay=1e-4; (6) training loop: train one epoch, evaluate on val and test sets, log epoch/train_loss/val_acc/test_acc to CSV; (7) checkpoint saving at epochs in {5,10,20,30} as <out_dir>/checkpoints/checkpoint_seed<seed>_<aug|noaug>_ep<epoch>.pt; (8) CSV written to <out_dir>/metrics_seed<seed>_<aug|noaug>.csv with a comment header line recording seed, augment, device, start datetime.",
+        "Implement the Subset wrapper so train and val share the same base dataset object (downloaded once) but the train subset uses augmentation transforms while val uses only ToTensor+Normalize.",
+        "Add device = torch.device('cuda' if torch.cuda.is_available() else 'cpu') and move model and batches to device.",
+        "Run CPU smoke test: python src/train.py --seed 42 --augment false --epochs 2 --data_dir /tmp/fmnist_smoke --out_dir /tmp/smoke_out. Verify 2-row CSV exists and checkpoint files exist for epoch 2 (save logic triggers for epoch in {5,10,20,30} so adjust smoke test to use --epochs 5 to test saving, or add epoch 2 as a save point only in smoke mode).",
+        "Verify no syntax errors by running python -c 'import ast; ast.parse(open(\"src/train.py\").read())' and confirm output files have expected names."
+      ],
+      "title": "Implement CNN training script with configurable augmentation",
+      "tools": [
+        "write_file",
+        "run_python",
+        "run_shell",
+        "install_packages"
+      ],
+      "inputs": [
+        {
+          "path": "docs/architecture_spec.md",
+          "source": "task:T1.1"
+        }
+      ],
+      "compute": {
+        "kind": "cpu",
+        "est_minutes": 20,
+        "timeout_minutes": 40
+      },
+      "outputs": [
+        {
+          "path": "src/train.py",
+          "format": "python",
+          "description": "Complete PyTorch training script: SmallCNN class, configurable augmentation, reproducible seeding, per-epoch CSV metric logging, checkpoint saving at epochs 5/10/20/30"
+        }
+      ],
+      "retries": 2,
+      "objective": "Write src/train.py: a complete, self-contained PyTorch training script for Fashion-MNIST with argparse, reproducible seeding, configurable augmentation, per-epoch CSV logging, and checkpoint saving at epochs 5/10/20/30.",
+      "resources": [],
+      "depends_on": [
+        "T1.1"
+      ],
+      "max_cost_usd": 0.5,
+      "human_required": false,
+      "acceptance_checks": [
+        "src/train.py parses without syntax errors",
+        "Script contains SmallCNN class with two Conv blocks, two FC layers, and no BatchNorm",
+        "Script accepts --seed, --augment, --epochs arguments",
+        "Smoke test (5 epochs) produces a 5-row CSV and at least one checkpoint file"
+      ]
+    },
+    {
+      "id": "T1.3",
+      "agent": "A2",
+      "steps": [
+        "Submit a run_gpu_jobs job named 'cuda_validate' with a Python script that: (1) prints and writes torch.__version__, torchvision.__version__, torch.version.cuda, torch.cuda.get_device_name(0); (2) asserts torch.cuda.is_available(); (3) downloads FashionMNIST to data/fashion_mnist with download=True for both train and test splits; (4) confirms len(train_dataset)==60000 and len(test_dataset)==10000; (5) imports SmallCNN from src/train.py; (6) creates a random batch of shape (64,1,28,28), moves to cuda, runs model.cuda()(batch) and confirms output shape (64,10); (7) creates one augmented DataLoader (with RandomHorizontalFlip, RandomCrop, RandomRotation) and one plain DataLoader, iterates one batch from each and confirms tensor shapes; (8) writes all findings to data/gpu_and_data_validation.txt with PASS/FAIL for each check.",
+        "After the GPU job completes, read data/gpu_and_data_validation.txt locally with read_file and confirm CUDA available and GPU name is present.",
+        "Post a note with the GPU name and confirmation that the data pipeline works."
+      ],
+      "title": "Verify CUDA device availability and Fashion-MNIST data pipeline on GPU",
+      "tools": [
+        "run_gpu_jobs",
+        "read_file",
+        "post_note"
+      ],
+      "inputs": [
+        {
+          "path": "src/train.py",
+          "source": "task:T1.2"
+        }
+      ],
+      "compute": {
+        "kind": "cuda_gpu",
+        "est_minutes": 10,
+        "timeout_minutes": 30
+      },
+      "outputs": [
+        {
+          "path": "data/gpu_and_data_validation.txt",
+          "format": "text",
+          "description": "Logged CUDA device name, PyTorch/torchvision/CUDA versions, dataset size confirmation (60000/10000), forward-pass CUDA result, and DataLoader shape validation"
+        }
+      ],
+      "retries": 2,
+      "objective": "Submit a GPU job that confirms CUDA is available, logs the GPU device name and software versions, downloads Fashion-MNIST, runs one forward pass of SmallCNN on CUDA, and writes evidence to data/gpu_and_data_validation.txt.",
+      "resources": [
+        "D1"
+      ],
+      "depends_on": [
+        "T1.2"
+      ],
+      "max_cost_usd": 0.15,
+      "human_required": false,
+      "acceptance_checks": [
+        "data/gpu_and_data_validation.txt exists",
+        "File contains 'CUDA available: True' and a non-'cpu' GPU device name",
+        "File confirms train dataset size 60000 and test dataset size 10000",
+        "File confirms forward pass on CUDA succeeded with output shape (64, 10)"
+      ]
+    },
+    {
+      "id": "T2.1",
+      "agent": "A2",
+      "steps": [
+        "Submit a run_gpu_jobs job named 'train_all_runs'. The job script runs these four commands sequentially: (1) python src/train.py --seed 42 --augment false --epochs 30 --data_dir data/fashion_mnist --out_dir data; (2) python src/train.py --seed 42 --augment true --epochs 30 --data_dir data/fashion_mnist --out_dir data; (3) python src/train.py --seed 123 --augment false --epochs 30 --data_dir data/fashion_mnist --out_dir data; (4) python src/train.py --seed 123 --augment true --epochs 30 --data_dir data/fashion_mnist --out_dir data. Each command logs progress to stdout and exits 0 on success.",
+        "Each run saves checkpoints at epochs 5, 10, 20, 30 as data/checkpoints/checkpoint_seed<seed>_<aug|noaug>_ep<epoch>.pt (16 files total, ~800KB each).",
+        "Each run writes metrics CSV with a comment header line containing the CUDA device name, seed, augment flag, and timestamp.",
+        "After the GPU job completes, read each of the four CSVs locally and confirm each has 30 data rows and no NaN values. Post a summary note with epoch-5 and epoch-30 test accuracies for all four runs.",
+        "If any CSV has fewer than 30 rows, resubmit that single run as a follow-up GPU job with the same flags."
+      ],
+      "title": "Execute all four training runs on GPU in a single packed job",
+      "tools": [
+        "run_gpu_jobs",
+        "read_file",
+        "run_python",
+        "post_note"
+      ],
+      "inputs": [
+        {
+          "path": "src/train.py",
+          "source": "task:T1.2"
+        },
+        {
+          "path": "data/gpu_and_data_validation.txt",
+          "source": "task:T1.3"
+        }
+      ],
+      "compute": {
+        "kind": "cuda_gpu",
+        "est_minutes": 45,
+        "timeout_minutes": 180
+      },
+      "outputs": [
+        {
+          "path": "data/metrics_seed42_noaug.csv",
+          "format": "csv",
+          "description": "Per-epoch train_loss/val_acc/test_acc for seed=42, no augmentation, 30 epochs"
+        },
+        {
+          "path": "data/metrics_seed42_aug.csv",
+          "format": "csv",
+          "description": "Per-epoch train_loss/val_acc/test_acc for seed=42, augmentation, 30 epochs"
+        },
+        {
+          "path": "data/metrics_seed123_noaug.csv",
+          "format": "csv",
+          "description": "Per-epoch train_loss/val_acc/test_acc for seed=123, no augmentation, 30 epochs"
+        },
+        {
+          "path": "data/metrics_seed123_aug.csv",
+          "format": "csv",
+          "description": "Per-epoch train_loss/val_acc/test_acc for seed=123, augmentation, 30 epochs"
+        },
+        {
+          "path": "data/checkpoints/checkpoint_seed42_noaug_ep5.pt",
+          "format": "pytorch",
+          "description": "Model state_dict at epoch 5, seed 42, no augmentation"
+        },
+        {
+          "path": "data/checkpoints/checkpoint_seed42_noaug_ep10.pt",
+          "format": "pytorch",
+          "description": "Model state_dict at epoch 10, seed 42, no augmentation"
+        },
+        {
+          "path": "data/checkpoints/checkpoint_seed42_noaug_ep20.pt",
+          "format": "pytorch",
+          "description": "Model state_dict at epoch 20, seed 42, no augmentation"
+        },
+        {
+          "path": "data/checkpoints/checkpoint_seed42_noaug_ep30.pt",
+          "format": "pytorch",
+          "description": "Model state_dict at epoch 30, seed 42, no augmentation"
+        },
+        {
+          "path": "data/checkpoints/checkpoint_seed42_aug_ep5.pt",
+          "format": "pytorch",
+          "description": "Model state_dict at epoch 5, seed 42, augmentation"
+        },
+        {
+          "path": "data/checkpoints/checkpoint_seed42_aug_ep10.pt",
+          "format": "pytorch",
+          "description": "Model state_dict at epoch 10, seed 42, augmentation"
+        },
+        {
+          "path": "data/checkpoints/checkpoint_seed42_aug_ep20.pt",
+          "format": "pytorch",
+          "description": "Model state_dict at epoch 20, seed 42, augmentation"
+        },
+        {
+          "path": "data/checkpoints/checkpoint_seed42_aug_ep30.pt",
+          "format": "pytorch",
+          "description": "Model state_dict at epoch 30, seed 42, augmentation"
+        },
+        {
+          "path": "data/checkpoints/checkpoint_seed123_noaug_ep5.pt",
+          "format": "pytorch",
+          "description": "Model state_dict at epoch 5, seed 123, no augmentation"
+        },
+        {
+          "path": "data/checkpoints/checkpoint_seed123_noaug_ep10.pt",
+          "format": "pytorch",
+          "description": "Model state_dict at epoch 10, seed 123, no augmentation"
+        },
+        {
+          "path": "data/checkpoints/checkpoint_seed123_noaug_ep20.pt",
+          "format": "pytorch",
+          "description": "Model state_dict at epoch 20, seed 123, no augmentation"
+        },
+        {
+          "path": "data/checkpoints/checkpoint_seed123_noaug_ep30.pt",
+          "format": "pytorch",
+          "description": "Model state_dict at epoch 30, seed 123, no augmentation"
+        },
+        {
+          "path": "data/checkpoints/checkpoint_seed123_aug_ep5.pt",
+          "format": "pytorch",
+          "description": "Model state_dict at epoch 5, seed 123, augmentation"
+        },
+        {
+          "path": "data/checkpoints/checkpoint_seed123_aug_ep10.pt",
+          "format": "pytorch",
+          "description": "Model state_dict at epoch 10, seed 123, augmentation"
+        },
+        {
+          "path": "data/checkpoints/checkpoint_seed123_aug_ep20.pt",
+          "format": "pytorch",
+          "description": "Model state_dict at epoch 20, seed 123, augmentation"
+        },
+        {
+          "path": "data/checkpoints/checkpoint_seed123_aug_ep30.pt",
+          "format": "pytorch",
+          "description": "Model state_dict at epoch 30, seed 123, augmentation"
+        }
+      ],
+      "retries": 2,
+      "objective": "Run all four training conditions (seed42/noaug, seed42/aug, seed123/noaug, seed123/aug) sequentially in one GPU job, producing four 30-row metric CSVs and 16 checkpoint files.",
+      "resources": [
+        "D1"
+      ],
+      "depends_on": [
+        "T1.2",
+        "T1.3"
+      ],
+      "max_cost_usd": 0.4,
+      "human_required": false,
+      "acceptance_checks": [
+        "All four metric CSVs exist and each has exactly 30 data rows",
+        "All test_acc values across all CSVs are in the range [50, 99]",
+        "No NaN or missing values in any CSV",
+        "Checkpoint files exist for ep5 and ep30 for all four conditions (8 files minimum)",
+        "Each CSV header comment contains a CUDA device name (not 'cpu')"
+      ]
+    },
+    {
+      "id": "T2.2",
+      "agent": "A2",
+      "steps": [
+        "Run a Python script that reads data/metrics_seed42_aug.csv with pandas.",
+        "Check: exactly 30 rows, columns {epoch, train_loss, val_acc, test_acc} all present, no NaN values, all test_acc values between 50 and 99.",
+        "Print the rows at epochs 1, 5, 10, 20, 30 as a sanity check visible in logs.",
+        "Write data/run_checks/seed42_aug_verified.txt with status PASS or FAIL and the epoch-5 test_acc value."
+      ],
+      "title": "Verify seed-42 augmented run CSV outputs",
+      "tools": [
+        "run_python",
+        "write_file"
+      ],
+      "inputs": [
+        {
+          "path": "data/metrics_seed42_aug.csv",
+          "source": "task:T2.1"
+        }
+      ],
+      "compute": {
+        "kind": "cpu",
+        "est_minutes": 2,
+        "timeout_minutes": 5
+      },
+      "outputs": [
+        {
+          "path": "data/run_checks/seed42_aug_verified.txt",
+          "format": "text",
+          "description": "Verification record for seed-42 augmented run: row count, NaN check, accuracy range, epoch-5 test_acc"
+        }
+      ],
+      "retries": 1,
+      "objective": "Confirm data/metrics_seed42_aug.csv is structurally complete and numerically plausible; produce a verification record.",
+      "resources": [],
+      "depends_on": [
+        "T2.1"
+      ],
+      "max_cost_usd": 0.03,
+      "human_required": false,
+      "acceptance_checks": [
+        "data/run_checks/seed42_aug_verified.txt exists",
+        "File contains 'PASS'"
+      ]
+    },
+    {
+      "id": "T2.3",
+      "agent": "A2",
+      "steps": [
+        "Run a Python script that reads data/metrics_seed123_noaug.csv with pandas.",
+        "Check: exactly 30 rows, required columns present, no NaN, test_acc values between 50 and 99.",
+        "Print rows at epochs 1, 5, 10, 20, 30.",
+        "Write data/run_checks/seed123_noaug_verified.txt with PASS or FAIL and epoch-5 test_acc."
+      ],
+      "title": "Verify seed-123 no-augmentation run CSV outputs",
+      "tools": [
+        "run_python",
+        "write_file"
+      ],
+      "inputs": [
+        {
+          "path": "data/metrics_seed123_noaug.csv",
+          "source": "task:T2.1"
+        }
+      ],
+      "compute": {
+        "kind": "cpu",
+        "est_minutes": 2,
+        "timeout_minutes": 5
+      },
+      "outputs": [
+        {
+          "path": "data/run_checks/seed123_noaug_verified.txt",
+          "format": "text",
+          "description": "Verification record for seed-123 no-augmentation run: row count, NaN check, accuracy range, epoch-5 test_acc"
+        }
+      ],
+      "retries": 1,
+      "objective": "Confirm data/metrics_seed123_noaug.csv is structurally complete and numerically plausible; produce a verification record.",
+      "resources": [],
+      "depends_on": [
+        "T2.1"
+      ],
+      "max_cost_usd": 0.03,
+      "human_required": false,
+      "acceptance_checks": [
+        "data/run_checks/seed123_noaug_verified.txt exists",
+        "File contains 'PASS'"
+      ]
+    },
+    {
+      "id": "T2.4",
+      "agent": "A2",
+      "steps": [
+        "Run a Python script that reads data/metrics_seed123_aug.csv with pandas.",
+        "Check: exactly 30 rows, required columns present, no NaN, test_acc values between 50 and 99.",
+        "Print rows at epochs 1, 5, 10, 20, 30.",
+        "Write data/run_checks/seed123_aug_verified.txt with PASS or FAIL and epoch-5 test_acc."
+      ],
+      "title": "Verify seed-123 augmented run CSV outputs",
+      "tools": [
+        "run_python",
+        "write_file"
+      ],
+      "inputs": [
+        {
+          "path": "data/metrics_seed123_aug.csv",
+          "source": "task:T2.1"
+        }
+      ],
+      "compute": {
+        "kind": "cpu",
+        "est_minutes": 2,
+        "timeout_minutes": 5
+      },
+      "outputs": [
+        {
+          "path": "data/run_checks/seed123_aug_verified.txt",
+          "format": "text",
+          "description": "Verification record for seed-123 augmented run: row count, NaN check, accuracy range, epoch-5 test_acc"
+        }
+      ],
+      "retries": 1,
+      "objective": "Confirm data/metrics_seed123_aug.csv is structurally complete and numerically plausible; produce a verification record.",
+      "resources": [],
+      "depends_on": [
+        "T2.1"
+      ],
+      "max_cost_usd": 0.03,
+      "human_required": false,
+      "acceptance_checks": [
+        "data/run_checks/seed123_aug_verified.txt exists",
+        "File contains 'PASS'"
+      ]
+    },
+    {
+      "id": "T3.1",
+      "agent": "A3",
+      "steps": [
+        "Install pandas if not available. Load data/metrics_seed42_noaug.csv, data/metrics_seed42_aug.csv, data/metrics_seed123_noaug.csv, data/metrics_seed123_aug.csv.",
+        "Add columns: seed (42 or 123) and augmented (True/False) to each dataframe before concatenating.",
+        "Concatenate into a single dataframe with columns: seed, augmented, epoch, train_loss, val_acc, test_acc. Confirm total rows = 4 runs × 30 epochs = 120.",
+        "Validate: no NaN values, all test_acc values in [50, 99], epochs 1–30 present for each of the four (seed, augmented) combinations.",
+        "Write to analysis/combined_metrics.csv. Print a pivot table of mean test_acc by (seed, augmented, epoch) for epochs {5, 10, 20, 30} as a quick sanity check."
+      ],
+      "title": "Aggregate per-epoch metrics from all four runs into a unified dataframe",
+      "tools": [
+        "run_python",
+        "write_file",
+        "install_packages"
+      ],
+      "inputs": [
+        {
+          "path": "data/metrics_seed42_noaug.csv",
+          "source": "task:T2.1"
+        },
+        {
+          "path": "data/metrics_seed42_aug.csv",
+          "source": "task:T2.1"
+        },
+        {
+          "path": "data/metrics_seed123_noaug.csv",
+          "source": "task:T2.1"
+        },
+        {
+          "path": "data/metrics_seed123_aug.csv",
+          "source": "task:T2.1"
+        }
+      ],
+      "compute": {
+        "kind": "cpu",
+        "est_minutes": 3,
+        "timeout_minutes": 10
+      },
+      "outputs": [
+        {
+          "path": "analysis/combined_metrics.csv",
+          "format": "csv",
+          "description": "Unified 120-row dataframe with columns: seed, augmented, epoch, train_loss, val_acc, test_acc for all four runs"
+        }
+      ],
+      "retries": 1,
+      "objective": "Load the four metric CSVs, add seed and augmented flag columns, concatenate into combined_metrics.csv, and validate completeness and accuracy plausibility.",
+      "resources": [],
+      "depends_on": [
+        "T2.1",
+        "T2.2",
+        "T2.3",
+        "T2.4"
+      ],
+      "max_cost_usd": 0.1,
+      "human_required": false,
+      "acceptance_checks": [
+        "analysis/combined_metrics.csv exists and has exactly 120 rows",
+        "Columns seed, augmented, epoch, train_loss, val_acc, test_acc all present",
+        "No NaN values in any column",
+        "Four unique (seed, augmented) combinations each with 30 rows"
+      ]
+    },
+    {
+      "id": "T3.2",
+      "agent": "A3",
+      "steps": [
+        "Load analysis/combined_metrics.csv. For each (seed, epoch) pair compute accuracy_gap = test_acc_aug − test_acc_noaug by merging augmented and non-augmented rows on (seed, epoch).",
+        "Compute mean_gap(epoch) = mean of accuracy_gap across both seeds at each epoch.",
+        "Save gap_trajectory.csv with columns: epoch, gap_seed42, gap_seed123, mean_gap (30 rows).",
+        "For checkpoint epochs {5, 10, 20, 30} extract per-condition per-seed test_acc and train_loss values. Compute mean test_acc per condition across seeds. Compute train-val proxy divergence as (train_loss / (1-val_acc)) or simply note both values separately.",
+        "Save checkpoint_stats.csv with columns: epoch, noaug_s42_test, aug_s42_test, gap_s42, noaug_s123_test, aug_s123_test, gap_s123, mean_gap, noaug_s42_trainloss, aug_s42_trainloss, noaug_s123_trainloss, aug_s123_trainloss (4 rows).",
+        "Print all computed values to stdout for logging."
+      ],
+      "title": "Compute accuracy gap trajectory and checkpoint statistics",
+      "tools": [
+        "run_python",
+        "write_file",
+        "install_packages"
+      ],
+      "inputs": [
+        {
+          "path": "analysis/combined_metrics.csv",
+          "source": "task:T3.1"
+        }
+      ],
+      "compute": {
+        "kind": "cpu",
+        "est_minutes": 3,
+        "timeout_minutes": 10
+      },
+      "outputs": [
+        {
+          "path": "analysis/gap_trajectory.csv",
+          "format": "csv",
+          "description": "30-row accuracy gap trajectory: epoch, gap_seed42, gap_seed123, mean_gap"
+        },
+        {
+          "path": "analysis/checkpoint_stats.csv",
+          "format": "csv",
+          "description": "4-row checkpoint summary at epochs 5/10/20/30: per-seed per-condition test accuracies, gaps, mean gap, and training losses"
+        }
+      ],
+      "retries": 1,
+      "objective": "Produce gap_trajectory.csv (per-seed and mean accuracy gap for all 30 epochs) and checkpoint_stats.csv (accuracy and loss metrics at epochs 5/10/20/30 for all four conditions).",
+      "resources": [],
+      "depends_on": [
+        "T3.1"
+      ],
+      "max_cost_usd": 0.15,
+      "human_required": false,
+      "acceptance_checks": [
+        "analysis/gap_trajectory.csv exists and has exactly 30 rows with columns epoch, gap_seed42, gap_seed123, mean_gap",
+        "analysis/checkpoint_stats.csv exists and has exactly 4 rows for epochs 5, 10, 20, 30",
+        "No NaN values in either file",
+        "gap values are consistent: gap_seed42 at epoch e matches aug_s42_test − noaug_s42_test in checkpoint_stats at checkpoint epochs"
+      ]
+    },
+    {
+      "id": "T3.3",
+      "agent": "A3",
+      "steps": [
+        "Load analysis/gap_trajectory.csv and analysis/checkpoint_stats.csv.",
+        "Scan epochs 1–30 for the first epoch e* such that mean_gap > 0 for epochs e*, e*+1, e*+2. If no such e* exists within epoch 28 (to allow 3 consecutive), report 'No crossover within 30 epochs'.",
+        "Read the epoch-5 gap values: gap_seed42 at epoch=5 and gap_seed123 at epoch=5 from gap_trajectory.csv. Classify epoch-5 regime: 'underfitting-penalty-confirmed' if both seeds show gap ≤ 0; 'early-benefit' if both show gap > 0; 'mixed' if one positive and one non-positive.",
+        "Read train_loss and val_acc at epoch 5 and epoch 30 from checkpoint_stats.csv for both conditions and seeds. Compute train-val divergence proxy for underfitting (high train_loss at ep5) and overfitting emergence (falling train_loss + stagnating val_acc at ep30 for no-aug condition).",
+        "Write analysis/crossover_report.txt with: epoch-5 gap values for both seeds and mean, regime classification, crossover epoch (or no-crossover statement), mean_gap at epochs 5/10/20/30, train_loss and val_acc at epochs 5 and 30 for each condition/seed, and all raw numbers used."
+      ],
+      "title": "Identify crossover epoch and classify epoch-5 regime",
+      "tools": [
+        "run_python",
+        "write_file",
+        "read_file",
+        "post_note"
+      ],
+      "inputs": [
+        {
+          "path": "analysis/gap_trajectory.csv",
+          "source": "task:T3.2"
+        },
+        {
+          "path": "analysis/checkpoint_stats.csv",
+          "source": "task:T3.2"
+        }
+      ],
+      "compute": {
+        "kind": "cpu",
+        "est_minutes": 5,
+        "timeout_minutes": 15
+      },
+      "outputs": [
+        {
+          "path": "analysis/crossover_report.txt",
+          "format": "text",
+          "description": "Crossover epoch identification, epoch-5 regime classification (underfitting-penalty-confirmed/mixed/early-benefit), and supporting train-val divergence evidence"
+        }
+      ],
+      "retries": 1,
+      "objective": "From gap_trajectory.csv, find the first epoch where mean_gap > 0 for at least 3 consecutive epochs; classify the epoch-5 regime; write findings to analysis/crossover_report.txt.",
+      "resources": [],
+      "depends_on": [
+        "T3.2"
+      ],
+      "max_cost_usd": 0.2,
+      "human_required": false,
+      "acceptance_checks": [
+        "analysis/crossover_report.txt exists and is non-empty",
+        "File contains epoch-5 gap values for both seeds",
+        "File contains a regime classification string (one of: underfitting-penalty-confirmed, early-benefit, mixed)",
+        "File contains a crossover epoch statement (numeric epoch or 'No crossover within 30 epochs')",
+        "All numeric values in the file can be traced back to gap_trajectory.csv or checkpoint_stats.csv"
+      ]
+    },
+    {
+      "id": "T4.1",
+      "agent": "A4",
+      "steps": [
+        "Load analysis/combined_metrics.csv. Create a matplotlib figure with a single axis.",
+        "Plot four lines: (seed=42, aug=False) as solid blue, (seed=42, aug=True) as solid orange, (seed=123, aug=False) as dashed blue, (seed=123, aug=True) as dashed orange. X-axis: epoch 1–30; Y-axis: test_acc.",
+        "Add a vertical dashed grey line at epoch=5 labeled 'Epoch-5 target budget' with a text annotation.",
+        "Set axis labels 'Training Epoch' and 'Test Accuracy (%)', title 'Test Accuracy: Augmented vs Non-Augmented (Fashion-MNIST)', and a legend identifying each line by seed and condition.",
+        "Save figures/fig1_test_accuracy_curves.png and figures/fig1_test_accuracy_curves.pdf at dpi=300. Create figures/ directory if absent."
+      ],
+      "title": "Plot per-epoch test accuracy curves for all four runs",
+      "tools": [
+        "run_python",
+        "install_packages",
+        "write_file"
+      ],
+      "inputs": [
+        {
+          "path": "analysis/combined_metrics.csv",
+          "source": "task:T3.1"
+        }
+      ],
+      "compute": {
+        "kind": "cpu",
+        "est_minutes": 3,
+        "timeout_minutes": 10
+      },
+      "outputs": [
+        {
+          "path": "figures/fig1_test_accuracy_curves.png",
+          "format": "png",
+          "description": "Test accuracy curves for all four runs with epoch-5 vertical marker, 300 dpi"
+        },
+        {
+          "path": "figures/fig1_test_accuracy_curves.pdf",
+          "format": "pdf",
+          "description": "Vector version of fig1 for paper submission"
+        }
+      ],
+      "retries": 1,
+      "objective": "Produce fig1_test_accuracy_curves.png and .pdf: test accuracy vs epoch for all four runs with epoch-5 vertical marker, consistent color/style coding, and proper labeling.",
+      "resources": [],
+      "depends_on": [
+        "T3.1"
+      ],
+      "max_cost_usd": 0.1,
+      "human_required": false,
+      "acceptance_checks": [
+        "figures/fig1_test_accuracy_curves.png exists with file size > 20KB",
+        "figures/fig1_test_accuracy_curves.pdf exists",
+        "Figure has four distinct lines (confirmed by checking matplotlib axes line count)"
+      ]
+    },
+    {
+      "id": "T4.2",
+      "agent": "A4",
+      "steps": [
+        "Load analysis/gap_trajectory.csv and read analysis/crossover_report.txt to extract the crossover epoch value (or 'None' if no crossover).",
+        "Create a matplotlib figure. Plot gap_seed42 as a thin solid line and gap_seed123 as a thin dashed line; plot mean_gap as a bold solid black line. Add a horizontal grey dashed reference line at gap=0.",
+        "Mark the epoch-5 gap values for each seed with filled circles (same colors as the respective lines).",
+        "If a crossover epoch was identified, add a vertical annotated line at that epoch with label 'Crossover (epoch N)'. If no crossover, add a text note 'No crossover within 30 epochs'.",
+        "Set axis labels 'Training Epoch' and 'Accuracy Gap: Aug − No-Aug (pp)', title 'Augmentation Benefit Trajectory', legend, and save as figures/fig2_accuracy_gap.png and .pdf at dpi=300."
+      ],
+      "title": "Plot accuracy gap trajectory as primary result figure",
+      "tools": [
+        "run_python",
+        "install_packages",
+        "read_file"
+      ],
+      "inputs": [
+        {
+          "path": "analysis/gap_trajectory.csv",
+          "source": "task:T3.2"
+        },
+        {
+          "path": "analysis/crossover_report.txt",
+          "source": "task:T3.3"
+        }
+      ],
+      "compute": {
+        "kind": "cpu",
+        "est_minutes": 3,
+        "timeout_minutes": 10
+      },
+      "outputs": [
+        {
+          "path": "figures/fig2_accuracy_gap.png",
+          "format": "png",
+          "description": "Primary result: accuracy gap trajectory with per-seed lines, mean line, zero reference, epoch-5 markers, and crossover annotation, 300 dpi"
+        },
+        {
+          "path": "figures/fig2_accuracy_gap.pdf",
+          "format": "pdf",
+          "description": "Vector version of fig2 for paper submission"
+        }
+      ],
+      "retries": 1,
+      "objective": "Produce fig2_accuracy_gap.png and .pdf: accuracy gap vs epoch with per-seed lines, bold mean line, zero reference line, epoch-5 markers, and annotated crossover epoch.",
+      "resources": [],
+      "depends_on": [
+        "T3.2",
+        "T3.3"
+      ],
+      "max_cost_usd": 0.12,
+      "human_required": false,
+      "acceptance_checks": [
+        "figures/fig2_accuracy_gap.png exists with file size > 20KB",
+        "figures/fig2_accuracy_gap.pdf exists",
+        "Figure contains a zero-reference line (y=0 plotted)"
+      ]
+    },
+    {
+      "id": "T4.3",
+      "agent": "A4",
+      "steps": [
+        "Load analysis/combined_metrics.csv.",
+        "Create a 2×2 matplotlib figure with shared x-axis (epoch 1–30). Rows: seed 42 (top), seed 123 (bottom). Columns: no-aug (left), aug (right).",
+        "In each subplot, plot train_loss on the left y-axis (blue line) and val_acc on the right y-axis (orange line). Add a vertical dashed grey line at epoch=5.",
+        "Label each subplot with seed and condition in the title. Add a shared super-title 'Training Dynamics: Loss and Validation Accuracy'.",
+        "Apply tight_layout(). Save figures/fig3_loss_curves.png and figures/fig3_loss_curves.pdf at dpi=300."
+      ],
+      "title": "Plot training loss and validation accuracy curves for underfitting and overfitting diagnosis",
+      "tools": [
+        "run_python",
+        "install_packages"
+      ],
+      "inputs": [
+        {
+          "path": "analysis/combined_metrics.csv",
+          "source": "task:T3.1"
+        }
+      ],
+      "compute": {
+        "kind": "cpu",
+        "est_minutes": 3,
+        "timeout_minutes": 10
+      },
+      "outputs": [
+        {
+          "path": "figures/fig3_loss_curves.png",
+          "format": "png",
+          "description": "2x2 subplot grid of train_loss and val_acc for all four runs, showing underfitting at epoch 5 and overfitting emergence by epoch 30, 300 dpi"
+        },
+        {
+          "path": "figures/fig3_loss_curves.pdf",
+          "format": "pdf",
+          "description": "Vector version of fig3 for paper submission"
+        }
+      ],
+      "retries": 1,
+      "objective": "Produce fig3_loss_curves.png and .pdf: a 2×2 subplot grid (rows=seeds, columns=conditions) showing train_loss and val_acc on dual y-axes with epoch-5 markers.",
+      "resources": [],
+      "depends_on": [
+        "T3.1"
+      ],
+      "max_cost_usd": 0.1,
+      "human_required": false,
+      "acceptance_checks": [
+        "figures/fig3_loss_curves.png exists with file size > 30KB",
+        "figures/fig3_loss_curves.pdf exists"
+      ]
+    },
+    {
+      "id": "T4.4",
+      "agent": "A4",
+      "steps": [
+        "Load analysis/checkpoint_stats.csv. Format all accuracy values to two decimal places as percentage strings (e.g. '87.43'). Format gap values with sign (+/−).",
+        "Write analysis/table1_checkpoint_summary.csv with columns: epoch, noaug_s42_test, aug_s42_test, gap_s42, noaug_s123_test, aug_s123_test, gap_s123, mean_gap.",
+        "Generate analysis/table1_checkpoint_summary.tex as a LaTeX tabular environment with booktabs-style rules (\\toprule, \\midrule, \\bottomrule), appropriate column headers, and all values formatted to 2 decimal places.",
+        "Read analysis/crossover_report.txt to extract epoch-5 gaps, regime classification, and crossover epoch.",
+        "Create results/ directory if absent. Write results/SUMMARY.md with sections: (1) Study metadata (title, seeds, epochs, architecture); (2) Key result: epoch-5 accuracy gap per seed and mean, regime classification; (3) Crossover: identified epoch or 'None within 30 epochs', mean_gap at epochs 5/10/20/30; (4) Checkpoint table (inline markdown table from checkpoint_stats.csv); (5) Training dynamics summary (train_loss and val_acc at epochs 5 and 30 per condition); (6) Figure inventory (file paths for fig1–fig3); (7) Data provenance note referencing GPU device from data/gpu_and_data_validation.txt."
+      ],
+      "title": "Compile checkpoint summary table and produce final results summary",
+      "tools": [
+        "run_python",
+        "write_file",
+        "read_file",
+        "install_packages"
+      ],
+      "inputs": [
+        {
+          "path": "analysis/checkpoint_stats.csv",
+          "source": "task:T3.2"
+        },
+        {
+          "path": "analysis/crossover_report.txt",
+          "source": "task:T3.3"
+        }
+      ],
+      "compute": {
+        "kind": "cpu",
+        "est_minutes": 5,
+        "timeout_minutes": 15
+      },
+      "outputs": [
+        {
+          "path": "analysis/table1_checkpoint_summary.csv",
+          "format": "csv",
+          "description": "Formatted checkpoint summary table at epochs 5/10/20/30 with per-seed per-condition test accuracies and gaps, 2 decimal place formatting"
+        },
+        {
+          "path": "analysis/table1_checkpoint_summary.tex",
+          "format": "latex",
+          "description": "LaTeX tabular environment for table1 with booktabs rules and formatted values"
+        },
+        {
+          "path": "results/SUMMARY.md",
+          "format": "markdown",
+          "description": "Complete results summary with all key numeric findings: epoch-5 gaps, regime classification, crossover epoch, checkpoint table, and figure inventory"
+        }
+      ],
+      "retries": 1,
+      "objective": "Export table1_checkpoint_summary as CSV and LaTeX tabular, and write results/SUMMARY.md with all key numeric results for the Report stage.",
+      "resources": [],
+      "depends_on": [
+        "T3.2",
+        "T3.3"
+      ],
+      "max_cost_usd": 0.2,
+      "human_required": false,
+      "acceptance_checks": [
+        "analysis/table1_checkpoint_summary.csv exists and has 4 rows",
+        "analysis/table1_checkpoint_summary.tex exists and contains \\begin{tabular} and \\end{tabular}",
+        "results/SUMMARY.md exists and contains the strings 'epoch-5' and 'regime' and a numeric gap value",
+        "results/SUMMARY.md references fig1, fig2, and fig3 by file path"
+      ]
+    }
+  ],
+  "title": "Augmentation Benefit Direction in the 5-Epoch Underfitting Regime: A Crossover Analysis for Small CNNs on Fashion-MNIST",
+  "agents": [
+    {
+      "id": "A1",
+      "name": "ML Implementation Engineer",
+      "tools": [
+        "run_python",
+        "write_file",
+        "read_file",
+        "run_shell",
+        "install_packages",
+        "post_note"
+      ],
+      "model_tier": "standard",
+      "instructions": "You write the CNN architecture specification and src/train.py. Implement the exact architecture from architecture_spec.md (two Conv-ReLU-MaxPool blocks, two FC layers, dropout=0.25, no BatchNorm). Include argparse flags --seed, --augment, --epochs, --data_dir, --out_dir. Fix torch/numpy/random/CUDA seeds. Apply augmentation only to train subset. Save per-epoch CSV and checkpoints at epochs 5,10,20,30. Run a CPU smoke test (2 epochs) before finalizing to confirm syntax and file outputs."
+    },
+    {
+      "id": "A2",
+      "name": "GPU Training Engineer",
+      "tools": [
+        "run_gpu_jobs",
+        "run_python",
+        "write_file",
+        "read_file",
+        "run_shell",
+        "post_note",
+        "read_notes"
+      ],
+      "model_tier": "standard",
+      "instructions": "You orchestrate all GPU computation via run_gpu_jobs. Submit a quick CUDA-validation job first (T1.3): download Fashion-MNIST, confirm device name, run one forward pass, write gpu_and_data_validation.txt. Then submit a single packed job (T2.1) running all four training runs sequentially to avoid queue overhead. After each GPU job finishes, read output files locally to verify shape and accuracy range, write verification records, and share findings via post_note."
+    },
+    {
+      "id": "A3",
+      "name": "Analysis Scientist",
+      "tools": [
+        "run_python",
+        "read_file",
+        "write_file",
+        "install_packages",
+        "post_note",
+        "read_notes"
+      ],
+      "model_tier": "reasoning",
+      "instructions": "You perform the crossover analysis. Load and concatenate all four per-epoch CSVs, validate completeness, and compute accuracy_gap = test_acc_aug − test_acc_noaug for every (seed, epoch) pair plus mean_gap. Apply the pre-specified crossover criterion: first epoch where mean_gap > 0 for at least 3 consecutive epochs. Classify the epoch-5 regime as underfitting-penalty-confirmed / mixed / early-benefit. Report train-val loss divergence at epochs 5 and 30 as supporting evidence. Validate every computed number against raw CSVs before writing outputs."
+    },
+    {
+      "id": "A4",
+      "name": "Visualization and Results Engineer",
+      "tools": [
+        "run_python",
+        "read_file",
+        "write_file",
+        "install_packages",
+        "post_note",
+        "read_notes"
+      ],
+      "model_tier": "standard",
+      "instructions": "You produce all publication-quality figures (PNG + PDF at 300 dpi) and the final results/SUMMARY.md. Use consistent color coding: blue=no-aug, orange=aug; solid=seed42, dashed=seed123. Annotate figures with epoch-5 vertical markers and the crossover epoch from crossover_report.txt. Export the checkpoint table as both CSV and a LaTeX tabular environment. SUMMARY.md must include epoch-5 gap values for both seeds and their mean, regime classification, crossover epoch, and checkpoint accuracies at epochs 5/10/20/30."
+    }
+  ],
+  "summary": "An ML implementation agent writes the CNN architecture specification and a fully configurable PyTorch training script with seeding, CSV logging, and checkpoint saving. A GPU training agent then runs a quick CUDA validation job (downloading Fashion-MNIST and verifying a forward pass) followed by a single packed GPU job that trains all four conditions (2 seeds × 2 augmentation settings, 30 epochs each) sequentially, before running lightweight CPU verification tasks. An analysis agent aggregates the four per-epoch CSVs, computes the full accuracy-gap trajectory, and identifies the crossover epoch using the pre-specified three-consecutive-epoch criterion. A visualization agent produces three publication-quality figure sets and a LaTeX checkpoint-summary table, culminating in results/SUMMARY.md collecting all key numbers for the Report stage.",
+  "datasets": [
+    {
+      "id": "D1",
+      "url": "https://github.com/zalandoresearch/fashion-mnist",
+      "name": "Fashion-MNIST",
+      "notes": "60000 training + 10000 test 28×28 grayscale images, 10 clothing classes. Split 55K/5K train/val with torch.utils.data.random_split using a Generator seeded before any transform so augmentation does not affect the split. Augmentation transforms applied only to the 55K train subset, not validation or test.",
+      "format": "IDX binary (ubyte), gzip-compressed; four files; torchvision decompresses automatically",
+      "license": "MIT License — Copyright © 2017 Zalando SE",
+      "verified": true,
+      "access_method": "torchvision.datasets.FashionMNIST(root='data/fashion_mnist', train=True/False, download=True, transform=...) — torchvision auto-downloads four IDX gz files (~30 MB) from the Zalando S3 mirror"
+    }
+  ],
+  "checkpoints": [
+    {
+      "reason": "Verify that a CUDA GPU is confirmed available (device name logged) and Fashion-MNIST data pipeline works before committing ~45 minutes of GPU training time in T2.1.",
+      "after_task": "T1.3"
+    },
+    {
+      "reason": "Inspect the four metric CSVs to confirm all 30-epoch runs completed with plausible test accuracies (>50%) and that epoch-5 training accuracy is below ~90%, confirming the underfitting regime assumption before downstream analysis begins.",
+      "after_task": "T2.1"
+    }
+  ],
+  "execution_notes": [
+    "T5.1 (conference-style paper writing) from the approved plan is excluded per blueprint rules; the Report stage will write the paper from results/SUMMARY.md, figures, and tables. results/SUMMARY.md produced by T4.4 serves as the handoff artifact.",
+    "All four training runs are packed into a single GPU job in T2.1 (sequential execution within one job script) to minimize GPU-session startup overhead and avoid queue delays from the 1-concurrent-session limit. T2.2–T2.4 therefore become lightweight CPU verification tasks rather than independent training runs.",
+    "T2.3 and T2.4 now both depend directly on T2.1 (not T1.3 and T2.3 respectively as in the original plan) since their training outputs are produced by T2.1. T3.1 depends on all of T2.1–T2.4 to ensure verifications complete before aggregation.",
+    "If epoch-5 training accuracy exceeds 90% in all four runs (model not in underfitting regime), the experiment should be re-run with --lr 0.0003 as noted in the plan's open questions; this constitutes a protocol deviation and must be reported in results/SUMMARY.md.",
+    "Checkpoint files (~800KB each, 16 total ≈ 13MB) and Fashion-MNIST data (~30MB) are both well within the 500MB GPU-job sync limit and will be available in the workspace after each GPU job completes.",
+    "RandomHorizontalFlip is applied to all 10 Fashion-MNIST classes including asymmetric items (shoes, bags), consistent with standard Fashion-MNIST benchmarks. This assumption is documented in docs/architecture_spec.md."
+  ],
+  "python_packages": [
+    "torch>=2.0.0",
+    "torchvision>=0.15.0",
+    "numpy>=1.24.0",
+    "pandas>=2.0.0",
+    "matplotlib>=3.7.0"
+  ],
+  "llm_usd_estimate": 3.0,
+  "system_requirements": [],
+  "compute_hours_estimate": 1.0,
+  "warnings": [],
+  "budget": {
+    "llm_usd": 15.0,
+    "gpu_hours": 5.0
+  }
+}

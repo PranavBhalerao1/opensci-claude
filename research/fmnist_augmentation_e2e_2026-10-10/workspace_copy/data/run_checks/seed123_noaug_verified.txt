@@ -1,0 +1,29 @@
+VERIFICATION RECORD — seed123 / no-augmentation run
+======================================================
+File checked : data/metrics_seed123_noaug.csv
+Check date   : 2026-10-10
+Verifier     : GPU Training Engineer (T2.3)
+
+--- Structural checks ---
+Row count      : 30  [PASS — expected 30]
+Required cols  : train_loss, train_acc, val_acc, test_acc  [PASS]
+NaN cells      : 0  [PASS]
+
+--- Numerical checks ---
+test_acc range : min=87.34%  max=92.55%  [PASS — within (50, 99)]
+
+--- Spot-check rows ---
+epoch | train_loss | train_acc | val_acc | test_acc
+------+------------+-----------+---------+---------
+    1 |   0.428606 |   84.4855 |   87.82 |    87.34
+    5 |   0.187989 |   93.0691 |   91.72 |    91.76
+   10 |   0.117908 |   95.6655 |   92.38 |    92.04
+   20 |   0.061228 |   97.7709 |   92.22 |    92.05
+   30 |   0.047374 |   98.3036 |   92.40 |    92.26
+
+--- Key result ---
+Epoch-5 test_acc : 91.76%
+(consistent with T2.1 upstream result of 91.76%)
+
+--- Overall verdict ---
+PASS

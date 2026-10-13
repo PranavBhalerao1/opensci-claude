@@ -1,0 +1,31 @@
+============================================================
+GPU & DATA PIPELINE VALIDATION REPORT
+Generated: 2026-10-10T04:41:32.034562 UTC
+============================================================
+
+[SOFTWARE VERSIONS]
+  torch version             : 2.11.0+cu130
+  torchvision version       : 0.26.0+cu130
+  CUDA version (torch)      : 13.0
+
+[HARDWARE]
+  CUDA available            : True
+  GPU device name           : NVIDIA L4
+
+[DATASET SIZES]
+  Train dataset size        : 60000  (expected 60000) -> PASS
+  Test  dataset size        : 10000   (expected 10000) -> PASS
+
+[FORWARD PASS ON CUDA]
+  Input  shape              : (64, 1, 28, 28)
+  Output shape              : (64, 10)
+  Forward pass CUDA         : PASS
+  Trainable parameters      : 824458  (expected 824458)
+
+[DATALOADER SHAPES]
+  Augmented  loader batch   : (64, 1, 28, 28)  -> PASS
+  Plain      loader batch   : (64, 1, 28, 28) -> PASS
+
+[SUMMARY]
+  All checks PASSED         : True
+============================================================

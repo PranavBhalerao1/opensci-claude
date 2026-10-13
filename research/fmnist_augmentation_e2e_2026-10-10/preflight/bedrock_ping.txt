@@ -1,0 +1,8 @@
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 1 item
+
+tests/test_bedrock_integration.py::test_live_text_request 
+[text] model=us.anthropic.claude-sonnet-4-6 calls=1 in=12 cached=0 out=4 searches=0 cost=$0.0001
+PASSED
+
+============================== 1 passed in 7.01s ===============================

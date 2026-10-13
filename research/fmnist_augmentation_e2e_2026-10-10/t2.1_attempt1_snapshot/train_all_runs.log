@@ -1,0 +1,205 @@
+=== Environment Check ===
+torch: 2.11.0+cu130
+CUDA: True
+GPU: NVIDIA L4
+
+========================================
+RUN 1/4: seed=42, augment=false
+========================================
+[2026-10-10T04:44:44] seed=42 augment=False epochs=30 device=cuda
+SmallCNN trainable parameters: 824,458  (expected 824,458)
+Epoch   1/30  train_loss=0.4355  train_acc=0.8425  val_acc=0.8884  test_acc=0.8823
+Epoch   2/30  train_loss=0.2827  train_acc=0.8959  val_acc=0.8964  test_acc=0.8934
+Epoch   3/30  train_loss=0.2378  train_acc=0.9127  val_acc=0.9150  test_acc=0.9095
+Epoch   4/30  train_loss=0.2093  train_acc=0.9226  val_acc=0.9094  test_acc=0.9035
+Epoch   5/30  train_loss=0.1879  train_acc=0.9309  val_acc=0.9112  test_acc=0.9130
+  ✓ Checkpoint saved → data/checkpoints/checkpoint_seed42_noaug_ep5.pt
+Epoch   6/30  train_loss=0.1693  train_acc=0.9385  val_acc=0.9194  test_acc=0.9201
+Epoch   7/30  train_loss=0.1557  train_acc=0.9413  val_acc=0.9196  test_acc=0.9206
+Epoch   8/30  train_loss=0.1395  train_acc=0.9483  val_acc=0.9172  test_acc=0.9158
+Epoch   9/30  train_loss=0.1282  train_acc=0.9523  val_acc=0.9238  test_acc=0.9236
+Epoch  10/30  train_loss=0.1166  train_acc=0.9568  val_acc=0.9228  test_acc=0.9218
+  ✓ Checkpoint saved → data/checkpoints/checkpoint_seed42_noaug_ep10.pt
+Epoch  11/30  train_loss=0.1085  train_acc=0.9597  val_acc=0.9206  test_acc=0.9214
+Epoch  12/30  train_loss=0.1026  train_acc=0.9624  val_acc=0.9220  test_acc=0.9234
+Epoch  13/30  train_loss=0.0938  train_acc=0.9645  val_acc=0.9200  test_acc=0.9182
+Epoch  14/30  train_loss=0.0874  train_acc=0.9669  val_acc=0.9210  test_acc=0.9224
+Epoch  15/30  train_loss=0.0809  train_acc=0.9696  val_acc=0.9216  test_acc=0.9220
+Epoch  16/30  train_loss=0.0778  train_acc=0.9708  val_acc=0.9244  test_acc=0.9238
+Epoch  17/30  train_loss=0.0723  train_acc=0.9734  val_acc=0.9250  test_acc=0.9232
+Epoch  18/30  train_loss=0.0697  train_acc=0.9743  val_acc=0.9268  test_acc=0.9263
+Epoch  19/30  train_loss=0.0670  train_acc=0.9753  val_acc=0.9202  test_acc=0.9200
+Epoch  20/30  train_loss=0.0628  train_acc=0.9767  val_acc=0.9234  test_acc=0.9235
+  ✓ Checkpoint saved → data/checkpoints/checkpoint_seed42_noaug_ep20.pt
+Epoch  21/30  train_loss=0.0629  train_acc=0.9762  val_acc=0.9230  test_acc=0.9155
+Epoch  22/30  train_loss=0.0607  train_acc=0.9786  val_acc=0.9224  test_acc=0.9224
+Epoch  23/30  train_loss=0.0577  train_acc=0.9797  val_acc=0.9228  test_acc=0.9202
+Epoch  24/30  train_loss=0.0565  train_acc=0.9794  val_acc=0.9242  test_acc=0.9242
+Epoch  25/30  train_loss=0.0556  train_acc=0.9796  val_acc=0.9206  test_acc=0.9213
+Epoch  26/30  train_loss=0.0533  train_acc=0.9810  val_acc=0.9200  test_acc=0.9170
+Epoch  27/30  train_loss=0.0510  train_acc=0.9818  val_acc=0.9198  test_acc=0.9222
+Epoch  28/30  train_loss=0.0527  train_acc=0.9809  val_acc=0.9206  test_acc=0.9180
+Epoch  29/30  train_loss=0.0517  train_acc=0.9809  val_acc=0.9226  test_acc=0.9218
+Epoch  30/30  train_loss=0.0510  train_acc=0.9812  val_acc=0.9278  test_acc=0.9265
+  ✓ Checkpoint saved → data/checkpoints/checkpoint_seed42_noaug_ep30.pt
+
+Done.  CSV  → data/metrics_seed42_noaug.csv
+        Ckpt → data/checkpoints/
+RUN 1 COMPLETE
+
+========================================
+RUN 2/4: seed=42, augment=true
+========================================
+[2026-10-10T04:52:36] seed=42 augment=True epochs=30 device=cuda
+SmallCNN trainable parameters: 824,458  (expected 824,458)
+Epoch   1/30  train_loss=0.6937  train_acc=0.7421  val_acc=0.8400  test_acc=0.8360
+Epoch   2/30  train_loss=0.4897  train_acc=0.8168  val_acc=0.8712  test_acc=0.8683
+Epoch   3/30  train_loss=0.4303  train_acc=0.8401  val_acc=0.8742  test_acc=0.8719
+Epoch   4/30  train_loss=0.3965  train_acc=0.8541  val_acc=0.8834  test_acc=0.8811
+Epoch   5/30  train_loss=0.3761  train_acc=0.8623  val_acc=0.8926  test_acc=0.8915
+  ✓ Checkpoint saved → data/checkpoints/checkpoint_seed42_aug_ep5.pt
+Epoch   6/30  train_loss=0.3596  train_acc=0.8683  val_acc=0.8948  test_acc=0.8959
+Epoch   7/30  train_loss=0.3486  train_acc=0.8736  val_acc=0.9020  test_acc=0.8979
+Epoch   8/30  train_loss=0.3422  train_acc=0.8748  val_acc=0.9028  test_acc=0.8959
+Epoch   9/30  train_loss=0.3333  train_acc=0.8780  val_acc=0.9052  test_acc=0.8995
+Epoch  10/30  train_loss=0.3257  train_acc=0.8806  val_acc=0.9056  test_acc=0.9027
+  ✓ Checkpoint saved → data/checkpoints/checkpoint_seed42_aug_ep10.pt
+Epoch  11/30  train_loss=0.3232  train_acc=0.8815  val_acc=0.9040  test_acc=0.9077
+Epoch  12/30  train_loss=0.3175  train_acc=0.8843  val_acc=0.9030  test_acc=0.9035
+Epoch  13/30  train_loss=0.3156  train_acc=0.8842  val_acc=0.9106  test_acc=0.9080
+Epoch  14/30  train_loss=0.3074  train_acc=0.8871  val_acc=0.9062  test_acc=0.9042
+Epoch  15/30  train_loss=0.3067  train_acc=0.8866  val_acc=0.9016  test_acc=0.8960
+Epoch  16/30  train_loss=0.3042  train_acc=0.8878  val_acc=0.9050  test_acc=0.9038
+Epoch  17/30  train_loss=0.3001  train_acc=0.8910  val_acc=0.9098  test_acc=0.9050
+Epoch  18/30  train_loss=0.2980  train_acc=0.8911  val_acc=0.9098  test_acc=0.9065
+Epoch  19/30  train_loss=0.2933  train_acc=0.8931  val_acc=0.9140  test_acc=0.9095
+Epoch  20/30  train_loss=0.2934  train_acc=0.8898  val_acc=0.9064  test_acc=0.9013
+  ✓ Checkpoint saved → data/checkpoints/checkpoint_seed42_aug_ep20.pt
+Epoch  21/30  train_loss=0.2893  train_acc=0.8932  val_acc=0.9096  test_acc=0.9089
+Epoch  22/30  train_loss=0.2904  train_acc=0.8937  val_acc=0.9036  test_acc=0.9024
+Epoch  23/30  train_loss=0.2871  train_acc=0.8952  val_acc=0.9144  test_acc=0.9123
+Epoch  24/30  train_loss=0.2841  train_acc=0.8973  val_acc=0.9088  test_acc=0.9072
+Epoch  25/30  train_loss=0.2852  train_acc=0.8945  val_acc=0.9052  test_acc=0.9041
+Epoch  26/30  train_loss=0.2827  train_acc=0.8958  val_acc=0.9144  test_acc=0.9118
+Epoch  27/30  train_loss=0.2825  train_acc=0.8969  val_acc=0.9124  test_acc=0.9125
+Epoch  28/30  train_loss=0.2828  train_acc=0.8971  val_acc=0.9184  test_acc=0.9164
+Epoch  29/30  train_loss=0.2777  train_acc=0.8969  val_acc=0.9128  test_acc=0.9138
+Epoch  30/30  train_loss=0.2774  train_acc=0.8991  val_acc=0.9082  test_acc=0.9128
+  ✓ Checkpoint saved → data/checkpoints/checkpoint_seed42_aug_ep30.pt
+
+Done.  CSV  → data/metrics_seed42_aug.csv
+        Ckpt → data/checkpoints/
+RUN 2 COMPLETE
+
+========================================
+RUN 3/4: seed=123, augment=false
+========================================
+[2026-10-10T05:06:07] seed=123 augment=False epochs=30 device=cuda
+SmallCNN trainable parameters: 824,458  (expected 824,458)
+Epoch   1/30  train_loss=0.4286  train_acc=0.8449  val_acc=0.8782  test_acc=0.8734
+Epoch   2/30  train_loss=0.2824  train_acc=0.8959  val_acc=0.9072  test_acc=0.9003
+Epoch   3/30  train_loss=0.2406  train_acc=0.9114  val_acc=0.9160  test_acc=0.9098
+Epoch   4/30  train_loss=0.2097  train_acc=0.9221  val_acc=0.9140  test_acc=0.9053
+Epoch   5/30  train_loss=0.1880  train_acc=0.9307  val_acc=0.9172  test_acc=0.9176
+  ✓ Checkpoint saved → data/checkpoints/checkpoint_seed123_noaug_ep5.pt
+Epoch   6/30  train_loss=0.1703  train_acc=0.9381  val_acc=0.9252  test_acc=0.9202
+Epoch   7/30  train_loss=0.1516  train_acc=0.9443  val_acc=0.9198  test_acc=0.9154
+Epoch   8/30  train_loss=0.1374  train_acc=0.9497  val_acc=0.9238  test_acc=0.9198
+Epoch   9/30  train_loss=0.1271  train_acc=0.9530  val_acc=0.9170  test_acc=0.9167
+Epoch  10/30  train_loss=0.1179  train_acc=0.9567  val_acc=0.9238  test_acc=0.9204
+  ✓ Checkpoint saved → data/checkpoints/checkpoint_seed123_noaug_ep10.pt
+Epoch  11/30  train_loss=0.1069  train_acc=0.9607  val_acc=0.9200  test_acc=0.9181
+Epoch  12/30  train_loss=0.0987  train_acc=0.9632  val_acc=0.9266  test_acc=0.9255
+Epoch  13/30  train_loss=0.0935  train_acc=0.9648  val_acc=0.9234  test_acc=0.9241
+Epoch  14/30  train_loss=0.0855  train_acc=0.9677  val_acc=0.9268  test_acc=0.9213
+Epoch  15/30  train_loss=0.0805  train_acc=0.9700  val_acc=0.9250  test_acc=0.9241
+Epoch  16/30  train_loss=0.0755  train_acc=0.9723  val_acc=0.9266  test_acc=0.9212
+Epoch  17/30  train_loss=0.0736  train_acc=0.9726  val_acc=0.9248  test_acc=0.9223
+Epoch  18/30  train_loss=0.0661  train_acc=0.9758  val_acc=0.9286  test_acc=0.9226
+Epoch  19/30  train_loss=0.0646  train_acc=0.9760  val_acc=0.9250  test_acc=0.9205
+Epoch  20/30  train_loss=0.0612  train_acc=0.9777  val_acc=0.9222  test_acc=0.9205
+  ✓ Checkpoint saved → data/checkpoints/checkpoint_seed123_noaug_ep20.pt
+Epoch  21/30  train_loss=0.0631  train_acc=0.9764  val_acc=0.9288  test_acc=0.9232
+Epoch  22/30  train_loss=0.0591  train_acc=0.9780  val_acc=0.9206  test_acc=0.9188
+Epoch  23/30  train_loss=0.0562  train_acc=0.9786  val_acc=0.9226  test_acc=0.9220
+Epoch  24/30  train_loss=0.0546  train_acc=0.9807  val_acc=0.9250  test_acc=0.9215
+Epoch  25/30  train_loss=0.0535  train_acc=0.9811  val_acc=0.9212  test_acc=0.9201
+Epoch  26/30  train_loss=0.0569  train_acc=0.9789  val_acc=0.9250  test_acc=0.9205
+Epoch  27/30  train_loss=0.0514  train_acc=0.9805  val_acc=0.9218  test_acc=0.9193
+Epoch  28/30  train_loss=0.0493  train_acc=0.9817  val_acc=0.9258  test_acc=0.9214
+Epoch  29/30  train_loss=0.0504  train_acc=0.9812  val_acc=0.9208  test_acc=0.9185
+Epoch  30/30  train_loss=0.0474  train_acc=0.9830  val_acc=0.9240  test_acc=0.9226
+  ✓ Checkpoint saved → data/checkpoints/checkpoint_seed123_noaug_ep30.pt
+
+Done.  CSV  → data/metrics_seed123_noaug.csv
+        Ckpt → data/checkpoints/
+RUN 3 COMPLETE
+
+========================================
+RUN 4/4: seed=123, augment=true
+========================================
+[2026-10-10T05:13:57] seed=123 augment=True epochs=30 device=cuda
+SmallCNN trainable parameters: 824,458  (expected 824,458)
+Epoch   1/30  train_loss=0.6856  train_acc=0.7441  val_acc=0.8188  test_acc=0.8168
+Epoch   2/30  train_loss=0.4835  train_acc=0.8200  val_acc=0.8712  test_acc=0.8694
+Epoch   3/30  train_loss=0.4278  train_acc=0.8402  val_acc=0.8766  test_acc=0.8748
+Epoch   4/30  train_loss=0.3960  train_acc=0.8534  val_acc=0.8738  test_acc=0.8701
+Epoch   5/30  train_loss=0.3738  train_acc=0.8610  val_acc=0.8872  test_acc=0.8851
+  ✓ Checkpoint saved → data/checkpoints/checkpoint_seed123_aug_ep5.pt
+Epoch   6/30  train_loss=0.3607  train_acc=0.8671  val_acc=0.8904  test_acc=0.8906
+Epoch   7/30  train_loss=0.3492  train_acc=0.8708  val_acc=0.9050  test_acc=0.9004
+Epoch   8/30  train_loss=0.3447  train_acc=0.8717  val_acc=0.8950  test_acc=0.8893
+Epoch   9/30  train_loss=0.3374  train_acc=0.8761  val_acc=0.9016  test_acc=0.8992
+Epoch  10/30  train_loss=0.3269  train_acc=0.8794  val_acc=0.9074  test_acc=0.9010
+  ✓ Checkpoint saved → data/checkpoints/checkpoint_seed123_aug_ep10.pt
+Epoch  11/30  train_loss=0.3212  train_acc=0.8814  val_acc=0.9054  test_acc=0.9033
+Epoch  12/30  train_loss=0.3171  train_acc=0.8831  val_acc=0.9012  test_acc=0.8948
+Epoch  13/30  train_loss=0.3150  train_acc=0.8842  val_acc=0.9134  test_acc=0.9046
+Epoch  14/30  train_loss=0.3140  train_acc=0.8850  val_acc=0.9082  test_acc=0.9040
+Epoch  15/30  train_loss=0.3054  train_acc=0.8882  val_acc=0.9078  test_acc=0.9088
+Epoch  16/30  train_loss=0.3012  train_acc=0.8885  val_acc=0.9090  test_acc=0.9051
+Epoch  17/30  train_loss=0.3030  train_acc=0.8872  val_acc=0.9164  test_acc=0.9113
+Epoch  18/30  train_loss=0.2982  train_acc=0.8912  val_acc=0.9098  test_acc=0.9039
+Epoch  19/30  train_loss=0.2964  train_acc=0.8914  val_acc=0.9010  test_acc=0.9016
+Epoch  20/30  train_loss=0.2978  train_acc=0.8893  val_acc=0.9174  test_acc=0.9112
+  ✓ Checkpoint saved → data/checkpoints/checkpoint_seed123_aug_ep20.pt
+Epoch  21/30  train_loss=0.2937  train_acc=0.8926  val_acc=0.9160  test_acc=0.9098
+Epoch  22/30  train_loss=0.2898  train_acc=0.8931  val_acc=0.9170  test_acc=0.9114
+Epoch  23/30  train_loss=0.2848  train_acc=0.8935  val_acc=0.9174  test_acc=0.9109
+Epoch  24/30  train_loss=0.2835  train_acc=0.8956  val_acc=0.9160  test_acc=0.9085
+Epoch  25/30  train_loss=0.2862  train_acc=0.8947  val_acc=0.9088  test_acc=0.9039
+Epoch  26/30  train_loss=0.2842  train_acc=0.8955  val_acc=0.9094  test_acc=0.9011
+Epoch  27/30  train_loss=0.2841  train_acc=0.8954  val_acc=0.9120  test_acc=0.9093
+Epoch  28/30  train_loss=0.2818  train_acc=0.8962  val_acc=0.9162  test_acc=0.9126
+Epoch  29/30  train_loss=0.2796  train_acc=0.8975  val_acc=0.9244  test_acc=0.9194
+Epoch  30/30  train_loss=0.2807  train_acc=0.8964  val_acc=0.9118  test_acc=0.9100
+  ✓ Checkpoint saved → data/checkpoints/checkpoint_seed123_aug_ep30.pt
+
+Done.  CSV  → data/metrics_seed123_aug.csv
+        Ckpt → data/checkpoints/
+RUN 4 COMPLETE
+
+=== Listing output files ===
+-rw-r--r-- 1 root root 1.2K Oct 10 05:27 data/metrics_seed123_aug.csv
+-rw-r--r-- 1 root root 1.2K Oct 10 05:13 data/metrics_seed123_noaug.csv
+-rw-r--r-- 1 root root 1.2K Oct 10 05:06 data/metrics_seed42_aug.csv
+-rw-r--r-- 1 root root 1.2K Oct 10 04:52 data/metrics_seed42_noaug.csv
+total 152M
+-rw-r--r-- 1 root root 9.5M Oct 10 05:18 checkpoint_seed123_aug_ep10.pt
+-rw-r--r-- 1 root root 9.5M Oct 10 05:22 checkpoint_seed123_aug_ep20.pt
+-rw-r--r-- 1 root root 9.5M Oct 10 05:27 checkpoint_seed123_aug_ep30.pt
+-rw-r--r-- 1 root root 9.5M Oct 10 05:16 checkpoint_seed123_aug_ep5.pt
+-rw-r--r-- 1 root root 9.5M Oct 10 05:08 checkpoint_seed123_noaug_ep10.pt
+-rw-r--r-- 1 root root 9.5M Oct 10 05:11 checkpoint_seed123_noaug_ep20.pt
+-rw-r--r-- 1 root root 9.5M Oct 10 05:13 checkpoint_seed123_noaug_ep30.pt
+-rw-r--r-- 1 root root 9.5M Oct 10 05:07 checkpoint_seed123_noaug_ep5.pt
+-rw-r--r-- 1 root root 9.5M Oct 10 04:57 checkpoint_seed42_aug_ep10.pt
+-rw-r--r-- 1 root root 9.5M Oct 10 05:01 checkpoint_seed42_aug_ep20.pt
+-rw-r--r-- 1 root root 9.5M Oct 10 05:06 checkpoint_seed42_aug_ep30.pt
+-rw-r--r-- 1 root root 9.5M Oct 10 04:54 checkpoint_seed42_aug_ep5.pt
+-rw-r--r-- 1 root root 9.5M Oct 10 04:47 checkpoint_seed42_noaug_ep10.pt
+-rw-r--r-- 1 root root 9.5M Oct 10 04:49 checkpoint_seed42_noaug_ep20.pt
+-rw-r--r-- 1 root root 9.5M Oct 10 04:52 checkpoint_seed42_noaug_ep30.pt
+-rw-r--r-- 1 root root 9.5M Oct 10 04:46 checkpoint_seed42_noaug_ep5.pt
+=== ALL RUNS COMPLETE ===
+NVIDIA L4

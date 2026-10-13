@@ -1,0 +1,156 @@
+{
+  "id": "b0012d5f888f",
+  "project_id": "a2794d1959b5",
+  "blueprint_run_id": "42581927e395",
+  "task_id": "T3.1",
+  "agent": "A3",
+  "status": "done",
+  "attempts": 1,
+  "cost": 0.368679135,
+  "summary": "Aggregated all four per-epoch metric CSVs into analysis/combined_metrics.csv (120 rows, 6 columns: seed, augmented, epoch, train_loss, val_acc, test_acc). All five acceptance checks passed (row count, columns, no NaN, 4 groups × 30 rows, test_acc in [50,99]). Full crossover analysis completed: accuracy_gap = test_acc_aug − test_acc_noaug computed for all 60 (seed, epoch) pairs; mean_gap trajectory over all 30 epochs is uniformly negative (range −5.15 to −0.36 pp). The pre-specified crossover criterion (first epoch with mean_gap > 0 for ≥ 3 consecutive epochs) is never satisfied within 30 epochs. Epoch-5 mean_gap = −2.70 pp → regime classified as underfitting-penalty-confirmed. Supporting evidence: at epoch 5 the augmented models have Δtrain_loss ≈ +0.19 pp (harder to fit) and Δval_acc ≈ −1.9 to −3.0 pp; at epoch 30 the training-loss gap widens to +0.23 pp while val_acc gap narrows slightly to −1.2 to −2.0 pp. All computed values validated against raw CSVs (8/8 spot-checks match T2.1 reported values exactly).",
+  "artifacts": [
+    "analysis/combined_metrics.csv",
+    "analysis/accuracy_gap_trajectory.csv",
+    "analysis/per_seed_accuracy_gap.csv",
+    "analysis/crossover_summary.json",
+    "scripts/aggregate_metrics.py",
+    "scripts/crossover_analysis.py"
+  ],
+  "checks": [
+    {
+      "check": "analysis/combined_metrics.csv exists and has exactly 120 rows",
+      "passed": true,
+      "reason": "FACTS explicitly state '120 data rows (excluding the header)' for analysis/combined_metrics.csv."
+    },
+    {
+      "check": "Columns seed, augmented, epoch, train_loss, val_acc, test_acc all present",
+      "passed": true,
+      "reason": "FACTS list the columns as 'seed,augmented,epoch,train_loss,val_acc,test_acc', matching all six required columns exactly."
+    },
+    {
+      "check": "No NaN values in any column",
+      "passed": true,
+      "reason": "All visible rows in the preview contain valid numeric values with no gaps, and no contradicting evidence exists in the FACTS; agent reports nan_count=0 which is consistent with the file content shown."
+    },
+    {
+      "check": "Four unique (seed, augmented) combinations each with 30 rows",
+      "passed": true,
+      "reason": "The preview shows seed=42/False starting at epoch 1 and seed=123/True ending at epoch 30, and 4 groups × 30 epochs = 120 rows matches the FACTS-confirmed row count of 120."
+    }
+  ],
+  "issues": [],
+  "events": [
+    {
+      "t": "2026-10-10T07:38:47.163854+00:00",
+      "args": "{\"code\": \"\\nimport os, glob\\n\\n# First, let's see what files exist\\nfor f in sorted(glob.glob(\\\"data/metrics_*.csv\\\")):\\n    print(f\\\"=== {f} ===\\\")\\n    with open(f) as fh:\\n        lines = fh.readlines()\\n    print(f\\\"  Total lines: {len(lines)}\\\")\\n    print(f\\\"  Line 1: {lines[0].strip()}\\\")\\n  …",
+      "cost": 0.0201069,
+      "step": 1,
+      "tool": "run_python",
+      "type": "tool",
+      "result": "exit_code: 0\nstdout:\n=== data/metrics_seed123_aug.csv ===\n  Total lines: 31\n  Line 1: # seed=123 augment=True device=cuda start=2026-10-10T07:20:55,train_loss,train_acc,val_acc,test_acc\n  Line 2: 1,0.685644,74.4109,81.88,81.68\n  Line 3: 2,0.483478,81.9982,87.12,86.94\n  Last line: 30,0.280691,89.6364,91.18,91.0\n\n=== data/metrics_seed123_noaug.csv ===\n  Total lines: 31\n  Line 1: # seed=123 augment=False device=cuda start=2026-10-10T07:12:36,train_loss,train_acc,val_acc,test_acc\n  Line 2: 1,0.42860…"
+    },
+    {
+      "t": "2026-10-10T07:38:56.109191+00:00",
+      "args": "{\"code\": \"\\nimport pandas as pd\\n\\n# Read one file to see the exact column names pandas produces\\ndf_test = pd.read_csv(\\\"data/metrics_seed42_noaug.csv\\\")\\nprint(\\\"Columns:\\\", df_test.columns.tolist())\\nprint(\\\"Shape:\\\", df_test.shape)\\nprint(\\\"Head(3):\\\\n\\\", df_test.head(3))\\nprint(\\\"Dtypes:\\\\n\\\", …",
+      "cost": 0.03179121,
+      "step": 2,
+      "tool": "run_python",
+      "type": "tool",
+      "result": "exit_code: 0\nstdout:\nColumns: ['# seed=42 augment=False device=cuda start=2026-10-10T06:50:48', 'train_loss', 'train_acc', 'val_acc', 'test_acc']\nShape: (30, 5)\nHead(3):\n    # seed=42 augment=False device=cuda start=2026-10-10T06:50:48  ...  test_acc\n0                                                  1              ...     88.23\n1                                                  2              ...     89.34\n2                                                  3              ...     90.95\n\n[3 rows …"
+    },
+    {
+      "t": "2026-10-10T07:39:08.638931+00:00",
+      "args": "{\"code\": \"\\nimport pandas as pd\\n\\n# Verify all four CSVs produce 30 rows each with plain pd.read_csv\\nconfigs = [\\n    (\\\"data/metrics_seed42_noaug.csv\\\",  42,  False),\\n    (\\\"data/metrics_seed42_aug.csv\\\",    42,  True),\\n    (\\\"data/metrics_seed123_noaug.csv\\\", 123, False),\\n    (\\\"data/metrics_…",
+      "cost": 0.049049220000000004,
+      "step": 3,
+      "tool": "run_python",
+      "type": "tool",
+      "result": "exit_code: 0\nstdout:\ndata/metrics_seed42_noaug.csv: shape=(30, 5), cols=['# seed=42 augment=False device=cuda start=2026-10-10T06:50:48', 'train_loss', 'train_acc', 'val_acc', 'test_acc']\ndata/metrics_seed42_aug.csv: shape=(30, 5), cols=['# seed=42 augment=True device=cuda start=2026-10-10T06:59:04', 'train_loss', 'train_acc', 'val_acc', 'test_acc']\ndata/metrics_seed123_noaug.csv: shape=(30, 5), cols=['# seed=123 augment=False device=cuda start=2026-10-10T07:12:36', 'train_loss', 'train_acc', 'v…"
+    },
+    {
+      "t": "2026-10-10T07:39:22.318037+00:00",
+      "args": "{\"path\": \"scripts/aggregate_metrics.py\", \"content\": \"\\\"\\\"\\\"\\nscripts/aggregate_metrics.py\\nAggregates per-epoch metric CSVs from all four training runs into a single\\ncombined_metrics.csv for downstream crossover analysis.\\n\\nProvenance:\\n  Source files : data/metrics_seed{42,123}_{aug,noaug}.csv\\n …",
+      "cost": 0.07744176,
+      "step": 4,
+      "tool": "write_file",
+      "type": "tool",
+      "result": "Wrote 4025 chars to scripts/aggregate_metrics.py"
+    },
+    {
+      "t": "2026-10-10T07:39:26.756489+00:00",
+      "args": "{\"code\": \"\\nexec(open(\\\"scripts/aggregate_metrics.py\\\").read())\\n\"}",
+      "cost": 0.08632305,
+      "step": 5,
+      "tool": "run_python",
+      "type": "tool",
+      "result": "exit_code: 0\nstdout:\n  Loaded data/metrics_seed42_noaug.csv: 30 rows, epoch range [1–30]\n  Loaded data/metrics_seed42_aug.csv: 30 rows, epoch range [1–30]\n  Loaded data/metrics_seed123_noaug.csv: 30 rows, epoch range [1–30]\n  Loaded data/metrics_seed123_aug.csv: 30 rows, epoch range [1–30]\n\nCombined shape : (120, 6)\nColumns        : ['seed', 'augmented', 'epoch', 'train_loss', 'val_acc', 'test_acc']\n\nValidation: ALL CHECKS PASSED\n  NaN values     : 0\n  test_acc range : [81.68, 92.65]\n  Groups (s…"
+    },
+    {
+      "t": "2026-10-10T07:40:07.067836+00:00",
+      "args": "{\"path\": \"scripts/crossover_analysis.py\", \"content\": \"\\\"\\\"\\\"\\nscripts/crossover_analysis.py\\nCrossover analysis for the augmentation benefit direction study.\\n\\nComputes:\\n  - accuracy_gap = test_acc_aug − test_acc_noaug  for every (seed, epoch)\\n  - mean_gap across seeds for each epoch\\n  - First c…",
+      "cost": 0.15483237,
+      "step": 6,
+      "tool": "write_file",
+      "type": "tool",
+      "result": "Wrote 7014 chars to scripts/crossover_analysis.py"
+    },
+    {
+      "t": "2026-10-10T07:40:11.969690+00:00",
+      "args": "{\"code\": \"\\nexec(open(\\\"scripts/crossover_analysis.py\\\").read())\\n\"}",
+      "cost": 0.174822615,
+      "step": 7,
+      "tool": "run_python",
+      "type": "tool",
+      "result": "exit_code: 1\nstdout:\nLoaded combined_metrics.csv  shape=(120, 6)\nMerged (seed × epoch) shape  : (60, 10)\n\nFull mean_gap trajectory:\n epoch  mean_gap\n     1    -5.145\n     2    -2.800\n     3    -3.630\n     4    -2.880\n     5    -2.700\n     6    -2.690\n     7    -1.885\n     8    -2.520\n     9    -2.080\n    10    -1.925\n    11    -1.425\n    12    -2.530\n    13    -1.485\n    14    -1.775\n    15    -2.065\n    16    -1.805\n    17    -1.460\n    18    -1.925\n    19    -1.470\n    20    -1.575\n    21    -…"
+    },
+    {
+      "t": "2026-10-10T07:40:29.961803+00:00",
+      "args": "{\"code\": \"\\nimport os, json\\nimport numpy as np\\nimport pandas as pd\\n\\n# ── Re-run the full analysis with the bug-fix ──────────────────────────────────\\n\\ndf = pd.read_csv(\\\"analysis/combined_metrics.csv\\\")\\n\\nnoaug = df[df[\\\"augmented\\\"] == False].copy()\\naug   = df[df[\\\"augmented\\\"] == True].cop…",
+      "cost": 0.22027945499999999,
+      "step": 8,
+      "tool": "run_python",
+      "type": "tool",
+      "result": "exit_code: 0\nstdout:\n── Raw-CSV cross-check ──\n  seed=42 aug=False ep= 5: expected=91.30  actual=91.30  ✓\n  seed=42 aug=True ep= 5: expected=89.15  actual=89.15  ✓\n  seed=123 aug=False ep= 5: expected=91.76  actual=91.76  ✓\n  seed=123 aug=True ep= 5: expected=88.51  actual=88.51  ✓\n  seed=42 aug=False ep=30: expected=92.65  actual=92.65  ✓\n  seed=42 aug=True ep=30: expected=91.28  actual=91.28  ✓\n  seed=123 aug=False ep=30: expected=92.26  actual=92.26  ✓\n  seed=123 aug=True ep=30: expected=91.0…"
+    },
+    {
+      "t": "2026-10-10T07:40:37.068174+00:00",
+      "args": "{\"code\": \"\\n# Final verification — check all output files\\nimport pandas as pd, json\\n\\nprint(\\\"=== analysis/combined_metrics.csv ===\\\")\\ncm = pd.read_csv(\\\"analysis/combined_metrics.csv\\\")\\nprint(f\\\"Shape        : {cm.shape}\\\")\\nprint(f\\\"Columns      : {cm.columns.tolist()}\\\")\\nprint(f\\\"NaN count  …",
+      "cost": 0.242722095,
+      "step": 9,
+      "tool": "run_python",
+      "type": "tool",
+      "result": "exit_code: 0\nstdout:\n=== analysis/combined_metrics.csv ===\nShape        : (120, 6)\nColumns      : ['seed', 'augmented', 'epoch', 'train_loss', 'val_acc', 'test_acc']\nNaN count    : 0\ntest_acc range : [81.68, 92.65]\nGroups (30 rows each):\nseed  augmented\n42    False        30\n      True         30\n123   False        30\n      True         30\nUnique (seed,aug) combos : 4\n\n=== analysis/accuracy_gap_trajectory.csv ===\n epoch  mean_gap\n     1    -5.145\n     2    -2.800\n     3    -3.630\n     4    -2.88…"
+    },
+    {
+      "t": "2026-10-10T07:41:06.168065+00:00",
+      "args": "{\"path\": \"scripts/crossover_analysis.py\", \"content\": \"\\\"\\\"\\\"\\nscripts/crossover_analysis.py\\nCrossover analysis for the augmentation benefit direction study.\\n\\nComputes:\\n  - accuracy_gap = test_acc_aug − test_acc_noaug  for every (seed, epoch)\\n  - mean_gap across seeds for each epoch\\n  - First c…",
+      "cost": 0.30509589,
+      "step": 10,
+      "tool": "write_file",
+      "type": "tool",
+      "result": "Wrote 7876 chars to scripts/crossover_analysis.py"
+    },
+    {
+      "t": "2026-10-10T07:41:15.307651+00:00",
+      "args": "{\"code\": \"\\n# Final acceptance check battery — simulates the verifier's exact tests\\nimport pandas as pd\\n\\npath = \\\"analysis/combined_metrics.csv\\\"\\ndf = pd.read_csv(path)\\n\\nchecks = {}\\n\\n# 1. Row count\\nchecks[\\\"row_count_120\\\"]          = (len(df) == 120)\\n\\n# 2. Required columns present\\nreq_c…",
+      "cost": 0.331734975,
+      "step": 11,
+      "tool": "run_python",
+      "type": "tool",
+      "result": "exit_code: 0\nstdout:\n=== Acceptance Check Results ===\n  row_count_120: PASS ✓\n  required_columns_present: PASS ✓\n  no_nan: PASS ✓\n  four_groups_30_rows_each: PASS ✓\n  test_acc_range_50_99: PASS ✓\n\nOverall: ALL PASS\n\nSample rows:\n seed  augmented  epoch  train_loss  val_acc  test_acc\n   42      False      1    0.435521    88.84     88.23\n   42      False      5    0.187928    91.12     91.30\n   42      False     10    0.116639    92.28     92.18\n   42      False     20    0.062765    92.34     92…"
+    },
+    {
+      "t": "2026-10-10T07:41:35.349663+00:00",
+      "args": "{\"status\": \"success\", \"summary\": \"Aggregated all four per-epoch metric CSVs into analysis/combined_metrics.csv (120 rows, 6 columns: seed, augmented, epoch, train_loss, val_acc, test_acc). All five acceptance checks passed (row count, columns, no NaN, 4 groups × 30 rows, test_acc in [50,99]). Full c…",
+      "cost": 0.368679135,
+      "step": 12,
+      "tool": "report_result",
+      "type": "tool",
+      "result": "Result recorded."
+    }
+  ],
+  "note": null,
+  "feedback": null,
+  "started_at": "2026-10-10 07:38:42.948168+00:00",
+  "finished_at": "2026-10-10 07:41:48.675107+00:00"
+}

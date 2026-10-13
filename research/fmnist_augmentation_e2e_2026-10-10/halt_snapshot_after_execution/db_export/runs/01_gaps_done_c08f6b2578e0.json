@@ -1,0 +1,428 @@
+{
+  "id": "c08f6b2578e0",
+  "project_id": "a2794d1959b5",
+  "kind": "gaps",
+  "status": "done",
+  "phase": "done",
+  "counts": {
+    "checked": 6,
+    "proposed": 6
+  },
+  "log": [
+    {
+      "t": "2026-10-10T03:59:20.433575+00:00",
+      "text": "Reading 48 papers' notes for gaps"
+    },
+    {
+      "t": "2026-10-10T04:03:30.780868+00:00",
+      "text": "Proposed 6 candidate gaps"
+    },
+    {
+      "t": "2026-10-10T04:03:30.889312+00:00",
+      "text": "Searching for prior work that already answers each gap"
+    },
+    {
+      "t": "2026-10-10T04:08:14.060612+00:00",
+      "text": "Scoring and ranking"
+    },
+    {
+      "t": "2026-10-10T04:08:14.179245+00:00",
+      "text": "Gap analysis complete"
+    }
+  ],
+  "result": {
+    "gaps": [
+      {
+        "id": "g1",
+        "risks": [
+          "Two seeds may be insufficient to observe a reliable crossover point in the accuracy-gap curves",
+          "The non-augmented model may not overfit within 30 epochs on Fashion-MNISTs 60K training set requiring even longer runs",
+          "Effect sizes may be below 0.5% throughout making any conclusions highly uncertain"
+        ],
+        "title": "Augmentation benefit direction in 5-epoch underfitting regime",
+        "scores": {
+          "impact": {
+            "why": "Answers a practically important question about when augmentation is worth applying under compute-constrained training.",
+            "score": 4
+          },
+          "novelty": {
+            "why": "None of the prior work specifically investigates whether geometric augmentation is neutral or harmful at very short training runs (~5 epochs) versus beneficial at longer runs on Fashion-MNIST with a small CNN; the closest works (e.g., 'State-of-the-Art Results with the Fashion-MNIST Dataset' and 'Multi-Class Image Classification on Fashion-MNIST') use augmentation with longer training schedules (20–100 epochs) without studying the epoch-regime dependency of augmentation benefit.",
+            "score": 4
+          },
+          "feasibility": {
+            "why": "Directly extends the core study protocol with only additional epoch-count variants on the same infrastructure.",
+            "score": 5
+          },
+          "testability": {
+            "why": "Accuracy at each epoch count is a fully determinate numerical outcome with a clear comparison criterion.",
+            "score": 5
+          }
+        },
+        "overall": 4.45,
+        "approach": "Run the core 5-epoch protocol for both conditions with seeds 42 and 123, then extend training to 10, 20, and 30 epochs using the same seeds and architecture. Record test accuracy and training/validation loss at each endpoint. Plot the accuracy gap (augmented minus non-augmented) as a function of epoch count to determine whether 5 epochs falls in a regime where augmentation is neutral or harmful and identify the epoch at which consistent benefits first appear.",
+        "gap_type": "missing_evaluation",
+        "question": "Does basic geometric augmentation improve or degrade test accuracy of a small CNN trained for only approximately 5 epochs on Fashion-MNIST, where underfitting rather than overfitting is likely to dominate?",
+        "why_open": "Studies demonstrating augmentation benefits such as (Çetiner et al. 2023) and (Imam et al. 2026) train models for 50–200 epochs on CIFAR-10 where overfitting dominates, making their results inapplicable to the 5-epoch underfitting regime. (Lin et al. 2023) explicitly shows augmentation can degrade performance when underfitting occurs but does not quantify this effect for Fashion-MNIST or short training budgets. (Guo 2024) shows that even LeNet-5 achieves only 90% validation accuracy on Fashion-MNIST at similar training lengths, suggesting small CNNs operate in a capacity-limited regime where augmentation may introduce harmful noise rather than beneficial regularisation.",
+        "hypothesis": "At 5 epochs of training a small CNN on Fashion-MNIST has insufficient capacity utilisation for augmentation to provide a regularisation benefit, resulting in equal or lower test accuracy for the augmented condition, with the benefit emerging only after 15–25 epochs when the non-augmented model begins overfitting.",
+        "data_needed": "Fashion-MNIST via torchvision (60K train, 10K test); no additional data required",
+        "novelty_check": {
+          "status": "novel",
+          "closest": [
+            {
+              "url": "https://www.semanticscholar.org/paper/ef0545e59c2c6aa37039f7cc5fab385dfe0cb97d",
+              "year": 2024,
+              "title": "State-of-the-Art Results with the Fashion-MNIST Dataset",
+              "overlap": "Studies CNN with augmentation on Fashion-MNIST but trains to full convergence without examining underfitting regimes at short epoch counts.",
+              "in_review": true
+            },
+            {
+              "url": "https://www.semanticscholar.org/paper/22b86b724eb3ab4cfc19a741fe0905ae398b6fb2",
+              "year": 2026,
+              "title": "Convolutional Neural Networks for Image Classification",
+              "overlap": "Uses data augmentation on Fashion-MNIST CNN up to 20 epochs but does not isolate the epoch range where augmentation transitions from neutral/harmful to beneficial.",
+              "in_review": false
+            },
+            {
+              "url": "https://www.semanticscholar.org/paper/6ab1a8dac9024def667ae0a957deda89567aa6a7",
+              "year": 2026,
+              "title": "Multi-Class Image Classification on Fashion-MNIST Using a Custom CNN",
+              "overlap": "Trains a small custom CNN on Fashion-MNIST with augmentation for 100 epochs but does not analyze augmentation impact at early underfitting epochs.",
+              "in_review": true
+            }
+          ],
+          "explanation": "None of the prior work specifically investigates whether geometric augmentation is neutral or harmful at very short training runs (~5 epochs) versus beneficial at longer runs on Fashion-MNIST with a small CNN; the closest works (e.g., 'State-of-the-Art Results with the Fashion-MNIST Dataset' and 'Multi-Class Image Classification on Fashion-MNIST') use augmentation with longer training schedules (20–100 epochs) without studying the epoch-regime dependency of augmentation benefit."
+        },
+        "compute_needed": "Approximately 2–4 additional GPU hours on Colab T4/L4 for extended-epoch runs beyond the core 5-epoch protocol",
+        "novelty_queries": [
+          "augmentation underfitting short training epochs CNN",
+          "data augmentation few epochs accuracy Fashion-MNIST",
+          "augmentation benefit epoch budget small model"
+        ],
+        "supporting_paper_ids": [
+          "22e5fa326667",
+          "0dbeb31f9075",
+          "30dbb26f0428",
+          "7bf8d9723b33",
+          "2a92dd9e1956"
+        ]
+      },
+      {
+        "id": "g3",
+        "risks": [
+          "Accuracy differences between conditions may be below 0.3% and indistinguishable with only 2 seeds",
+          "Results may be specific to the chosen small CNN architecture and not generalise to deeper models",
+          "Fashion-MNISTs horizontal symmetry may make flip trivially dominant yielding an uninteresting result"
+        ],
+        "title": "Ablation of individual augmentation components on Fashion-MNIST",
+        "scores": {
+          "impact": {
+            "why": "Identifying which single augmentation technique provides most benefit avoids unnecessary noise and compute overhead.",
+            "score": 4
+          },
+          "novelty": {
+            "why": "A Preliminary Study on Data Augmentation (2019) examines how augmentation method combinations affect CNN classification accuracy and finds that combining two geometric methods can degrade performance—directly relevant to the proposed hypothesis—but does so on different datasets and does not isolate flip, crop, and rotation on Fashion-MNIST in the structured ablation proposed. The specific dataset, architecture, and the full factorial design across all seven conditions remain unaddressed.",
+            "score": 3
+          },
+          "feasibility": {
+            "why": "Defining additional training conditions with different torchvision transform pipelines is trivially easy in PyTorch.",
+            "score": 5
+          },
+          "testability": {
+            "why": "Each augmentation condition produces a scalar test accuracy making the comparison direct and fully reproducible.",
+            "score": 5
+          }
+        },
+        "overall": 4.15,
+        "approach": "Define seven augmentation conditions: no augmentation, flip only, crop only, rotation only, flip+crop, flip+rotation, crop+rotation, and all three combined. Run each condition for 5 epochs with seeds 42 and 123 on the same small CNN. Report test accuracy for all conditions in a summary table, compute the marginal contribution of each technique as the accuracy change from adding it to the full combination, and test whether any combination exceeds the best single-technique condition.",
+        "gap_type": "untested_combination",
+        "question": "When horizontal flip, random crop, and rotation are each applied individually versus in all pairwise and full combinations, which technique drives accuracy gains for a small CNN on Fashion-MNIST at 5 epochs, and does combining techniques improve over the best single technique?",
+        "why_open": "(Çetiner et al. 2023) explicitly finds that combining augmentation techniques on CIFAR-10 does not improve over individual techniques and notes the reasons are not analysed. (Korzhebin et al. 2021) confirms that the combination of individually best methods does not necessarily achieve the best combined result but uses only 40 training images. (Shijie et al. 2017) ranks individual augmentation techniques on CIFAR-10 and ImageNet but does not study their interactions or apply them to Fashion-MNIST. No study has performed a systematic single-technique and combination ablation of flip, crop, and rotation specifically on Fashion-MNIST with a small CNN.",
+        "hypothesis": "Horizontal flip alone drives the majority of the combined augmentation benefit on Fashion-MNIST because fashion items have meaningful left-right symmetry, while random crop and rotation each add limited additional benefit and their combination with flip produces no statistically meaningful improvement over flip alone.",
+        "data_needed": "Fashion-MNIST via torchvision (60K train, 10K test)",
+        "novelty_check": {
+          "status": "partially_addressed",
+          "closest": [
+            {
+              "url": "https://www.semanticscholar.org/paper/e43bbcf6fe73d072f7ef92a68d4e3857b06594ba",
+              "year": 2019,
+              "title": "A Preliminary Study on Data Augmentation of Deep Learning for Image Classification",
+              "overlap": "Examines pairwise and combined augmentation conditions for CNN image classification and finds that combining geometric augmentations can hurt accuracy, partially pre-empting the hypothesis.",
+              "in_review": false
+            },
+            {
+              "url": "https://www.semanticscholar.org/paper/752d5eaad820e8e291cdebd8a38951e9b46cea03",
+              "year": 2025,
+              "title": "Enhancing Image Classification with Augmentation: Data Augmentation Techniques for Improved Image Classification",
+              "overlap": "Evaluates multiple sets of augmentation techniques on CNNs and explores combinations, but uses different techniques and datasets without the targeted Fashion-MNIST ablation.",
+              "in_review": false
+            }
+          ],
+          "explanation": "A Preliminary Study on Data Augmentation (2019) examines how augmentation method combinations affect CNN classification accuracy and finds that combining two geometric methods can degrade performance—directly relevant to the proposed hypothesis—but does so on different datasets and does not isolate flip, crop, and rotation on Fashion-MNIST in the structured ablation proposed. The specific dataset, architecture, and the full factorial design across all seven conditions remain unaddressed."
+        },
+        "compute_needed": "7 conditions × 2 seeds × 5 epochs approximately 1–2 GPU hours on Colab T4/L4",
+        "novelty_queries": [
+          "ablation augmentation flip crop rotation Fashion-MNIST",
+          "individual augmentation technique contribution accuracy CNN",
+          "augmentation combination ablation study image classification"
+        ],
+        "supporting_paper_ids": [
+          "22e5fa326667",
+          "24fa379268ee",
+          "2ecc33f6eeb5",
+          "406be4f7031f"
+        ]
+      },
+      {
+        "id": "g5",
+        "risks": [
+          "30 seeds per condition requires multiple Colab GPU sessions with careful bookkeeping to avoid losing results",
+          "Variance may be so low that 2 seeds are sufficient making the study trivially confirmatory",
+          "Variance estimates may be architecture-specific and not generalise to other models or tasks"
+        ],
+        "title": "Minimum seeds for reliable augmentation comparison: variance characterisation",
+        "scores": {
+          "impact": {
+            "why": "Establishing a minimum seed recommendation would materially improve reproducibility standards for augmentation benchmarking.",
+            "score": 4
+          },
+          "novelty": {
+            "why": "None of the prior works directly measure run-to-run test accuracy variance for a small CNN on Fashion-MNIST nor conduct a formal power analysis to determine the number of seeds needed to detect augmentation benefits at a specified statistical power level; the closest work on augmentation comparisons (e.g., 'Comparison of simple augmentation transformations') focuses on which augmentation works best across datasets, not on seed-count requirements or sampling variance characterization.",
+            "score": 4
+          },
+          "feasibility": {
+            "why": "Many short 5-epoch runs are feasible on Colab but require multi-session management for 60 total runs.",
+            "score": 4
+          },
+          "testability": {
+            "why": "Standard deviation and the resulting power curve are fully determined by observed data with a clear numerical output.",
+            "score": 5
+          }
+        },
+        "overall": 4.15,
+        "approach": "Run 30 seeds for both the augmented and non-augmented conditions (5 epochs each) on the small CNN with all other hyperparameters fixed. Compute the mean and standard deviation of test accuracy across seeds, plot the empirical sampling distribution, and perform a power analysis using the observed standard deviation to determine the minimum n required to detect effect sizes of 0.1%, 0.5%, and 1% at 80% power. Report a concrete seed-count recommendation for future augmentation benchmarking studies on this task.",
+        "gap_type": "methodological",
+        "question": "How large is the run-to-run test accuracy variance for a small CNN trained on Fashion-MNIST for 5 epochs, and how many random seeds are required to detect a typical augmentation benefit with 80% statistical power?",
+        "why_open": "The core study's documented limitation is that two seeds are insufficient for statistical significance testing and it is unclear how much run-to-run variance should be expected, yet no paper explicitly characterises seed-to-seed accuracy variance for this specific setting. (Sayın et al. 2025) applies two-way ANOVA across optimizer-activation combinations on Fashion-MNIST but reports aggregate statistics rather than per-seed distributions for augmentation comparisons. Without an empirical variance estimate the minimum number of seeds needed to reliably compare augmented and non-augmented conditions cannot be principled.",
+        "hypothesis": "The run-to-run standard deviation in test accuracy for a small CNN on Fashion-MNIST at 5 epochs lies between 0.1% and 0.5%, requiring at least 8–20 seeds per condition to detect a 0.5% augmentation benefit with 80% power using a paired t-test.",
+        "data_needed": "Fashion-MNIST via torchvision (60K train, 10K test); same architecture and hyperparameters as the core study",
+        "novelty_check": {
+          "status": "novel",
+          "closest": [
+            {
+              "url": "https://www.semanticscholar.org/paper/5af1ca0658e4617775720ad087befe00fcefede6",
+              "year": 2024,
+              "title": "Comparison of simple augmentation transformations for a convolutional neural network classifying medical images",
+              "overlap": "Compares augmentation types on CNNs for medical images and assesses statistical significance of augmentation differences, but does not quantify run-to-run variance or perform seed-count power analysis.",
+              "in_review": false
+            },
+            {
+              "url": "https://www.semanticscholar.org/paper/d626a7cd06122080ae0e4bf2547c3495a1165899",
+              "year": 2026,
+              "title": "Performance and Training-Time Comparison of Five Pretrained CNN Architectures for South Kalimantan Food Image Classification",
+              "overlap": "Uses repeated runs with different random seeds to assess model stability, but does not report variance statistics or power-analysis-based seed recommendations.",
+              "in_review": false
+            },
+            {
+              "url": "https://www.semanticscholar.org/paper/523c1acf7579607f3714133c162c48cb7c36b3e1",
+              "year": 2025,
+              "title": "Hybrid CNN-Capsule Network Architecture for Automated Diabetic Retinopathy Classification: A Rigorous Statistical Validation on Clinical Data",
+              "overlap": "Emphasizes statistical rigor in deep learning validation including cross-validation, but focuses on clinical DR classification rather than seed variance or power analysis for augmentation benchmarking.",
+              "in_review": false
+            }
+          ],
+          "explanation": "None of the prior works directly measure run-to-run test accuracy variance for a small CNN on Fashion-MNIST nor conduct a formal power analysis to determine the number of seeds needed to detect augmentation benefits at a specified statistical power level; the closest work on augmentation comparisons (e.g., 'Comparison of simple augmentation transformations') focuses on which augmentation works best across datasets, not on seed-count requirements or sampling variance characterization."
+        },
+        "compute_needed": "60 runs × 5 epochs approximately 3–5 GPU hours on Colab T4/L4 across multiple sessions; CPU for power analysis",
+        "novelty_queries": [
+          "seed variance deep learning accuracy reproducibility",
+          "minimum seeds statistical comparison augmentation CNN",
+          "run to run variability neural network training"
+        ],
+        "supporting_paper_ids": [
+          "82fabaf7cebb"
+        ]
+      },
+      {
+        "id": "g6",
+        "risks": [
+          "With only 2 seeds per-class estimates are highly noisy and statistical conclusions are unreliable",
+          "Per-class effect sizes may be below 1% and dominated by seed variance rather than augmentation",
+          "Class-level results may be specific to the chosen small CNN architecture"
+        ],
+        "title": "Per-class accuracy differential under augmentation for confusable classes",
+        "scores": {
+          "impact": {
+            "why": "Provides mechanistic insight into augmentation effects at class level but is a secondary analysis with limited practical consequence.",
+            "score": 3
+          },
+          "novelty": {
+            "why": "None of the prior works examine per-class augmentation benefit specifically for visually confusable versus easily separable categories on Fashion-MNIST, nor do they apply a cluster-level statistical test (e.g., Wilcoxon signed-rank) to compare augmentation gains across garment similarity groups.",
+            "score": 4
+          },
+          "feasibility": {
+            "why": "Requires only confusion matrix extraction from runs already performed in the core study with no additional GPU time.",
+            "score": 5
+          },
+          "testability": {
+            "why": "Per-class F1 differences are deterministic given model predictions though statistical power with 2 seeds is limited.",
+            "score": 4
+          }
+        },
+        "overall": 4.05,
+        "approach": "From the core study's 4 training runs extract per-class precision recall and F1 score from confusion matrices at the final epoch for all 10 Fashion-MNIST categories. Compute the per-class accuracy difference (augmented minus non-augmented) for each category across both seeds. Rank classes by magnitude of augmentation benefit and apply a Wilcoxon signed-rank test to assess whether the confusable garment cluster shows systematically larger gains than the footwear and accessories cluster.",
+        "gap_type": "missing_evaluation",
+        "question": "Does basic geometric augmentation disproportionately improve classification accuracy for visually confusable Fashion-MNIST classes such as shirt, coat, and pullover compared with easily separable classes such as sandal, bag, and ankle boot?",
+        "why_open": "All augmentation papers surveyed including (Çetiner et al. 2023), (Imam et al. 2026), (Shijie et al. 2017), (Gu et al. 2019), and (Helmud et al. 2024) report only aggregate test accuracy or macro-averaged metrics, providing no insight into which categories benefit most from augmentation. Fashion-MNIST is known to have a cluster of visually confusable upper-body garments driving most classification errors, as evidenced by per-class difficulty patterns implicit in models reported in (Vattikonda, et al. 2024) and (Ahmad et al. 2026), but no study has measured augmentation's per-class effect to determine whether it differentially helps confusable versus separable categories.",
+        "hypothesis": "Augmentation produces larger per-class accuracy gains for confusable garment categories (shirt, coat, pullover, T-shirt/top) than for easily separable categories (sandal, bag, ankle boot) because geometric transformations expand intra-class variability that helps the model learn invariant features specifically for visually similar items.",
+        "data_needed": "Per-class predictions and confusion matrices from the core study 4 training runs; no additional training required",
+        "novelty_check": {
+          "status": "novel",
+          "closest": [
+            {
+              "url": "https://www.semanticscholar.org/paper/f56533c8eef3a2b99c990765ccbf3c9b6764239f",
+              "year": 2024,
+              "title": "IMPROVING IMAGE CLASSIFICATION ACCURACY WITH OVERSAMPLING AND DATA AUGMENTATION USING DEEP LEARNING: A CASE STUDY ON THE SIMPSONS CHARACTERS DATASET",
+              "overlap": "Investigates how augmentation improves class-level classification accuracy, but focuses on character identity classes with imbalance correction rather than visual confusability clusters.",
+              "in_review": false
+            },
+            {
+              "url": "https://www.semanticscholar.org/paper/4210c3a06461ad091fd50c1dfd8beea0271d02c6",
+              "year": 2022,
+              "title": "Application of multidomain sensor image fusion and training data augmentation for enhanced CNN image classification",
+              "overlap": "Studies augmentation effects on CNN classification with attention to feature association per class, but uses multi-sensor fusion on a different domain without per-class confusability analysis.",
+              "in_review": false
+            }
+          ],
+          "explanation": "None of the prior works examine per-class augmentation benefit specifically for visually confusable versus easily separable categories on Fashion-MNIST, nor do they apply a cluster-level statistical test (e.g., Wilcoxon signed-rank) to compare augmentation gains across garment similarity groups."
+        },
+        "compute_needed": "No additional GPU compute beyond the core 4-run protocol; CPU only for confusion matrix extraction and statistical test",
+        "novelty_queries": [
+          "per class augmentation benefit image classification CNN",
+          "augmentation confusable class accuracy Fashion-MNIST",
+          "class level augmentation effect confusion matrix"
+        ],
+        "supporting_paper_ids": [
+          "22e5fa326667",
+          "0dbeb31f9075",
+          "f2bcd2a6cec5",
+          "e41bb584614e"
+        ]
+      },
+      {
+        "id": "g2",
+        "risks": [
+          "5 epochs may be too few for the non-augmented model to overfit even at 500 samples masking any crossover",
+          "Subsampling variance at small sizes with only 2 seeds may dominate the augmentation signal",
+          "The threshold may lie outside the tested range requiring additional conditions"
+        ],
+        "title": "Training data size threshold for positive augmentation effect",
+        "scores": {
+          "impact": {
+            "why": "Directly guides practitioners working with limited labelled data on whether to invest in augmentation pipelines.",
+            "score": 4
+          },
+          "novelty": {
+            "why": "None of the prior works specifically investigate the crossover threshold at which basic geometric augmentation transitions from neutral/negative to positive accuracy gain as a function of training set size for a small CNN on Fashion-MNIST; the closest work (Purposive Data Augmentation Strategy) touches on augmentation in small-sample industrial datasets but does not characterize a crossover threshold or use a controlled subsampling approach on a benchmark image classification dataset.",
+            "score": 4
+          },
+          "feasibility": {
+            "why": "Stratified subsampling and multiple conditions are straightforward in PyTorch and fit within Colab GPU limits.",
+            "score": 4
+          },
+          "testability": {
+            "why": "The crossover dataset size is a measurable quantity though only 2 seeds per size introduces uncertainty in locating it precisely.",
+            "score": 4
+          }
+        },
+        "overall": 4.0,
+        "approach": "Subsample the Fashion-MNIST training set at seven sizes (500, 1000, 2000, 5000, 10000, 30000, 60000) using stratified sampling. For each size run both augmented and non-augmented conditions for 5 epochs using seeds 42 and 123. Plot mean accuracy gain versus training size and fit a piecewise-linear or sigmoid curve to locate the crossover point where augmentation transitions from net-negative to net-positive.",
+        "gap_type": "untested_assumption",
+        "question": "What minimum training set size causes basic geometric augmentation to shift from a neutral or negative effect to a consistently positive accuracy gain for a small CNN on Fashion-MNIST at 5 epochs?",
+        "why_open": "(Lin et al. 2023) demonstrates that augmentation can degrade performance below a dataset-size threshold but does not quantify that threshold and uses an unnamed dataset. (Shijie et al. 2017) notes augmentation gains are more pronounced on smaller datasets but only compares two scale levels rather than sweeping systematically. (Anusree et al. 2026) shows a 9.11% gain on Fashion-MNIST with only 50 samples per class using chaotic transformations, confirming size effects exist but not pinpointing a crossover for standard geometric augmentation. No study has conducted a systematic size sweep on Fashion-MNIST to determine at what N simple augmentation becomes reliably beneficial.",
+        "hypothesis": "Basic geometric augmentation yields negligible or negative accuracy gains at the full 60K training set due to sufficient data diversity, but produces measurable positive gains below approximately 5000 training samples, with the crossover threshold occurring somewhere between 5K and 15K samples.",
+        "data_needed": "Fashion-MNIST via torchvision with stratified subsampling implemented in PyTorch",
+        "novelty_check": {
+          "status": "novel",
+          "closest": [
+            {
+              "url": "https://www.semanticscholar.org/paper/2a6798d3527c59720b02a2bb76da218f08ff750a",
+              "year": 2024,
+              "title": "Purposive Data Augmentation Strategy and Lightweight Classification Model for Small Sample Industrial Defect Dataset",
+              "overlap": "Examines data augmentation effectiveness on small-sample imbalanced datasets with a lightweight CNN, but focuses on class-targeted augmentation strategy rather than identifying a sample-size crossover threshold for geometric augmentation.",
+              "in_review": false
+            }
+          ],
+          "explanation": "None of the prior works specifically investigate the crossover threshold at which basic geometric augmentation transitions from neutral/negative to positive accuracy gain as a function of training set size for a small CNN on Fashion-MNIST; the closest work (Purposive Data Augmentation Strategy) touches on augmentation in small-sample industrial datasets but does not characterize a crossover threshold or use a controlled subsampling approach on a benchmark image classification dataset."
+        },
+        "compute_needed": "14 conditions × 2 seeds × 5 epochs approximately 1.5–3 GPU hours on Colab T4/L4",
+        "novelty_queries": [
+          "augmentation dataset size threshold accuracy CNN",
+          "data augmentation training set size Fashion-MNIST",
+          "augmentation benefit small large dataset comparison"
+        ],
+        "supporting_paper_ids": [
+          "24fa379268ee",
+          "2a92dd9e1956",
+          "6ce8a871c38c",
+          "7bd1b53a0b32"
+        ]
+      },
+      {
+        "id": "g4",
+        "risks": [
+          "Single seed per condition conflates hyperparameter effects with random initialisation variance",
+          "27 conditions may exceed a single Colab GPU session limit requiring checkpointing",
+          "Response surface may be nearly flat within the tested range yielding an uninformative result"
+        ],
+        "title": "Augmentation hyperparameter sensitivity grid on Fashion-MNIST",
+        "scores": {
+          "impact": {
+            "why": "Knowing which augmentation parameters matter helps set defaults for future studies but has limited theoretical novelty.",
+            "score": 3
+          },
+          "novelty": {
+            "why": "None of the prior works perform a systematic sensitivity analysis or factorial grid search over flip probability, crop fraction, and rotation angle as isolated parameters on Fashion-MNIST with a small CNN at ~5 epochs; the closest works apply augmentation as a fixed preprocessing step without ablating individual parameter values.",
+            "score": 4
+          },
+          "feasibility": {
+            "why": "27 conditions with a single seed is manageable but risks exceeding Colab session limits and conflates noise with hyperparameter effects.",
+            "score": 3
+          },
+          "testability": {
+            "why": "Each condition yields a scalar accuracy and an ANOVA decomposition provides a clear quantitative answer about sensitivity.",
+            "score": 4
+          }
+        },
+        "overall": 3.45,
+        "approach": "Design a full 3-factor grid: flip_prob in {0.3, 0.5, 0.7} times crop_fraction in {0.05, 0.10, 0.20} times rotation_deg in {5, 10, 20} yielding 27 conditions. Run each condition for 5 epochs with seed 42 on the small CNN. Report accuracy as a 3D response surface, compute main effects and two-way interactions via ANOVA decomposition, and identify which augmentation parameter has the largest influence on accuracy within the tested range.",
+        "gap_type": "methodological",
+        "question": "How sensitive is the accuracy gain from geometric augmentation to specific parameter values—flip probability, crop fraction, and rotation angle—for a small CNN trained for approximately 5 epochs on Fashion-MNIST?",
+        "why_open": "(Lin et al. 2023) studies augmentation hyperparameter sensitivity for facial expression recognition and finds sensitivity is dataset-dependent, but Fashion-MNIST is not examined. (Shijie et al. 2017) and (Zhang et al. 2015) use fixed augmentation parameters without any sensitivity analysis across parameter values. The noted open problem explicitly states that optimal augmentation hyperparameters are rarely tuned systematically and default values may not be optimal for a given architecture or dataset, yet no paper has characterised this sensitivity for Fashion-MNIST at a short training budget.",
+        "hypothesis": "Within the conventional default range (flip probability 0.3–0.7, crop fraction 5–20%, rotation 5–20°), test accuracy varies by less than 0.5% on Fashion-MNIST at 5 epochs indicating defaults are near-optimal; however aggressive values beyond this range such as crop above 25% or rotation above 25° will consistently degrade accuracy by more than 1%.",
+        "data_needed": "Fashion-MNIST via torchvision (60K train, 10K test)",
+        "novelty_check": {
+          "status": "novel",
+          "closest": [],
+          "explanation": "None of the prior works perform a systematic sensitivity analysis or factorial grid search over flip probability, crop fraction, and rotation angle as isolated parameters on Fashion-MNIST with a small CNN at ~5 epochs; the closest works apply augmentation as a fixed preprocessing step without ablating individual parameter values."
+        },
+        "compute_needed": "27 conditions × 1 seed × 5 epochs approximately 2–3 GPU hours on Colab T4/L4 potentially requiring multiple sessions",
+        "novelty_queries": [
+          "augmentation hyperparameter sensitivity grid search CNN",
+          "flip probability crop fraction rotation tuning classification",
+          "optimal augmentation parameters Fashion-MNIST accuracy"
+        ],
+        "supporting_paper_ids": [
+          "24fa379268ee",
+          "44e58448bd5c",
+          "2a92dd9e1956",
+          "5828fbfeeab8"
+        ]
+      }
+    ],
+    "feedback": null,
+    "recommended": "g1"
+  },
+  "error": null,
+  "started_at": "2026-10-10 03:59:19.693388+00:00",
+  "finished_at": "2026-10-10 04:08:14.298173+00:00"
+}

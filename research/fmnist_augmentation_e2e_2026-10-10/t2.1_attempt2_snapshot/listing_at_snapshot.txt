@@ -1,0 +1,43 @@
+data:
+total 40
+drwxr-xr-x  5 pranav_bhalerao pranav_bhalerao 4096 2026-10-09 23:30:43.200290653 -0700 .
+drwxr-xr-x 12 pranav_bhalerao pranav_bhalerao 4096 2026-10-09 21:42:04.690570691 -0700 ..
+drwxr-xr-x  3 pranav_bhalerao pranav_bhalerao 4096 2026-10-09 21:23:50.327041522 -0700 FashionMNIST
+drwxr-xr-x  2 pranav_bhalerao pranav_bhalerao 4096 2026-10-09 23:30:43.920140883 -0700 checkpoints
+drwxr-xr-x  3 pranav_bhalerao pranav_bhalerao 4096 2026-10-09 21:41:54.005839709 -0700 fashion_mnist
+-rw-r--r--  1 pranav_bhalerao pranav_bhalerao 1010 2026-10-09 21:41:32.000000000 -0700 gpu_and_data_validation.txt
+-rw-r--r--  1 pranav_bhalerao pranav_bhalerao 1069 2026-10-09 23:29:57.000000000 -0700 metrics_seed123_aug.csv
+-rw-r--r--  1 pranav_bhalerao pranav_bhalerao 1067 2026-10-09 23:16:35.000000000 -0700 metrics_seed123_noaug.csv
+-rw-r--r--  1 pranav_bhalerao pranav_bhalerao 1064 2026-10-09 23:08:37.000000000 -0700 metrics_seed42_aug.csv
+-rw-r--r--  1 pranav_bhalerao pranav_bhalerao 1064 2026-10-09 22:54:43.000000000 -0700 metrics_seed42_noaug.csv
+
+data/checkpoints:
+total 154824
+drwxr-xr-x 2 pranav_bhalerao pranav_bhalerao    4096 2026-10-09 23:30:43.920140883 -0700 .
+drwxr-xr-x 5 pranav_bhalerao pranav_bhalerao    4096 2026-10-09 23:30:43.200290653 -0700 ..
+-rw-r--r-- 1 pranav_bhalerao pranav_bhalerao 9904699 2026-10-09 23:21:05.000000000 -0700 checkpoint_seed123_aug_ep10.pt
+-rw-r--r-- 1 pranav_bhalerao pranav_bhalerao 9904699 2026-10-09 23:25:31.000000000 -0700 checkpoint_seed123_aug_ep20.pt
+-rw-r--r-- 1 pranav_bhalerao pranav_bhalerao 9904699 2026-10-09 23:29:57.000000000 -0700 checkpoint_seed123_aug_ep30.pt
+-rw-r--r-- 1 pranav_bhalerao pranav_bhalerao 9904661 2026-10-09 23:18:52.000000000 -0700 checkpoint_seed123_aug_ep5.pt
+-rw-r--r-- 1 pranav_bhalerao pranav_bhalerao 9904775 2026-10-09 23:11:19.000000000 -0700 checkpoint_seed123_noaug_ep10.pt
+-rw-r--r-- 1 pranav_bhalerao pranav_bhalerao 9904775 2026-10-09 23:13:57.000000000 -0700 checkpoint_seed123_noaug_ep20.pt
+-rw-r--r-- 1 pranav_bhalerao pranav_bhalerao 9904775 2026-10-09 23:16:35.000000000 -0700 checkpoint_seed123_noaug_ep30.pt
+-rw-r--r-- 1 pranav_bhalerao pranav_bhalerao 9904737 2026-10-09 23:10:00.000000000 -0700 checkpoint_seed123_noaug_ep5.pt
+-rw-r--r-- 1 pranav_bhalerao pranav_bhalerao 9904661 2026-10-09 22:59:26.000000000 -0700 checkpoint_seed42_aug_ep10.pt
+-rw-r--r-- 1 pranav_bhalerao pranav_bhalerao 9904661 2026-10-09 23:04:02.000000000 -0700 checkpoint_seed42_aug_ep20.pt
+-rw-r--r-- 1 pranav_bhalerao pranav_bhalerao 9904661 2026-10-09 23:08:37.000000000 -0700 checkpoint_seed42_aug_ep30.pt
+-rw-r--r-- 1 pranav_bhalerao pranav_bhalerao 9904623 2026-10-09 22:57:08.000000000 -0700 checkpoint_seed42_aug_ep5.pt
+-rw-r--r-- 1 pranav_bhalerao pranav_bhalerao 9904737 2026-10-09 22:49:21.000000000 -0700 checkpoint_seed42_noaug_ep10.pt
+-rw-r--r-- 1 pranav_bhalerao pranav_bhalerao 9904737 2026-10-09 22:52:02.000000000 -0700 checkpoint_seed42_noaug_ep20.pt
+-rw-r--r-- 1 pranav_bhalerao pranav_bhalerao 9904737 2026-10-09 22:54:43.000000000 -0700 checkpoint_seed42_noaug_ep30.pt
+-rw-r--r-- 1 pranav_bhalerao pranav_bhalerao 9904699 2026-10-09 22:48:01.000000000 -0700 checkpoint_seed42_noaug_ep5.pt
+
+logs/gpu:
+total 52
+drwxr-xr-x 2 pranav_bhalerao pranav_bhalerao  4096 2026-10-09 23:30:43.927456075 -0700 .
+drwxr-xr-x 3 pranav_bhalerao pranav_bhalerao  4096 2026-10-09 21:41:09.067358382 -0700 ..
+-rw-r--r-- 1 pranav_bhalerao pranav_bhalerao 15887 2026-10-09 22:46:17.000000000 -0700 _environment.txt
+-rw-r--r-- 1 pranav_bhalerao pranav_bhalerao  3626 2026-10-09 21:41:36.000000000 -0700 cuda_validate.log
+-rw-r--r-- 1 pranav_bhalerao pranav_bhalerao    46 2026-10-09 21:41:36.000000000 -0700 cuda_validate.log.time
+-rw-r--r-- 1 pranav_bhalerao pranav_bhalerao 12755 2026-10-09 23:29:57.000000000 -0700 train_all_runs.log
+-rw-r--r-- 1 pranav_bhalerao pranav_bhalerao    46 2026-10-09 23:29:57.000000000 -0700 train_all_runs.log.time

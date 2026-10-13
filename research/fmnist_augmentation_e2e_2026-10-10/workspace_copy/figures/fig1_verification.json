@@ -1,0 +1,34 @@
+{
+  "figure": "figures/fig1_test_accuracy_curves.png",
+  "total_axes_lines": 5,
+  "labeled_data_lines": 4,
+  "lines": [
+    {
+      "label": "Seed 42 \u2013 No Aug",
+      "color": "#1f77b4",
+      "linestyle": "solid",
+      "n_points": 30
+    },
+    {
+      "label": "Seed 42 \u2013 Aug",
+      "color": "#ff7f0e",
+      "linestyle": "solid",
+      "n_points": 30
+    },
+    {
+      "label": "Seed 123 \u2013 No Aug",
+      "color": "#1f77b4",
+      "linestyle": "dashed",
+      "n_points": 30
+    },
+    {
+      "label": "Seed 123 \u2013 Aug",
+      "color": "#ff7f0e",
+      "linestyle": "dashed",
+      "n_points": 30
+    }
+  ],
+  "vertical_marker_epoch": 5,
+  "png_bytes": 261990,
+  "pdf_bytes": 19263
+}

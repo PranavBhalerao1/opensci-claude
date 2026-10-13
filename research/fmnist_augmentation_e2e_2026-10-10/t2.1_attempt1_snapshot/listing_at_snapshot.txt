@@ -1,0 +1,23 @@
+data:
+total 24
+drwxr-xr-x  5 pranav_bhalerao pranav_bhalerao 4096 2026-10-09 22:44:34.288418878 -0700 .
+drwxr-xr-x 12 pranav_bhalerao pranav_bhalerao 4096 2026-10-09 21:42:04.690570691 -0700 ..
+drwxr-xr-x  3 pranav_bhalerao pranav_bhalerao 4096 2026-10-09 21:23:50.327041522 -0700 FashionMNIST
+drwxr-xr-x  2 pranav_bhalerao pranav_bhalerao 4096 2026-10-09 22:44:34.288418878 -0700 checkpoints
+drwxr-xr-x  3 pranav_bhalerao pranav_bhalerao 4096 2026-10-09 21:41:54.005839709 -0700 fashion_mnist
+-rw-r--r--  1 pranav_bhalerao pranav_bhalerao 1010 2026-10-09 21:41:32.000000000 -0700 gpu_and_data_validation.txt
+
+data/checkpoints:
+total 8
+drwxr-xr-x 2 pranav_bhalerao pranav_bhalerao 4096 2026-10-09 22:44:34.288418878 -0700 .
+drwxr-xr-x 5 pranav_bhalerao pranav_bhalerao 4096 2026-10-09 22:44:34.288418878 -0700 ..
+
+logs/gpu:
+total 52
+drwxr-xr-x 2 pranav_bhalerao pranav_bhalerao  4096 2026-10-09 22:46:17.055376247 -0700 .
+drwxr-xr-x 3 pranav_bhalerao pranav_bhalerao  4096 2026-10-09 21:41:09.067358382 -0700 ..
+-rw-r--r-- 1 pranav_bhalerao pranav_bhalerao 15887 2026-10-09 22:46:17.055376247 -0700 _environment.txt
+-rw-r--r-- 1 pranav_bhalerao pranav_bhalerao  3626 2026-10-09 21:41:36.000000000 -0700 cuda_validate.log
+-rw-r--r-- 1 pranav_bhalerao pranav_bhalerao    46 2026-10-09 21:41:36.000000000 -0700 cuda_validate.log.time
+-rw-r--r-- 1 pranav_bhalerao pranav_bhalerao 14097 2026-10-09 22:27:10.000000000 -0700 train_all_runs.log
+-rw-r--r-- 1 pranav_bhalerao pranav_bhalerao    46 2026-10-09 22:27:10.000000000 -0700 train_all_runs.log.time

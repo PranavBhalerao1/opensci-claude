@@ -1,0 +1,69 @@
+INFO:     Started server process [28266]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+2026-10-10 02:18:11,529 INFO launcher: execution resume: {'resumed': True, 'restarted': True}
+2026-10-10 02:18:13,788 INFO httpx: HTTP Request: POST https://api.e2b.app/v2/sandboxes "HTTP/1.1 201 Created"
+2026-10-10 02:18:43,789 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.tgz "HTTP/1.1 200 OK"
+2026-10-10 02:18:43,860 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.list "HTTP/1.1 200 OK"
+2026-10-10 02:19:07,869 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.list "HTTP/1.1 200 OK"
+2026-10-10 02:19:21,579 INFO httpx: HTTP Request: GET https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.tgz "HTTP/1.1 200 OK"
+2026-10-10 02:19:48,409 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-10 02:19:48,679 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.tgz "HTTP/1.1 200 OK"
+2026-10-10 02:19:48,725 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.list "HTTP/1.1 200 OK"
+2026-10-10 02:19:52,780 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.list "HTTP/1.1 200 OK"
+2026-10-10 02:19:53,779 INFO httpx: HTTP Request: GET https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.tgz "HTTP/1.1 200 OK"
+2026-10-10 02:20:03,571 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-10 02:20:03,817 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.tgz "HTTP/1.1 200 OK"
+2026-10-10 02:20:03,869 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.list "HTTP/1.1 200 OK"
+2026-10-10 02:20:09,484 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.list "HTTP/1.1 200 OK"
+2026-10-10 02:20:09,601 INFO httpx: HTTP Request: GET https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.tgz "HTTP/1.1 200 OK"
+2026-10-10 02:20:16,904 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-10 02:20:17,152 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.tgz "HTTP/1.1 200 OK"
+2026-10-10 02:20:17,203 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.list "HTTP/1.1 200 OK"
+2026-10-10 02:20:20,388 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.list "HTTP/1.1 200 OK"
+2026-10-10 02:20:20,505 INFO httpx: HTTP Request: GET https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.tgz "HTTP/1.1 200 OK"
+2026-10-10 02:20:34,778 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-10 02:20:35,024 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.tgz "HTTP/1.1 200 OK"
+2026-10-10 02:20:35,077 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.list "HTTP/1.1 200 OK"
+2026-10-10 02:20:35,388 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.list "HTTP/1.1 200 OK"
+2026-10-10 02:20:35,504 INFO httpx: HTTP Request: GET https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.tgz "HTTP/1.1 200 OK"
+2026-10-10 02:20:47,513 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-10 02:20:50,062 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-10 02:20:50,282 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.tgz "HTTP/1.1 200 OK"
+2026-10-10 02:20:50,327 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.list "HTTP/1.1 200 OK"
+2026-10-10 02:20:54,064 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.list "HTTP/1.1 200 OK"
+2026-10-10 02:20:54,185 INFO httpx: HTTP Request: GET https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.tgz "HTTP/1.1 200 OK"
+2026-10-10 02:20:57,429 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-10 02:20:57,661 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.tgz "HTTP/1.1 200 OK"
+2026-10-10 02:20:57,708 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_push.list "HTTP/1.1 200 OK"
+2026-10-10 02:20:58,080 INFO httpx: HTTP Request: POST https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.list "HTTP/1.1 200 OK"
+2026-10-10 02:20:58,191 INFO httpx: HTTP Request: GET https://sandbox.e2b.app/files?path=%2Fhome%2Fuser%2F.sync%2Fos_pull.tgz "HTTP/1.1 200 OK"
+2026-10-10 02:21:05,002 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+2026-10-10 02:21:22,029 INFO httpx2: HTTP Request: POST https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/invoke "HTTP/1.1 200 OK"
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [28266]
+Traceback (most recent call last):
+  File "/usr/lib/python3.12/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/asyncio/base_events.py", line 687, in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+  File "/mnt/c/Users/Pranav Bhalerao/desktop/projects/openscientist/opensci-bedrock/backend/../research/fmnist_augmentation_e2e_2026-10-10/launch/launcher_resume_execution.py", line 52, in main
+    await asyncio.gather(server.serve(), act(server))
+asyncio.exceptions.CancelledError
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/mnt/c/Users/Pranav Bhalerao/desktop/projects/openscientist/opensci-bedrock/backend/../research/fmnist_augmentation_e2e_2026-10-10/launch/launcher_resume_execution.py", line 55, in <module>
+    asyncio.run(main())
+  File "/usr/lib/python3.12/asyncio/runners.py", line 194, in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/asyncio/runners.py", line 123, in run
+    raise KeyboardInterrupt()
+KeyboardInterrupt

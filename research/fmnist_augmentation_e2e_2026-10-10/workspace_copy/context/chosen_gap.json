@@ -1,0 +1,75 @@
+{
+  "id": "g1",
+  "risks": [
+    "Two seeds may be insufficient to observe a reliable crossover point in the accuracy-gap curves",
+    "The non-augmented model may not overfit within 30 epochs on Fashion-MNISTs 60K training set requiring even longer runs",
+    "Effect sizes may be below 0.5% throughout making any conclusions highly uncertain"
+  ],
+  "title": "Augmentation benefit direction in 5-epoch underfitting regime",
+  "run_id": "c08f6b2578e0",
+  "scores": {
+    "impact": {
+      "why": "Answers a practically important question about when augmentation is worth applying under compute-constrained training.",
+      "score": 4
+    },
+    "novelty": {
+      "why": "None of the prior work specifically investigates whether geometric augmentation is neutral or harmful at very short training runs (~5 epochs) versus beneficial at longer runs on Fashion-MNIST with a small CNN; the closest works (e.g., 'State-of-the-Art Results with the Fashion-MNIST Dataset' and 'Multi-Class Image Classification on Fashion-MNIST') use augmentation with longer training schedules (20–100 epochs) without studying the epoch-regime dependency of augmentation benefit.",
+      "score": 4
+    },
+    "feasibility": {
+      "why": "Directly extends the core study protocol with only additional epoch-count variants on the same infrastructure.",
+      "score": 5
+    },
+    "testability": {
+      "why": "Accuracy at each epoch count is a fully determinate numerical outcome with a clear comparison criterion.",
+      "score": 5
+    }
+  },
+  "overall": 4.45,
+  "approach": "Run the core 5-epoch protocol for both conditions with seeds 42 and 123, then extend training to 10, 20, and 30 epochs using the same seeds and architecture. Record test accuracy and training/validation loss at each endpoint. Plot the accuracy gap (augmented minus non-augmented) as a function of epoch count to determine whether 5 epochs falls in a regime where augmentation is neutral or harmful and identify the epoch at which consistent benefits first appear.",
+  "gap_type": "missing_evaluation",
+  "question": "Does basic geometric augmentation improve or degrade test accuracy of a small CNN trained for only approximately 5 epochs on Fashion-MNIST, where underfitting rather than overfitting is likely to dominate?",
+  "why_open": "Studies demonstrating augmentation benefits such as (Çetiner et al. 2023) and (Imam et al. 2026) train models for 50–200 epochs on CIFAR-10 where overfitting dominates, making their results inapplicable to the 5-epoch underfitting regime. (Lin et al. 2023) explicitly shows augmentation can degrade performance when underfitting occurs but does not quantify this effect for Fashion-MNIST or short training budgets. (Guo 2024) shows that even LeNet-5 achieves only 90% validation accuracy on Fashion-MNIST at similar training lengths, suggesting small CNNs operate in a capacity-limited regime where augmentation may introduce harmful noise rather than beneficial regularisation.",
+  "hypothesis": "At 5 epochs of training a small CNN on Fashion-MNIST has insufficient capacity utilisation for augmentation to provide a regularisation benefit, resulting in equal or lower test accuracy for the augmented condition, with the benefit emerging only after 15–25 epochs when the non-augmented model begins overfitting.",
+  "data_needed": "Fashion-MNIST via torchvision (60K train, 10K test); no additional data required",
+  "novelty_check": {
+    "status": "novel",
+    "closest": [
+      {
+        "url": "https://www.semanticscholar.org/paper/ef0545e59c2c6aa37039f7cc5fab385dfe0cb97d",
+        "year": 2024,
+        "title": "State-of-the-Art Results with the Fashion-MNIST Dataset",
+        "overlap": "Studies CNN with augmentation on Fashion-MNIST but trains to full convergence without examining underfitting regimes at short epoch counts.",
+        "in_review": true
+      },
+      {
+        "url": "https://www.semanticscholar.org/paper/22b86b724eb3ab4cfc19a741fe0905ae398b6fb2",
+        "year": 2026,
+        "title": "Convolutional Neural Networks for Image Classification",
+        "overlap": "Uses data augmentation on Fashion-MNIST CNN up to 20 epochs but does not isolate the epoch range where augmentation transitions from neutral/harmful to beneficial.",
+        "in_review": false
+      },
+      {
+        "url": "https://www.semanticscholar.org/paper/6ab1a8dac9024def667ae0a957deda89567aa6a7",
+        "year": 2026,
+        "title": "Multi-Class Image Classification on Fashion-MNIST Using a Custom CNN",
+        "overlap": "Trains a small custom CNN on Fashion-MNIST with augmentation for 100 epochs but does not analyze augmentation impact at early underfitting epochs.",
+        "in_review": true
+      }
+    ],
+    "explanation": "None of the prior work specifically investigates whether geometric augmentation is neutral or harmful at very short training runs (~5 epochs) versus beneficial at longer runs on Fashion-MNIST with a small CNN; the closest works (e.g., 'State-of-the-Art Results with the Fashion-MNIST Dataset' and 'Multi-Class Image Classification on Fashion-MNIST') use augmentation with longer training schedules (20–100 epochs) without studying the epoch-regime dependency of augmentation benefit."
+  },
+  "compute_needed": "Approximately 2–4 additional GPU hours on Colab T4/L4 for extended-epoch runs beyond the core 5-epoch protocol",
+  "novelty_queries": [
+    "augmentation underfitting short training epochs CNN",
+    "data augmentation few epochs accuracy Fashion-MNIST",
+    "augmentation benefit epoch budget small model"
+  ],
+  "supporting_paper_ids": [
+    "22e5fa326667",
+    "0dbeb31f9075",
+    "30dbb26f0428",
+    "7bf8d9723b33",
+    "2a92dd9e1956"
+  ]
+}

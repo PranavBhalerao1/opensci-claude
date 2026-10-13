@@ -1,0 +1,230 @@
+{
+  "id": "d8f925f54fc5",
+  "project_id": "a2794d1959b5",
+  "kind": "literature",
+  "status": "done",
+  "phase": "done",
+  "counts": {
+    "found": 381,
+    "included": 48,
+    "screened": 300,
+    "extracted": 48,
+    "candidates": 300,
+    "queries_done": 10,
+    "queries_total": 12
+  },
+  "log": [
+    {
+      "t": "2026-10-10T03:47:54.593325+00:00",
+      "text": "Searching 12 queries on Semantic Scholar"
+    },
+    {
+      "t": "2026-10-10T03:48:39.215882+00:00",
+      "text": "Semantic Scholar failed for “data augmentation convolutional neural network image classification” (HTTPStatusError); will try OpenAlex"
+    },
+    {
+      "t": "2026-10-10T03:49:26.531816+00:00",
+      "text": "Semantic Scholar failed for “random flip rotation translation augmentation training generalisation” (HTTPStatusError); will try OpenAlex"
+    },
+    {
+      "t": "2026-10-10T03:50:13.803691+00:00",
+      "text": "Semantic Scholar failed for “Fashion-MNIST benchmark CNN accuracy” (HTTPStatusError); will try OpenAlex"
+    },
+    {
+      "t": "2026-10-10T03:51:01.154099+00:00",
+      "text": "Semantic Scholar failed for “PyTorch image augmentation torchvision transforms” (HTTPStatusError); will try OpenAlex"
+    },
+    {
+      "t": "2026-10-10T03:51:48.468947+00:00",
+      "text": "Semantic Scholar failed for “effect of data augmentation on test accuracy” (HTTPStatusError); will try OpenAlex"
+    },
+    {
+      "t": "2026-10-10T03:52:43.022862+00:00",
+      "text": "Semantic Scholar failed for “overfitting regularisation data augmentation” (HTTPStatusError); will try OpenAlex"
+    },
+    {
+      "t": "2026-10-10T03:53:30.432402+00:00",
+      "text": "Semantic Scholar failed for “empirical evaluation augmentation strategies” (HTTPStatusError); will try OpenAlex"
+    },
+    {
+      "t": "2026-10-10T03:55:23.386030+00:00",
+      "text": "Semantic Scholar failed for “torchvision FashionMNIST classification baseline” (HTTPStatusError); will try OpenAlex"
+    },
+    {
+      "t": "2026-10-10T03:56:10.664448+00:00",
+      "text": "Semantic Scholar failed for “random crop horizontal flip CNN performance” (HTTPStatusError); will try OpenAlex"
+    },
+    {
+      "t": "2026-10-10T03:56:10.789944+00:00",
+      "text": "Searching OpenAlex for 9 queries"
+    },
+    {
+      "t": "2026-10-10T03:56:32.745272+00:00",
+      "text": "Found 381 unique papers; screening the top 300"
+    },
+    {
+      "t": "2026-10-10T03:57:10.223872+00:00",
+      "text": "48 papers passed screening"
+    },
+    {
+      "t": "2026-10-10T03:57:41.491767+00:00",
+      "text": "Reading 33 papers (15 already in the knowledge base)"
+    },
+    {
+      "t": "2026-10-10T03:58:36.428594+00:00",
+      "text": "Linking citations between 15 papers"
+    },
+    {
+      "t": "2026-10-10T03:58:36.903976+00:00",
+      "text": "Writing the literature overview"
+    },
+    {
+      "t": "2026-10-10T03:59:19.317766+00:00",
+      "text": "Literature review complete"
+    }
+  ],
+  "result": {
+    "overview": {
+      "themes": [
+        {
+          "name": "CNN Benchmarking on Fashion-MNIST",
+          "paper_ids": [
+            "a99921e56ae2",
+            "2444783adaac",
+            "5951185a3ff5",
+            "c27e56db7825",
+            "2c450211857f",
+            "4fdf3425e9fd",
+            "30dbb26f0428",
+            "edafe7dd838d",
+            "f2bcd2a6cec5",
+            "e090dd8c5e2a",
+            "486c6cd8e765",
+            "ec8e439a13a4",
+            "ed3f0ded523d",
+            "94294ca577c7",
+            "5c9b6e4a6b01",
+            "e41bb584614e"
+          ],
+          "description": "A large body of work uses Fashion-MNIST as a standard testbed for comparing CNN architectures, ranging from classic LeNet-5 to modern residual and attention-based models. These papers establish baseline accuracy ranges and typical architectural choices for the dataset."
+        },
+        {
+          "name": "Effect of Data Augmentation on CNN Generalisation",
+          "paper_ids": [
+            "22e5fa326667",
+            "0dbeb31f9075",
+            "24fa379268ee",
+            "3eb4438c8ea2",
+            "d77203eaee1d",
+            "2ecc33f6eeb5",
+            "44e58448bd5c",
+            "7a399e5ee645",
+            "406be4f7031f",
+            "43b5295e5fd7",
+            "5405b1644258",
+            "265d73e74888",
+            "2a92dd9e1956",
+            "c0901fe81463",
+            "5828fbfeeab8",
+            "c54a5f7e730f",
+            "127808cb4a47",
+            "6ce8a871c38c",
+            "ef313d9fb356"
+          ],
+          "description": "These papers directly investigate whether and how much data augmentation improves CNN classification accuracy, typically comparing augmented versus non-augmented training conditions. They consistently find that basic geometric augmentations reduce overfitting and raise test accuracy, though effect sizes vary by dataset, model, and training length."
+        },
+        {
+          "name": "Augmentation Techniques and Their Specific Impact",
+          "paper_ids": [
+            "22e5fa326667",
+            "0dbeb31f9075",
+            "24fa379268ee",
+            "2ecc33f6eeb5",
+            "44e58448bd5c",
+            "5405b1644258",
+            "2a92dd9e1956",
+            "c0901fe81463",
+            "5828fbfeeab8",
+            "6ce8a871c38c"
+          ],
+          "description": "Studies in this theme focus on specific augmentation operations — flipping, cropping, rotation, circular shift, context placement — and measure their individual or combined contributions. Results suggest horizontal flips and small translations are among the most consistently beneficial basic techniques."
+        },
+        {
+          "name": "Training Dynamics: Hyperparameters, Optimizers, and Batch Size",
+          "paper_ids": [
+            "fc995cdf33ba",
+            "82fabaf7cebb",
+            "0d638129b432",
+            "64cdac368d06"
+          ],
+          "description": "This group examines how training configuration choices such as batch size, optimizer type, and activation function affect CNN performance, providing context for interpreting accuracy differences across training conditions."
+        },
+        {
+          "name": "Lightweight and Efficient CNN Design",
+          "paper_ids": [
+            "a99921e56ae2",
+            "7bf8d9723b33",
+            "486c6cd8e765",
+            "94294ca577c7",
+            "e41bb584614e",
+            "7bd1b53a0b32"
+          ],
+          "description": "Several papers focus on building small, parameter-efficient CNNs that remain competitive in accuracy, which is directly relevant to the study's use of a small CNN architecture on a constrained training budget."
+        },
+        {
+          "name": "Data Augmentation in Specialised or Non-Standard Domains",
+          "paper_ids": [
+            "d77203eaee1d",
+            "44e58448bd5c",
+            "7a399e5ee645",
+            "265d73e74888",
+            "f5e4c1d70b99",
+            "c0901fe81463",
+            "6d4d24cb9aa3",
+            "c54a5f7e730f"
+          ],
+          "description": "These papers apply augmentation to medical images, biological cells, plant leaves, agricultural produce, and handwriting recognition, confirming the generality of augmentation benefits but also highlighting that effect sizes can vary when training data is very scarce or domain-specific."
+        },
+        {
+          "name": "Federated and Privacy-Preserving Learning with Fashion-MNIST",
+          "paper_ids": [
+            "75a4533dfb0a"
+          ],
+          "description": "A smaller set of papers uses Fashion-MNIST as a benchmark in federated or privacy-preserving learning contexts, relevant primarily as evidence of the dataset's broad adoption as a standard testbed rather than directly addressing augmentation."
+        }
+      ],
+      "summary": "Research on convolutional neural networks for image classification has matured considerably, with Fashion-MNIST emerging as a standard small-image benchmark. Studies consistently show that simple architectural choices (small filters, batch normalization, dropout) combined with basic data augmentation (flips, crops, rotations) can push test accuracy well above 90%, with state-of-the-art results now approaching 99.65% on this dataset. The question of whether augmentation meaningfully helps generalisation is largely answered affirmatively across many domains and datasets, though the magnitude of the benefit depends heavily on training set size, model capacity, and the specific augmentation strategy applied.\n\nFor a small CNN trained for only ~5 epochs on Fashion-MNIST's 60,000 images, the benefit of simple augmentation is likely modest but measurable. Most empirical studies find that basic geometric augmentations reduce overfitting and improve test accuracy, especially when training runs are short and model capacity is limited. However, very few studies isolate exactly the experimental design described here (identical architecture, fixed seeds, short training), meaning the field provides directional guidance rather than a precise quantitative prediction for this specific setup.",
+      "open_problems": [
+        "How large is the accuracy gain from simple augmentation specifically for small CNNs trained for only ~5 epochs on Fashion-MNIST, where underfitting rather than overfitting may dominate?",
+        "Two seeds (42 and 123) are insufficient for statistical significance testing — it is unclear how much run-to-run variance should be expected and how to interpret small accuracy differences.",
+        "Combining multiple augmentation techniques does not always improve over single techniques, and the reasons for this interaction are poorly understood.",
+        "Most studies report only final test accuracy rather than training curves, making it hard to understand whether augmentation accelerates or slows early-epoch learning.",
+        "Optimal augmentation hyperparameters (flip probability, crop fraction, rotation angle) are rarely tuned systematically; the default values used may not be optimal for a given architecture or dataset.",
+        "The relationship between dataset size and augmentation benefit is insufficiently characterised — it is unclear whether Fashion-MNIST's 60,000 training images is large enough that simple augmentation yields only marginal gains.",
+        "Generalisation of augmentation findings across datasets remains limited, with most individual studies confined to a single benchmark, making cross-dataset conclusions difficult."
+      ],
+      "common_methods": [
+        "Convolutional Neural Networks (CNN)",
+        "Random horizontal flip augmentation",
+        "Random crop / translation augmentation",
+        "Random rotation augmentation",
+        "Batch normalization",
+        "Dropout regularization",
+        "Adam and SGD optimizers",
+        "Transfer learning (VGG16, ResNet, EfficientNet)",
+        "Data augmentation comparison (augmented vs. baseline)",
+        "Train/validation/test splits with fixed seeds"
+      ],
+      "common_datasets": [
+        "Fashion-MNIST",
+        "CIFAR-10",
+        "MNIST",
+        "ImageNet (subsets)",
+        "CIFAR-100"
+      ]
+    }
+  },
+  "error": null,
+  "started_at": "2026-10-10 03:47:53.888046+00:00",
+  "finished_at": "2026-10-10 03:59:19.433053+00:00"
+}

@@ -1,0 +1,42 @@
+{
+ "db": "postgresql://aws-0-us-west-2.pooler.supabase.com:5432/postgres",
+ "db_version": "PostgreSQL 17.6 on x86_64-pc-linux-gnu",
+ "model_tables": 11,
+ "missing_tables": [],
+ "missing_columns": [],
+ "runs_marked_running_any_project": [],
+ "owner_beta": {
+  "approved": true,
+  "cap_usd": 50.0,
+  "spent_usd": 20.3125,
+  "remaining_usd": 29.6875
+ },
+ "e2b_template": "openscientist-cpu",
+ "e2b_running_sandboxes": [],
+ "default_project_settings": {
+  "depth": "standard",
+  "max_papers": 100,
+  "citation_hops": 0,
+  "refinement": {
+   "enabled": true
+  }
+ },
+ "refinement": {
+  "max_rounds": 3,
+  "max_usd": 12.0,
+  "numeric_crosscheck": true
+ },
+ "models": {
+  "bedrock_model_id": "us.anthropic.claude-sonnet-4-6",
+  "model_reasoning": "us.anthropic.claude-sonnet-4-6",
+  "model_standard": "us.anthropic.claude-sonnet-4-6",
+  "model_bulk": "us.anthropic.claude-sonnet-4-6",
+  "model_judge": "us.anthropic.claude-sonnet-4-6"
+ },
+ "colab": {
+  "credentials_file_set": true,
+  "max_sessions": 1
+ }
+}
+----
+Colab OK: 297.92 compute units left, usage 0.00/h, 0 active session(s), 0 owned by OpenScientist

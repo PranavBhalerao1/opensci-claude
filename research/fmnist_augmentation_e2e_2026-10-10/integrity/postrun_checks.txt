@@ -1,0 +1,25 @@
+Post-run checks, 2026-10-10 ~09:30Z (after both backend sessions were stopped)
+
+Non-interference (sha256, snapshots taken before launch at ~03:45Z):
+  research/ (all earlier runs, 560 files)                      : all identical  (sha256sum -c research_checksums_before.txt)
+  backend/data/projects/ (other projects' plan exports, 51 files): all identical  (sha256sum -c backend_data_projects_checksums_before.txt)
+  WSL ~/.openscientist/workspaces/ other projects (236 files)    : all identical  (diff wsl_workspaces_checksums_before.txt wsl_workspaces_checksums_after.txt)
+
+Source: git HEAD 551300c088bf7b0e0fa2a571a05c1c84f86ab698 before launch, before the session-2 restart and at the end;
+        `git status --porcelain` showed only this run folder as untracked.
+
+Processes/sessions at the end:
+  backend: stopped (SIGINT) after each session; no launcher process left
+  Colab:   "Colab OK: 294.45 compute units left, usage 0.00/h, 0 active session(s), 0 owned by OpenScientist"; ledger dir empty
+  E2B:     2 sandboxes of this project still running (not terminated; awaiting the user's decision):
+             iu7yrdut17pxxqofxfbvr  started 2026-10-10T04:20:30Z (session 1), ends 2026-10-11T04:20:30Z
+             i2zvu0409dc52t40igxsl  started 2026-10-10T09:18:13Z (session 2), ends 2026-10-11T09:18:13Z
+
+Determinism of the Colab training across T2.1's three attempts (three separate L4 sessions):
+  attempt 2 vs final CSV data rows (4 files): byte-identical
+  attempt 1 vs final training log: per-epoch train_loss identical for all 120 epochs
+
+Operator incident (not part of the research run): at ~09:23Z a post-run `uv run` in WSL without
+UV_PROJECT_ENVIRONMENT replaced the Windows dev venv backend/.venv with a Linux venv. The process was
+killed, the broken venv removed, and backend/.venv rebuilt on Windows with `uv sync --frozen` from
+backend/uv.lock; offline suite afterwards: 398 passed, 26 skipped. No research data, source or DB row was involved.

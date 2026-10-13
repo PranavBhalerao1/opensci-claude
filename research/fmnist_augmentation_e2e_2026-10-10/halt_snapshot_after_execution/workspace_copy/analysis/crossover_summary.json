@@ -1,0 +1,17 @@
+{
+  "crossover_epoch": null,
+  "epoch5_mean_gap_pp": -2.7,
+  "epoch5_regime": "underfitting-penalty-confirmed",
+  "gap_seed42_ep5": -2.15,
+  "gap_seed123_ep5": -3.25,
+  "gap_seed42_ep30": -1.37,
+  "gap_seed123_ep30": -1.26,
+  "delta_train_loss_ep5_seed42": 0.1882,
+  "delta_train_loss_ep5_seed123": 0.1858,
+  "delta_train_loss_ep30_seed42": 0.2264,
+  "delta_train_loss_ep30_seed123": 0.2333,
+  "delta_val_acc_ep5_seed42": -1.86,
+  "delta_val_acc_ep5_seed123": -3.0,
+  "delta_val_acc_ep30_seed42": -1.96,
+  "delta_val_acc_ep30_seed123": -1.22
+}

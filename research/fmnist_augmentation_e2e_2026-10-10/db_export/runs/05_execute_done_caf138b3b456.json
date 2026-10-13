@@ -1,0 +1,50 @@
+{
+  "id": "caf138b3b456",
+  "project_id": "a2794d1959b5",
+  "kind": "execute",
+  "status": "done",
+  "phase": "done",
+  "counts": {
+    "done": 13,
+    "human": 0,
+    "failed": 1,
+    "blocked": 0,
+    "pending": 0,
+    "running": 0,
+    "skipped": 0,
+    "spent_cents": 911
+  },
+  "log": [
+    {
+      "t": "2026-10-10T09:18:12.377550+00:00",
+      "text": "Setting up the workspace environment"
+    },
+    {
+      "t": "2026-10-10T09:19:06.037462+00:00",
+      "text": "Installed packages"
+    },
+    {
+      "t": "2026-10-10T09:19:06.160743+00:00",
+      "text": "Executing tasks"
+    },
+    {
+      "t": "2026-10-10T09:21:23.700749+00:00",
+      "text": "Finished: 13 of 14 tasks done"
+    }
+  ],
+  "result": {
+    "spent": 9.111043755,
+    "counts": {
+      "done": 13,
+      "human": 0,
+      "failed": 1,
+      "blocked": 0,
+      "skipped": 0,
+      "cancelled": 0
+    },
+    "cancelled": false
+  },
+  "error": null,
+  "started_at": "2026-10-10 09:18:11.232058+00:00",
+  "finished_at": "2026-10-10 09:21:23.929868+00:00"
+}
