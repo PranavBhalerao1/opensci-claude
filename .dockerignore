@@ -1,0 +1,9 @@
+# The image needs only backend/ (see Dockerfile); keep secrets and bulky dirs out of the build context.
+*
+!backend/pyproject.toml
+!backend/uv.lock
+!backend/.python-version
+!backend/app/
+!backend/scripts/heroku_start.sh
+**/__pycache__
+**/*.pyc
