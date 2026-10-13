@@ -2,7 +2,7 @@
 # the frontend is deployed separately.
 FROM python:3.12-slim
 
-COPY --from=ghcr.io/astral-sh/uv:0.12/uv /bin/uv
+COPY --from=ghcr.io/astral-sh/uv:0.12 /uv /bin/uv
 
 ENV PYTHONUNBUFFERED=1 \
     UV_COMPILE_BYTECODE=1 \
