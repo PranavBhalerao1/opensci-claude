@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<base href="/demo/">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Demo | OpenScientist</title>
+<meta name="description" content="Watch a recorded OpenScientist agent swarm split into thirty specialists and work a real research question end to end.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='46' fill='%230b0b0a'/%3E%3Ccircle cx='50' cy='50' r='46' fill='none' stroke='%23faf9f6' stroke-width='3'/%3E%3Ccircle cx='50' cy='50' r='6' fill='%23faf9f6'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/layout.css">
+<link rel="stylesheet" href="css/components.css">
+<link rel="stylesheet" href="css/sections/hero.css">
+<link rel="stylesheet" href="css/sections/demo.css">
+<script src="js/shared/navigation.js" defer></script>
+<script src="js/shared/reveal.js" defer></script>
+<script src="js/shared/scroll-progress.js" defer></script>
+<script src="js/sections/demo.js" defer></script>
+<script src="js/demo-main.js" defer></script>
+</head>
+<body>
+<div class="grain"></div>
+<div class="progress" id="progress"></div>
+
+<!-- ============ NAVIGATION ============ -->
+<header class="nav" id="siteNav">
+  <div class="wrap nav-inner">
+    <a href="/" class="logo"><span class="dot"></span>OpenScientist</a>
+    <nav class="nav-links">
+      <a href="/#method" class="hide-mobile">Method</a>
+      <a href="/#principles" class="hide-mobile">Principles</a>
+      <a href="/demo" class="hide-mobile" aria-current="page">Demo</a>
+      <a href="/login" class="hide-mobile">Sign in</a>
+      <a href="/waitlist" class="btn btn-solid">Join waitlist</a>
+    </nav>
+  </div>
+</header>
+
+<main id="top">
+
+  <!-- ============ DEMO INTRO ============ -->
+  <section class="demo-intro frame" id="demoIntro">
+    <span class="fc tl light"></span><span class="fc tr light"></span><span class="fc bl light"></span><span class="fc br light"></span>
+    <div class="wrap demo-intro-wrap reveal">
+      <p class="eyebrow">Live capability demo</p>
+      <h1>Step inside a research run.</h1>
+      <p class="demo-intro-copy">
+        Below is one system splitting into a swarm of specialists, each one working a piece of a real
+        research question. Click any ball to step inside that agent and see what it actually did.
+      </p>
+      <div class="demo-note">
+        <span class="demo-note-dot"></span>
+        <p>
+          <b>This is a ready-made demo.</b> Full autonomous runs take days of
+          compute and real lab access &mdash; not something we spin up on page load. What's below is a real,
+          recorded run on a lighter question: <em>do standing desks improve afternoon focus?</em>
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ RESEARCH BRIEF ============ -->
+  <section class="demo-brief-section" id="demoBriefSection">
+    <div class="wrap demo-brief-grid reveal">
+      <div class="demo-brief-copy">
+        <p class="eyebrow">Research brief</p>
+        <h2>What Praxis R1 is about to investigate</h2>
+        <p class="demo-brief-lede">
+          Before anything runs, Praxis R1 scopes the gap herself and writes it down. This is the brief
+          her swarm will work from.
+        </p>
+        <div class="demo-chips">
+          <span class="demo-chip">n = 24 participants</span>
+          <span class="demo-chip">10 workdays</span>
+          <span class="demo-chip">Within-subject design</span>
+          <span class="demo-chip">Wearable sensors</span>
+          <span class="demo-chip">30 agents &middot; 5 teams</span>
+        </div>
+      </div>
+      <div class="demo-doc">
+        <div class="demo-doc-bar"><span></span><span></span><span></span><small>brief_standing_desks_v0.md &middot; Praxis R1</small></div>
+        <div class="demo-doc-body">
+          <div class="demo-doc-field"><b>Question</b><p>Do standing desks improve afternoon focus?</p></div>
+          <div class="demo-doc-field"><b>Gap</b><p>Most posture-and-cognition studies run a single lab session. None track real knowledge workers, on real workdays, long enough to see an afternoon slump.</p></div>
+          <div class="demo-doc-field"><b>Hypothesis</b><p>Standing for part of the afternoon reduces attention lapses without hurting comfort or perceived productivity.</p></div>
+          <div class="demo-doc-field"><b>Method</b><p>24 participants &middot; 10 workdays &middot; wearable focus-timer + desk-position sensor &middot; paired within-subject comparison.</p></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ DEMO STAGE ============ -->
+  <section class="demo-stage frame" id="demoStage">
+    <span class="fc tl"></span><span class="fc tr"></span><span class="fc bl"></span><span class="fc br"></span>
+    <canvas id="demoGL"></canvas>
+    <div class="demo-hotspots" id="demoHotspots" aria-hidden="false"></div>
+
+    <div class="hud-corner bl"><span class="hud-dot"></span> PRAXIS R1 &middot; RECORDED RUN</div>
+    <div class="hud-corner br">STANDING DESKS &amp; FOCUS</div>
+
+    <!-- Start gate -->
+    <div class="demo-gate" id="demoGate">
+      <div class="demo-gate-card">
+        <p class="demo-gate-eyebrow">Ready when you are</p>
+        <h3>Begin the research run</h3>
+        <p>Praxis R1 will split into a swarm of 30 specialist agents and work the standing-desks question end to end, compressed to about half a minute.</p>
+        <button type="button" id="demoInitiate" class="demo-gate-btn">Initiate Praxis R1 <span class="demo-gate-btn-arrow">&rarr;</span></button>
+      </div>
+    </div>
+
+    <!-- Combined agent log console -->
+    <div class="demo-console" id="demoConsole" aria-hidden="true">
+      <div class="demo-console-head">
+        <span class="demo-console-dot"></span>
+        <span class="demo-console-title">Combined agent log</span>
+        <svg class="demo-spark" id="demoSpark" viewBox="0 0 120 28" preserveAspectRatio="none" aria-hidden="true"><polyline points="" /></svg>
+        <span class="demo-console-clock"><i>elapsed</i><b id="demoClock">00:00:00</b></span>
+        <span class="demo-console-count"><b id="demoEventCount">0</b><i>events</i></span>
+        <span class="demo-console-speed">~1000&times;</span>
+      </div>
+      <div class="demo-console-body" id="demoConsoleBody"></div>
+    </div>
+
+    <div class="demo-hint" id="demoHint">
+      <span id="demoHintText">Click a ball to step inside that agent</span>
+      <button type="button" id="demoReplay">Replay run &#8635;</button>
+    </div>
+
+    <!-- No-WebGL fallback -->
+    <div class="demo-fallback-list wrap" id="demoFallbackList"></div>
+
+    <!-- Immersive per-agent overlay -->
+    <div class="demo-panel" id="demoPanel" aria-hidden="true">
+      <button type="button" class="demo-panel-back" id="demoBack">&larr; Back to overview</button>
+      <div class="demo-panel-card">
+        <div class="demo-panel-inner" id="demoPanelInner"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ AGENT PROGRESS ============ -->
+  <section class="demo-progress-section" id="demoProgressSection">
+    <div class="wrap">
+      <p class="eyebrow">Agent swarm</p>
+      <h2>30 agents, five teams, working in parallel</h2>
+
+      <div class="demo-progress-top">
+        <div class="demo-ring-card">
+          <svg class="demo-ring" viewBox="0 0 100 100" aria-hidden="true">
+            <circle class="demo-ring-bg" cx="50" cy="50" r="44"></circle>
+            <circle class="demo-ring-fg" id="demoOverallRing" cx="50" cy="50" r="44"></circle>
+          </svg>
+          <div class="demo-ring-label"><b id="demoOverallPct">0%</b><span>overall complete</span></div>
+        </div>
+        <div class="demo-timeline-card">
+          <div class="demo-timeline-head"><span>Team timeline</span><b id="demoTimelineClock">00:00:00</b></div>
+          <div class="demo-timeline" id="demoTimeline"></div>
+        </div>
+      </div>
+
+      <div class="demo-progress-grid" id="demoProgressGrid"></div>
+    </div>
+  </section>
+
+  <!-- ============ RESULTS ============ -->
+  <section class="demo-results-section" id="demoResultsSection">
+    <div class="wrap">
+      <p class="eyebrow">Output</p>
+      <h2>What the run produced</h2>
+      <p class="demo-results-lock" id="demoResultsLock">Results unlock once the run completes.</p>
+
+      <div class="demo-results-grid" id="demoResultsGrid">
+        <div class="demo-chart-card">
+          <div class="demo-chart-head">Afternoon focus by desk position</div>
+          <div class="demo-chart-3d" id="demoChart3d"></div>
+          <div class="demo-chart-caption">Minutes of uninterrupted focus, by time of day and desk position</div>
+        </div>
+        <div class="demo-chart-card">
+          <div class="demo-chart-head">Focus-lapse rate across the study</div>
+          <svg class="demo-line-chart" id="demoLineChart" viewBox="0 0 300 140" preserveAspectRatio="none" aria-hidden="true"></svg>
+          <div class="demo-chart-caption">Lapses per hour, standing vs. seated, over 10 workdays</div>
+        </div>
+        <div class="demo-doc demo-doc-manuscript">
+          <div class="demo-doc-bar"><span></span><span></span><span></span><small>manuscript_standing_desks.md &middot; Praxis R1</small></div>
+          <div class="demo-doc-body">
+            <div class="demo-doc-title">Standing Desks and Afternoon Focus: A Within-Subject Field Study</div>
+            <div class="demo-doc-meta">Research Brief &middot; OpenScientist &middot; Praxis R1</div>
+            <p class="demo-doc-p">We tested whether standing for part of the afternoon improves sustained attention among knowledge workers. Twenty-four participants alternated seated and standing conditions across ten workdays while wearable sensors logged desk position and a focus-timer recorded attention lapses.</p>
+            <p class="demo-doc-p">Standing sessions produced 9% longer uninterrupted focus intervals than matched seated sessions (paired t-test, d&#8202;=&#8202;0.41, 95% CI [0.18, 0.64]), an effect that held after controlling for self-reported caffeine intake. No difference in perceived comfort was found between conditions.</p>
+            <div class="demo-doc-chips"><span>9 citations verified</span><span>references.bib</span><span>Confidence: high</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ FOLLOW-UP ============ -->
+  <section class="section-pad blueprint">
+    <div class="wrap mission-block reveal">
+      <h2>Want to run your own question?</h2>
+      <p class="sub">Early access opens in waves. Join the waitlist and invite friends to move up the line.</p>
+      <a href="/waitlist" class="btn-plain ghost-dark demo-cta">Join the waitlist &rarr;</a>
+    </div>
+  </section>
+
+</main>
+
+<!-- ============ FOOTER ============ -->
+<footer>
+  <div class="wrap foot-inner">
+    <a href="/" class="logo logo-footer"><span class="dot"></span>OpenScientist</a>
+    <div class="foot-links"><a href="/#method">Method</a><a href="/#principles">Principles</a><a href="/demo">Demo</a><a href="/waitlist">Waitlist</a><a href="/login">Sign in</a></div>
+    <div class="foot-copy">&copy; 2026 OpenScientist. The automated scientist.</div>
+  </div>
+</footer>
+</body>
+</html>

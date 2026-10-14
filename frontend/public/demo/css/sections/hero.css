@@ -1,0 +1,46 @@
+header.nav{position:fixed;top:0;left:0;right:0;z-index:500;padding:22px 0;transition:background .4s var(--ease),border-color .4s var(--ease),padding .4s var(--ease),color .4s var(--ease);border-bottom:1px solid transparent;color:var(--white);mix-blend-mode:difference;}
+header.nav.scrolled{padding:15px 0;}
+header.nav.in-praxis .logo{opacity:0;pointer-events:none;}
+.nav-inner{display:flex;align-items:center;justify-content:space-between;}
+.nav-links{display:flex;gap:36px;align-items:center;}
+.nav-links a{font-size:.82rem;font-weight:500;letter-spacing:.01em;position:relative;padding:4px 0;}
+.nav-links a::after{content:"";position:absolute;left:0;bottom:0;width:0%;height:1px;background:currentColor;transition:width .35s var(--ease);}
+.nav-links a:hover::after{width:100%;}
+.nav-links a.btn::after{display:none;}
+header.nav .btn{mix-blend-mode:normal;padding:12px 26px;min-width:124px;justify-content:center;white-space:nowrap;}
+@media(max-width:820px){.nav-links{gap:24px;}.nav-links a.hide-mobile{display:none;}}
+@media(max-width:420px){header.nav .btn{padding:11px 18px;min-width:112px;}}
+
+.hero{position:relative;min-height:100vh;display:flex;align-items:center;padding:150px 0 50px;background:var(--black);color:var(--white);overflow:hidden;}
+#heroGL{position:absolute;inset:0;width:100%;height:100%;z-index:0;}
+.hero-content{position:relative;z-index:2;text-align:center;display:flex;flex-direction:column;align-items:center;width:100%;}
+.hero-content::before{content:"";position:absolute;inset:-30% -50% -20%;background:radial-gradient(ellipse at center,rgba(0,0,0,.72) 0%,rgba(0,0,0,.42) 38%,transparent 68%);z-index:-1;pointer-events:none;}
+.hero .eyebrow{justify-content:center;color:rgba(185,180,170,.82);}
+.hero .eyebrow::before{background:rgba(185,180,170,.55);}
+.hero-word{font-weight:800;text-transform:uppercase;font-size:clamp(2.7rem,10vw,8rem);line-height:.9;letter-spacing:-0.035em;max-width:100%;padding-inline:20px;white-space:nowrap;text-shadow:0 2px 24px rgba(0,0,0,.85),0 1px 5px rgba(0,0,0,.65);}
+.tagline{margin-top:24px;font-family:var(--font-mono);font-size:clamp(.82rem,1.4vw,1.02rem);letter-spacing:.02em;color:rgba(218,213,202,.88);text-shadow:0 1px 10px rgba(0,0,0,.75);}
+.hero .actions{margin-top:42px;display:flex;gap:16px;flex-wrap:wrap;align-items:center;justify-content:center;}
+.stat-row{margin-top:88px;padding-top:36px;border-top:1px solid var(--line-dark);display:grid;grid-template-columns:repeat(4,1fr);gap:30px;width:100%;}
+.stat-row .stat b{display:block;font-family:var(--font-serif);font-style:italic;font-weight:500;font-size:clamp(1.4rem,2.4vw,1.9rem);margin-bottom:5px;}
+.stat-row .stat span{font-family:var(--font-mono);font-size:.7rem;letter-spacing:.05em;color:var(--gray-2);text-transform:uppercase;}
+@media(max-width:820px){.stat-row{grid-template-columns:repeat(2,1fr);row-gap:34px;}}
+@media(max-width:420px){.hero-word{font-size:clamp(2.2rem,10vw,2.7rem);padding-inline:12px;}}
+
+body:not(.loaded) .hero-anim{opacity:0;transform:translateY(18px);}
+.hero-anim{transition:opacity 1s var(--ease),transform 1s var(--ease);}
+body.loaded .hero-anim{opacity:1;transform:translateY(0);}
+body.loaded .hero-anim.h1{transition-delay:.05s;}
+body.loaded .hero-anim.h2{transition-delay:.16s;}
+body.loaded .hero-anim.h3{transition-delay:.28s;}
+body.loaded .hero-anim.h4{transition-delay:.4s;}
+
+.hero .btn-plain.solid-light{background:#eeeadf;color:var(--black);border-color:#eeeadf;}
+.hero .btn-plain.ghost-light{background:rgba(0,0,0,.44);border-color:rgba(255,255,255,.32);backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px);}
+.hero .btn-plain.ghost-light:hover{background:rgba(10,10,10,.65);border-color:rgba(255,255,255,.52);color:var(--white);}
+
+.hud-corner{position:absolute;z-index:3;font-family:var(--font-mono);font-size:.66rem;letter-spacing:.12em;color:var(--gray-2);text-transform:uppercase;display:flex;align-items:center;gap:8px;}
+.hud-corner.bl{left:40px;bottom:28px;}
+.hud-corner.br{right:40px;bottom:28px;}
+.hud-dot{width:6px;height:6px;border-radius:50%;background:var(--white);animation:pulseDot 1.6s ease-in-out infinite;}
+@keyframes pulseDot{0%,100%{opacity:1;}50%{opacity:.2;}}
+@media(max-width:720px){.hud-corner{display:none;}}

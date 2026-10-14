@@ -44,3 +44,18 @@ body {
 
 @keyframes blink { 50% { opacity: 0; } }
 .caret::after { content: "▍"; animation: blink 1s steps(1) infinite; margin-left: 1px; }
+
+/* Faint graph-paper grid, fading out toward the edges (landing page). */
+.graph-paper::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(var(--color-rule) 1px, transparent 1px),
+    linear-gradient(90deg, var(--color-rule) 1px, transparent 1px);
+  background-size: 40px 40px;
+  mask-image: radial-gradient(ellipse at center, black 0%, transparent 70%);
+  opacity: 0.6;
+}
+.graph-paper > * { position: relative; }

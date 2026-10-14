@@ -2,7 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 // Pages reachable without a session. Everything else redirects to /login.
-const PUBLIC_PATHS = ["/login", "/signup", "/forgot-password", "/auth"];
+const PUBLIC_PATHS = ["/login", "/signup", "/forgot-password", "/auth", "/welcome", "/waitlist", "/demo"];
 
 function isPublic(path: string): boolean {
   return PUBLIC_PATHS.some((p) => path === p || path.startsWith(`${p}/`));
@@ -41,6 +41,13 @@ export async function updateSession(request: NextRequest) {
   // server rather than trusting the cookie as-is.
   const { data: { user } } = await supabase.auth.getUser();
   const path = request.nextUrl.pathname;
+
+  // Signed-out visitors to the homepage see the landing page; the URL stays "/".
+  if (!user && path === "/") {
+    const url = request.nextUrl.clone();
+    url.pathname = "/welcome";
+    return NextResponse.rewrite(url);
+  }
 
   if (!user && !isPublic(path)) {
     const url = request.nextUrl.clone();

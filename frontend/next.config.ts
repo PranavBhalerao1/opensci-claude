@@ -1,7 +1,10 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  // The recorded swarm demo is a static page carried over from the original site (public/demo).
+  async rewrites() {
+    return [{ source: "/demo", destination: "/demo/index.html" }];
+  },
 };
 
 export default nextConfig;
