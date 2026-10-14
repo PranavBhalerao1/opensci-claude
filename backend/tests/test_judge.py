@@ -88,7 +88,7 @@ def test_request_is_one_fresh_message_with_numbered_manuscript_and_figures(study
     mistakes, bundle = run(study)
     assert len(provider.requests) == 1
     req = provider.requests[0]
-    assert req["system"] == judge.JUDGE_SYSTEM
+    assert req["system"].endswith(judge.JUDGE_SYSTEM)  # behind the standing identity rule
     assert [m["role"] for m in req["messages"]] == ["user"]
     content = req["messages"][0]["content"]
     texts = [b["text"] for b in content if b["type"] == "text"]
@@ -175,7 +175,7 @@ def test_bedrock_outage_gets_one_retry_then_fails(study, provider):
     mistakes, _ = run(study)
     assert mistakes["valid"] and len(provider.requests) == 2
     provider.script += [anthropic.APIConnectionError(request=REQUEST), anthropic.APIConnectionError(request=REQUEST)]
-    with pytest.raises(judge.ReviewFailed, match="Bedrock unavailable"):
+    with pytest.raises(judge.ReviewFailed, match="temporarily unavailable"):
         run(study)
 
 
@@ -241,7 +241,7 @@ def test_serious_claims_are_verified_by_a_second_fresh_call(study, provider):
     mistakes, _ = run(study)
     assert len(provider.requests) == 2
     verify = provider.requests[1]
-    assert verify["system"] == judge.JUDGE_SYSTEM and len(verify["messages"]) == 1
+    assert verify["system"].endswith(judge.JUDGE_SYSTEM) and len(verify["messages"]) == 1
     tail = verify["messages"][0]["content"][-1]["text"]
     assert "CLAIMED ISSUES" in tail and '"GROUNDING": "unverified"' in tail and "I3" not in tail
     by_id = {i["id"]: i for i in mistakes["issues"]}
@@ -416,8 +416,10 @@ def test_a_stream_that_breaks_mid_review_is_retried_once_then_fails_explicitly(s
     mistakes, _ = run(study)
     assert mistakes["valid"] and len(provider.requests) == 2
     provider.script += [_BrokenStream(error), _BrokenStream(error)]
-    with pytest.raises(judge.ReviewFailed, match="Bedrock unavailable: StreamInterrupted"):
+    # Generic: the provider and the exception class stay in the logs, out of the user's message.
+    with pytest.raises(judge.ReviewFailed, match="temporarily unavailable") as failure:
         run(study)
+    assert "StreamInterrupted" not in str(failure.value)
 
 
 def test_a_non_transient_stream_error_is_not_retried(study, provider):

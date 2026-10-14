@@ -81,3 +81,16 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+
+# The order tier_of() tries tiers in. Tiers may share a model id (they all default to
+# bedrock_model_id) and a usage row records only the id, so a shared id cannot be attributed to the
+# tier that spent it: the first match wins, and "standard" leads as the most-used tier. A tier
+# configured with an id of its own always resolves to itself, whatever its place here.
+TIER_ORDER = ("standard", "reasoning", "bulk", "judge")
+
+
+def tier_of(model_id: str) -> str:
+    """The tier name for a stored model id: a cost bucket, not provenance (see TIER_ORDER). What a
+    user can see names the tier, never the model or provider behind it; raw ids stay in the Usage
+    table and the logs, where cost accounting needs them."""
+    return next((t for t in TIER_ORDER if getattr(settings, f"model_{t}") == model_id), "other")

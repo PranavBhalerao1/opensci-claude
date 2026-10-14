@@ -20,12 +20,12 @@ from ..agents import blueprint as blueprint_agent
 from ..agents import plan as plan_agent
 from ..agents import report as report_agent
 from ..auth import CurrentUser, get_current_user
-from ..config import settings
+from ..config import settings, tier_of
 from ..db import Message, Paper, Project, ProjectPaper, Run, Secret, TaskState, Usage, engine, get_session
 from ..graph import project_graph
 from ..execution import orchestrator
 from ..execution.sandbox import sandbox_for
-from ..llm import current_project, stream_text
+from ..llm import current_project, safe_error, stream_text
 
 router = APIRouter(prefix="/api/projects", tags=["projects"])
 # Routes that start billable work (model calls or GPU jobs) also require the user to be
@@ -699,12 +699,14 @@ def get_usage(project_id: str, session: Session = Depends(get_session),
               user: CurrentUser = Depends(get_current_user)) -> dict:
     _get(session, project_id, user)
     rows = session.exec(select(Usage).where(Usage.project_id == project_id)).all()
-    by_model: dict[str, float] = {}
+    # Grouped by tier, not by model id: spend is the user's business, the model behind a tier is not.
+    by_tier: dict[str, float] = {}
     for u in rows:
-        by_model[u.model] = by_model.get(u.model, 0.0) + u.cost
+        tier = tier_of(u.model)
+        by_tier[tier] = by_tier.get(tier, 0.0) + u.cost
     from ..execution import colab_runner
 
-    return {"total": round(sum(by_model.values()), 4), "by_model": by_model, "calls": len(rows),
+    return {"total": round(sum(by_tier.values()), 4), "by_tier": by_tier, "calls": len(rows),
             "gpu": {"spent": round(colab_runner.gpu_spent(project_id), 4), "budget": colab_runner.gpu_budget(project_id)}}
 
 
@@ -762,7 +764,7 @@ def post_turn(project_id: str, body: TurnCreate, session: Session = Depends(get_
                 async for ev in _chat(project_id):
                     yield ev
         except Exception as exc:  # surface to the UI instead of dropping the stream
-            yield {"event": "error", "data": json.dumps({"message": str(exc)})}
+            yield {"event": "error", "data": json.dumps({"message": safe_error(exc)})}
         yield {"event": "done", "data": "{}"}
 
     return EventSourceResponse(events())

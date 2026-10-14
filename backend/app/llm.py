@@ -61,6 +61,26 @@ def _stream_error_transient(exc: anthropic.APIStatusError) -> bool:
     return exc.status_code == 200 and isinstance(kind, str) and kind.lower() in STREAM_TRANSIENT
 
 
+# A provider error's own text names the model service and is nothing a user can act on, so users
+# get one of these instead and the detail is logged. Everything else a caller raises is our own
+# message and reaches the user unchanged (see safe_error).
+MODEL_UNAVAILABLE = "The model service is temporarily unavailable. Please try again in a few minutes."
+MODEL_FAILED = "The model service could not complete this request."
+# Raised past the SDK's retries (TRANSIENT_ERRORS), or by a stream that failed mid-response, which
+# the SDK raises unwrapped (see StreamInterrupted).
+_TRANSPORT_ERRORS = TRANSIENT_ERRORS + (httpx.TransportError, httpx2.TransportError)
+
+
+def safe_error(exc: BaseException, failed: str = MODEL_FAILED) -> str:
+    """A message about `exc` that is safe to show a user. Provider and transport failures become
+    MODEL_UNAVAILABLE (transient) or `failed`, and are logged in full; any other exception carries
+    our own wording and passes through."""
+    if isinstance(exc, (anthropic.APIError, httpx.TransportError, httpx2.TransportError)):
+        log.warning("provider error shown to a user as a generic message: %s: %s", type(exc).__name__, exc)
+        return MODEL_UNAVAILABLE if isinstance(exc, _TRANSPORT_ERRORS) else failed
+    return str(exc) or type(exc).__name__
+
+
 MAX_TOKENS = 32_000  # per-response ceiling (thinking included) for non-streaming calls: agent steps
                       # and routine structured outputs
 # Claude Sonnet 4.6's per-response output maximum on Amazon Bedrock (model card: 64K, InvokeModel and
@@ -131,6 +151,29 @@ def _output_budget(reasoning_effort: str, max_tokens: int | None) -> int:
     return max_tokens if max_tokens is not None else EFFORT_TOKENS.get(reasoning_effort, EFFORT_TOKENS["medium"])
 
 
+# Prepended to the system prompt of every model call, here and in execution/agent.py. The product
+# does not disclose which model or provider runs it, and the model is the one part of the stack
+# that can give that away in its own words. Prepended rather than appended because _freeform ends
+# the system prompt with the JSON-schema contract, which has to stay last; being a constant, it
+# also leaves the cached prefix (execution/agent.py) stable between deploys.
+IDENTITY = """\
+You are OpenScientist, running on OpenScientist's own model.
+
+Never name, hint at or speculate about the model, provider or vendor behind OpenScientist, and
+never describe yourself as another company's model or assistant. If you are asked what model you
+are, say you are OpenScientist's own model, and carry on with the task.
+
+That covers OpenScientist's own infrastructure and nothing else. AI models and tools are legitimate
+subjects of research: name, cite, benchmark and compare them in papers, code and analysis exactly
+as the science requires. Simply never present one as the model behind OpenScientist, and never
+attribute this platform's own work to one."""
+
+
+def system_prompt(instructions: str) -> str:
+    """An agent's instructions, behind the standing identity rule."""
+    return f"{IDENTITY}\n\n{instructions}"
+
+
 async def stream_text(
     *,
     model: str,
@@ -143,7 +186,7 @@ async def stream_text(
         async with client.messages.stream(
             model=model,
             max_tokens=CHAT_MAX_TOKENS,
-            system=instructions,
+            system=system_prompt(instructions),
             messages=_messages(messages),
             thinking=THINKING,
             output_config={"effort": reasoning_effort},
@@ -152,7 +195,7 @@ async def stream_text(
                 yield text
             record_usage(model, await stream.get_final_message())
     except anthropic.APIError as exc:
-        raise RuntimeError(str(exc) or "LLM stream error") from exc
+        raise RuntimeError(safe_error(exc)) from exc
 
 
 async def _search(calls: list) -> list[dict]:
@@ -277,7 +320,8 @@ async def _attempt(model: str, instructions: str, msgs: list[dict], max_tokens: 
                    output_config_extra: dict):
     if max_tokens > MAX_TOKENS and model in _LONG_REFUSED:
         max_tokens = MAX_TOKENS
-    kw = dict(model=model, max_tokens=max_tokens, system=instructions, messages=msgs, thinking=THINKING,
+    kw = dict(model=model, max_tokens=max_tokens, system=system_prompt(instructions), messages=msgs,
+              thinking=THINKING,
               output_config={"effort": reasoning_effort, **output_config_extra})
     if max_tokens <= MAX_TOKENS:
         response = await client.messages.create(**kw)
@@ -412,7 +456,8 @@ async def _with_search[T: BaseModel](model: str, instructions: str, msgs: list[d
     for round_ in range(SEARCH_ROUNDS + 1):
         choice = "any" if round_ == 0 else "auto" if round_ < SEARCH_ROUNDS else "none"
         response = await client.messages.create(
-            model=model, max_tokens=max_tokens, system=instructions, messages=msgs, output_config=output_config,
+            model=model, max_tokens=max_tokens, system=system_prompt(instructions), messages=msgs,
+            output_config=output_config,
             tools=[TOOLS["web_search"].spec()], tool_choice={"type": choice}, thinking={"type": "disabled"},
         )
         record_usage(model, response)

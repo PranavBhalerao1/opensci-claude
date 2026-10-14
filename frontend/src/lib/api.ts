@@ -520,7 +520,7 @@ export const usageApi = {
     apiFetch(`${API_URL}/api/projects/${id}/usage`).then(
       json<{
         total: number;
-        by_model: Record<string, number>;
+        by_tier: Record<string, number>; // "reasoning" | "standard" | "bulk" | "judge" | "other"
         calls: number;
         gpu: { spent: number; budget: number };
       }>,

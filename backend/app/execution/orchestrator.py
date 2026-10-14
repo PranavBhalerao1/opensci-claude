@@ -24,7 +24,7 @@ from .. import beta
 from ..config import settings
 from ..db import Project, Run, Secret, TaskState, Usage, engine
 from ..jobs import RunHandle
-from ..llm import TRANSIENT_ERRORS, parse
+from ..llm import TRANSIENT_ERRORS, parse, safe_error
 from . import catalog
 from .agent import AgentSpec, run_agent
 from .sandbox import SandboxUnreachable, sandbox_for
@@ -423,8 +423,8 @@ def _requeue_on_infrastructure(state_id: str, me: TaskState, exc: Exception, cos
     """A network or provider failure: not the task's. Re-queue it as it was before this attempt
     (attempt count, feedback), so no retry is used up; the scheduler waits for the connection."""
     _append_event(state_id, {"type": "message", "step": 0, "cost": cost,
-                             "text": f"Interrupted by a network or service failure (not counted as an attempt): "
-                                     f"{type(exc).__name__}: {exc}"[:600]})
+                             "text": "Interrupted by a network or service failure (not counted as an "
+                                     f"attempt): {safe_error(exc)}"[:600]})
     _update(state_id, status="pending", attempts=me.attempts, cost=me.cost + cost, finished_at=_now())
 
 
@@ -716,7 +716,10 @@ async def run(project_id: str, h: RunHandle) -> dict:
                         # The connection failed, not the task: _execute re-queued it unchanged. Wait.
                         if ctl.go.is_set():
                             exc = fut.exception()
-                            ctl.pause(f"{NETWORK_PAUSE}{type(exc).__name__}: {exc}"[:300])
+                            # The prefix is load-bearing (the automatic-resume path above keys off
+                            # it); the detail is sanitized, since a provider failure's own text
+                            # names the model service.
+                            ctl.pause(f"{NETWORK_PAUSE}{safe_error(exc)}"[:300])
                         continue
                     if fut.exception():
                         _update(states[tid].id, status="failed", note=f"Runtime error: {fut.exception()}", finished_at=_now())

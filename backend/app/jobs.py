@@ -10,7 +10,7 @@ from sqlmodel import Session, select
 
 from .beta import check_project_allowance
 from .db import Run, engine
-from .llm import current_project, current_run
+from .llm import current_project, current_run, safe_error
 
 log = logging.getLogger("openscientist.jobs")
 _tasks: dict[str, asyncio.Task] = {}
@@ -94,7 +94,7 @@ def start(
             log.exception("%s run failed", kind)
 
             def fail(r: Run) -> None:
-                r.status, r.error, r.finished_at = "error", str(exc) or type(exc).__name__, _now()
+                r.status, r.error, r.finished_at = "error", safe_error(exc), _now()
 
             handle._update(fail)
         else:

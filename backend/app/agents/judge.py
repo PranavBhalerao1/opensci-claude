@@ -16,6 +16,7 @@ import asyncio
 import base64
 import hashlib
 import json
+import logging
 import re
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -27,14 +28,16 @@ from pydantic import BaseModel
 from sqlmodel import Session, select
 
 from .. import integrity, llm
-from ..config import settings
+from ..config import settings, tier_of
 from ..db import Project, Run, TaskState, engine
 from ..execution.orchestrator import TEXT_SUFFIXES, _previews
 from ..execution.sandbox import sandbox_for
 from ..jobs import RunHandle
-from ..llm import TRANSIENT_ERRORS, parse
+from ..llm import MODEL_UNAVAILABLE, TRANSIENT_ERRORS, parse
 from ..sources.common import norm_title
 from . import plan as plan_agent
+
+log = logging.getLogger("openscientist.judge")
 
 CRITERIA = (
     "research_question", "experimental_design", "controls_confounds", "statistics", "math_computation",
@@ -665,7 +668,8 @@ async def judge_call(bundle: Bundle, h: RunHandle | None = None) -> JudgeReport:
                                                                          {"type": "text", "text": tail}]}],
                                   reasoning_effort=effort, max_tokens=JUDGE_MAX_TOKENS)
         except TRANSIENT_ERRORS as exc:
-            raise ReviewFailed(f"Bedrock unavailable: {type(exc).__name__}: {exc}") from exc
+            log.warning("judge call failed: %s: %s", type(exc).__name__, exc)
+            raise ReviewFailed(MODEL_UNAVAILABLE) from exc
         except llm.OutputLimitReached as exc:
             problem = str(exc)
             effort, note, errors = "medium", OUTPUT_LIMIT_NOTE, []
@@ -751,7 +755,7 @@ async def review(project_id: str, h: RunHandle, iteration: int, previous: dict |
     base = {
         "schema": "openscientist.mistakes/v1", "project_id": project_id, "iteration": iteration,
         "review_run_id": llm.current_run.get(), "created_at": datetime.now(timezone.utc).isoformat(),
-        "model": settings.model_judge,
+        "model": tier_of(settings.model_judge),
         "inputs": {"report_run_id": report_run.id if report_run else None,
                    "plan_run_id": d["plan"].get("run_id"), "blueprint_run_id": d["bp_run_id"],
                    "manuscript_sha256": _sha_file(root / "paper" / "paper.tex"),

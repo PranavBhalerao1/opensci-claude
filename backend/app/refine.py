@@ -38,7 +38,7 @@ from .execution import orchestrator
 from .execution.sandbox import gpu_runner
 from .integrity import _under
 from .jobs import RunHandle
-from .llm import TRANSIENT_ERRORS
+from .llm import MODEL_UNAVAILABLE, TRANSIENT_ERRORS, safe_error
 
 log = logging.getLogger("openscientist.refine")
 
@@ -290,14 +290,15 @@ async def _review_job(project_id: str, h: RunHandle) -> dict:
     except beta.BetaLimitReached:
         mistakes = {**_failed(project_id, n, beta.LIMIT_MESSAGE), "budget_limit": True}
     except TRANSIENT_ERRORS as exc:
-        mistakes = _failed(project_id, n, f"Bedrock unavailable: {type(exc).__name__}: {exc}")
+        log.warning("review call failed: %s: %s", type(exc).__name__, exc)
+        mistakes = _failed(project_id, n, MODEL_UNAVAILABLE)
     except anthropic.APIError as exc:
-        # Any other Bedrock/API error (e.g. a permanent 4xx) that judge.review() did not already
+        # Any other model-service error (e.g. a permanent 4xx) that judge.review() did not already
         # turn into ReviewFailed: treat it the same way rather than letting it crash the job.
         # An uncaught exception here would only mark the Run as errored, leaving
         # Project.review.status stuck at "reviewing" forever for anything that reads it
         # directly (e.g. the guard that blocks other project actions during an active review).
-        mistakes = _failed(project_id, n, f"Bedrock error: {type(exc).__name__}: {exc}")
+        mistakes = _failed(project_id, n, safe_error(exc, "The review could not be completed."))
     tracks = st.get("tracks", {})
     if mistakes.get("valid") and mistakes.get("judged"):
         last = next((it for it in reversed(st.get("iterations", [])) if it.get("changed")), None)
@@ -723,7 +724,7 @@ async def _repair_job(project_id: str, h: RunHandle) -> dict:
         # anthropic.APIError covers TRANSIENT_ERRORS and permanent (e.g. 4xx) failures alike:
         # either way the repair cannot proceed, and "attention" (resumable) must be set here so
         # the status is not left stuck at "repairing" for anything that reads it directly.
-        return {"outcome": "attention", "error": f"Repair planning failed: {type(exc).__name__}: {exc}"[:1500]}
+        return {"outcome": "attention", "error": f"Repair planning failed: {safe_error(exc)}"[:1500]}
 
     if delta:  # task changes must name tasks of the amended blueprint
         known = {t["id"] for t in delta["master_plan"]["tasks"]}
@@ -1221,9 +1222,9 @@ def start(project_id: str) -> Run | None:
 
 # ── History files ──────────────────────────────────────────────────────────
 
-LIMITATION = ("Approval means an independent model reviewer (Claude Sonnet 4.6, the same model family that "
-              "wrote the study) found no blocking scientific problems in the paper and its evidence, and the "
-              "platform's integrity checks passed. It is a quality gate, not a guarantee of correctness.")
+LIMITATION = ("Approval means an independent model reviewer (a separate reviewer running on the same model "
+              "that wrote the study) found no blocking scientific problems in the paper and its evidence, and "
+              "the platform's integrity checks passed. It is a quality gate, not a guarantee of correctness.")
 
 
 def write_history(project_id: str) -> None:

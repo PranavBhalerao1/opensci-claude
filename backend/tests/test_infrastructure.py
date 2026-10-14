@@ -451,7 +451,8 @@ def test_outage_pauses_and_resumes_by_itself_without_rerunning_done_tasks(chain,
     assert chain.calls == ["T1", "T2", "T2"]  # T1 ran once; T2 resumed
     st = chain.states()
     assert (st["T1"].attempts, st["T2"].attempts) == (1, 1)  # the interrupted try was not counted
-    assert any(p.startswith(f"paused:{orchestrator.NETWORK_PAUSE}APIConnectionError") for p in phases)
+    # The prefix drives the automatic resume; the provider's exception class is not in the reason.
+    assert any(p == f"paused:{orchestrator.NETWORK_PAUSE}{llm.MODEL_UNAVAILABLE}" for p in phases)
     assert chain.sb._sbx is chain.fake
 
 

@@ -3,6 +3,7 @@ except where marked)."""
 
 import asyncio
 import copy
+import json
 
 import pytest
 
@@ -584,3 +585,50 @@ def test_e2b_pull_and_status_offline(tmp_path):
     out = asyncio.run(TOOLS["check_process"].handler(ctx, {"name": "train"}))
     assert out.startswith("No process named train")
     assert asyncio.run(TOOLS["stop_process"].handler(ctx, {"name": "train"})) == "train is not running"
+
+
+# ── The product does not disclose the model or provider behind it ──────────
+
+
+def test_health_reports_liveness_only():
+    """It is unauthenticated (the beta gate covers the product routes only), so it must not say
+    which models back the tiers."""
+    from fastapi.testclient import TestClient
+
+    from app.main import app
+
+    with TestClient(app) as client:
+        assert client.get("/api/health").json() == {"ok": True}
+
+
+def test_usage_reports_spend_by_tier_not_by_model_id():
+    from fastapi.testclient import TestClient
+    from sqlmodel import Session
+
+    from app.auth import CurrentUser, get_current_user
+    from app.config import settings
+    from app.db import Project, Usage, engine
+    from app.main import app
+
+    uid = "55555555-5555-5555-5555-555555555555"
+    _approve(uid)
+    with Session(engine) as s:
+        project = Project(title="_usage_test", user_id=uid)
+        s.add(project)
+        s.commit()
+        pid = project.id
+        # Offline every tier holds the same id, so both rows below are one bucket; the second is a
+        # model no configured tier uses any more, as a project's older rows may be.
+        s.add(Usage(project_id=pid, user_id=uid, model=settings.model_standard, cost=2.0))
+        s.add(Usage(project_id=pid, user_id=uid, model="retired-model-id", cost=1.0))
+        s.commit()
+    app.dependency_overrides[get_current_user] = lambda: CurrentUser(id=uid, email="u@example.org")
+    try:
+        with TestClient(app) as client:
+            body = client.get(f"/api/projects/{pid}/usage").json()
+    finally:
+        app.dependency_overrides.clear()
+
+    assert body["by_tier"] == {"standard": 2.0, "other": 1.0}
+    assert (body["total"], body["calls"]) == (3.0, 2)
+    assert "by_model" not in body and settings.model_standard not in json.dumps(body)

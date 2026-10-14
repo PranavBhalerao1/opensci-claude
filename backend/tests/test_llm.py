@@ -139,6 +139,13 @@ class Provider:
     def system(self, i: int) -> str:
         return self.requests[i]["system"]
 
+    def instructions(self, i: int) -> str:
+        """Request i's system prompt without the identity rule every call carries (see
+        llm.system_prompt): the caller's own instructions."""
+        system = self.requests[i]["system"]
+        assert system.startswith(llm.IDENTITY + "\n\n"), "every call must carry the identity rule"
+        return system[len(llm.IDENTITY) + 2:]
+
     def messages(self, i: int) -> list[dict]:
         return self.requests[i]["messages"]
 
@@ -255,7 +262,7 @@ def test_agent_request_carries_spec(provider, test_tools):
     spec = _spec(tools=["echo", "not_a_tool"], reasoning_effort="low")
     asyncio.run(_agent(spec, task="The task text"))
     assert provider.model(0) == spec.model
-    assert provider.system(0) == spec.instructions
+    assert provider.instructions(0) == spec.instructions
     assert provider.effort(0) == "low"
     # Unknown tool names are dropped; report_result is always offered.
     assert provider.tool_names(0) == ["echo", "report_result"]
@@ -425,7 +432,7 @@ def test_parse_returns_the_schema_object_and_records_usage(provider, run_id):
                                 schema=Verdict, reasoning_effort="low"))
     assert isinstance(out, Verdict) and out == _verdict()
     assert provider.model(0) == settings.model_standard
-    assert provider.system(0) == "Verify."
+    assert provider.instructions(0) == "Verify."
     assert provider.messages(0) == msgs
     assert provider.effort(0) == "low"
     (row,) = _usage_rows(run_id)
@@ -566,15 +573,17 @@ def test_stream_yields_text_deltas_and_records_usage(provider, run_id):
     msgs = [{"role": "user", "content": "Hi"}]
     out = asyncio.run(_collect(llm.stream_text(model=settings.model_standard, instructions="Be nice.", messages=msgs)))
     assert out == ["Hel", "lo", "!"]
-    assert provider.system(0) == "Be nice." and provider.messages(0) == msgs
+    assert provider.instructions(0) == "Be nice." and provider.messages(0) == msgs
     assert provider.effort(0) == "low"
     (row,) = _usage_rows(run_id)
     assert (row.input_tokens, row.cached_tokens, row.output_tokens) == (500, 100, 50)
 
 
 def test_stream_error_raises_runtime_error(provider):
+    """A RuntimeError, so the chat route reports it as a failed turn; its message is ours, not the
+    provider's (see the identity section at the end of this file)."""
     provider.stream_result(["partial"], error="overloaded")
-    with pytest.raises(RuntimeError, match="overloaded"):
+    with pytest.raises(RuntimeError, match="could not complete this request"):
         asyncio.run(_collect(llm.stream_text(model=settings.model_standard, instructions="x",
                                              messages=[{"role": "user", "content": "y"}])))
 
@@ -1156,3 +1165,70 @@ def test_other_stream_failures_keep_their_type(provider, freeform):
     provider.script.append(overloaded)  # rejected when the stream opened: already transient
     with pytest.raises(anthropic.OverloadedError):
         _ask_long()
+
+
+# ── The model never names the model or provider behind OpenScientist ───────
+# One rule, prepended to the system prompt of every call in app/llm.py and app/execution/agent.py,
+# because the model is the one part of the stack that can disclose this in its own words. The error
+# messages below are the other half: a provider failure's own text reaches the logs, not the user.
+
+
+def test_every_call_path_carries_the_identity_rule(provider, test_tools, run_id):
+    msgs = [{"role": "user", "content": "y"}]
+    provider.parse_result(_verdict())
+    _ask()                                                              # schema-constrained parse
+    provider.parse_result(_verdict(), searches=["sources"])
+    asyncio.run(llm.parse(model=settings.model_standard, instructions="Find sources.", messages=msgs,
+                          schema=Verdict, tools=[{"type": "web_search"}]))  # parse with web search
+    provider.stream_result(["Hi"])
+    asyncio.run(_collect(llm.stream_text(model=settings.model_standard, instructions="Be nice.",
+                                         messages=msgs)))               # chat
+    provider.agent_turn(calls=[("report_result", REPORT)])
+    asyncio.run(_agent(_spec()))                                        # the agent tool loop
+
+    # instructions() asserts the rule is on request i, then strips it off.
+    assert len(provider.requests) == 5  # the web-search path searches first, then answers
+    assert all(provider.instructions(i) for i in range(len(provider.requests)))
+    assert "OpenScientist's own model" in llm.IDENTITY
+    # The rule is about this platform's own stack, not about AI as a subject of research: nothing
+    # in it forbids naming, citing or benchmarking a model in a paper or in code.
+    assert "as the science requires" in llm.IDENTITY
+
+
+def test_the_identity_rule_comes_before_the_freeform_json_contract(provider, freeform):
+    """The freeform path ends the system prompt with the schema it must answer with; the identity
+    rule is prepended so it cannot come between that contract and the schema."""
+    provider.parse_result(_verdict())
+    _ask()
+    system = provider.system(0)
+    assert system.startswith(llm.IDENTITY)
+    assert system.endswith(json.dumps(anthropic.transform_schema(Verdict), separators=(",", ":")))
+
+
+def test_a_provider_failure_reaches_the_user_as_a_generic_message(provider):
+    """Its own text names the model service and is nothing a user can act on."""
+    transient = anthropic.APIConnectionError(request=httpx2.Request("POST", "https://bedrock.example"))
+    permanent = anthropic.BadRequestError(
+        "no such model: us.anthropic.some-model", response=httpx2.Response(400, request=httpx2.Request(
+            "POST", "https://bedrock.example")), body={"message": "no such model"})
+
+    assert llm.safe_error(transient) == llm.MODEL_UNAVAILABLE
+    assert llm.safe_error(llm.StreamInterrupted(httpx2.ReadError("reset"))) == llm.MODEL_UNAVAILABLE
+    assert llm.safe_error(permanent) == llm.MODEL_FAILED
+    assert llm.safe_error(permanent, "The review could not be completed.") == "The review could not be completed."
+    for message in (llm.MODEL_UNAVAILABLE, llm.MODEL_FAILED):
+        assert not {"anthropic", "claude", "bedrock", "aws"} & set(message.lower().split())
+    # Our own messages are the ones users can act on, so they pass through unchanged.
+    assert llm.safe_error(RuntimeError("Model returned no structured output")) == \
+        "Model returned no structured output"
+    assert llm.safe_error(llm.OutputLimitReached("the answer was cut off")) == "the answer was cut off"
+
+
+def test_a_failed_chat_stream_does_not_stream_the_providers_error_text(provider):
+    provider.stream_result(["Hel"], error="no such model: us.anthropic.some-model")
+    with pytest.raises(RuntimeError) as failure:
+        asyncio.run(_collect(llm.stream_text(model=settings.model_standard, instructions="Be nice.",
+                                             messages=[{"role": "user", "content": "Hi"}])))
+    # A dropped connection instead raises past this handler as a transport error, which the chat
+    # route sanitizes the same way (safe_error) before it reaches the browser.
+    assert str(failure.value) == llm.MODEL_FAILED

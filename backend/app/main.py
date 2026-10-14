@@ -35,11 +35,9 @@ app.include_router(projects.router, dependencies=[Depends(beta.require_approved)
 
 @app.get("/api/health")
 def health() -> dict:
-    return {"ok": True, "models": {
-        "reasoning": settings.model_reasoning,
-        "standard": settings.model_standard,
-        "bulk": settings.model_bulk,
-    }}
+    # Unauthenticated (the beta gate covers the product routes only), so it carries liveness and
+    # nothing else: which models back the tiers is not public. Read them from the deploy's config.
+    return {"ok": True}
 
 
 @app.get("/api/me")

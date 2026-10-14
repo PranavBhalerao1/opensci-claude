@@ -418,11 +418,11 @@ def test_bedrock_failures(env, failures, status):
     st = loop(study.pid)
     assert st["status"] == status
     if status == "review_failed":
-        assert "Bedrock unavailable" in st["attention"]
+        assert "temporarily unavailable" in st["attention"]
 
 
-def test_permanent_bedrock_error_fails_the_review_instead_of_sticking_at_reviewing(env):
-    """A non-transient Bedrock error (e.g. a 4xx) from the judge call must end the review with
+def test_permanent_provider_error_fails_the_review_instead_of_sticking_at_reviewing(env):
+    """A non-transient model-service error (e.g. a 4xx) from the judge call must end the review with
     an explicit, resumable status rather than leaving Project.review.status stuck at
     "reviewing" forever with its background job silently dead."""
     study, llm_, lab = env()
@@ -431,7 +431,10 @@ def test_permanent_bedrock_error_fails_the_review_instead_of_sticking_at_reviewi
     llm_.add(JudgeReport, bad_request)
     st = loop(study.pid)
     assert st["status"] == "review_failed"
-    assert "Bedrock error" in st["attention"] and "BadRequestError" in st["attention"]
+    # The user is told the review failed; the provider's own wording and the exception class are
+    # logged, not shown (safe_error).
+    assert "The review could not be completed." in st["attention"]
+    assert not {"BadRequestError", "bad request"} & set(st["attention"].split())
     assert not jobs.is_running(study.pid, "review")
 
 
@@ -848,9 +851,10 @@ def test_exhausted_judge_output_fails_the_review_explicitly_and_resume_recovers(
     assert st["status"] == "approved"
 
 
-def test_a_judge_stream_interrupted_twice_fails_the_review_as_bedrock_unavailable(env):
+def test_a_judge_stream_interrupted_twice_fails_the_review_as_model_unavailable(env):
     study, llm_, lab = env()
     broken = llm.StreamInterrupted(httpx2.ReadError("connection reset", request=REQUEST))
     llm_.add(JudgeReport, broken, broken)
     st = loop(study.pid)
-    assert st["status"] == "review_failed" and "Bedrock unavailable: StreamInterrupted" in st["attention"]
+    assert st["status"] == "review_failed" and "temporarily unavailable" in st["attention"]
+    assert "StreamInterrupted" not in st["attention"]

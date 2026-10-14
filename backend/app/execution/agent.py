@@ -1,4 +1,4 @@
-"""Agent runtime: a Claude tool-use loop bounded by a step limit and the project
+"""Agent runtime: a tool-use loop bounded by a step limit and the project
 owner's credit allowance (checked before every step). Cost is tracked, not capped.
 
 The transcript is kept here for one run and resent each step with a prompt-cache
@@ -10,7 +10,7 @@ from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 
 from .. import beta, llm
-from ..llm import MAX_TOKENS, THINKING, record_usage
+from ..llm import MAX_TOKENS, THINKING, record_usage, system_prompt
 from .tools import TOOLS, ToolContext, specs
 
 TOOL_OUTPUT_LIMIT = 16_000
@@ -74,7 +74,7 @@ async def run_agent(spec: AgentSpec, task: str, ctx: ToolContext, on_event: Even
         response = await llm.client.messages.create(
             model=spec.model,
             max_tokens=MAX_TOKENS,
-            system=spec.instructions,
+            system=system_prompt(spec.instructions),
             messages=_cached(transcript),
             tools=specs(tool_names),
             thinking=THINKING,
