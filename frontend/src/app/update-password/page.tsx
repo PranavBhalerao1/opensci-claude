@@ -37,7 +37,7 @@ export default function UpdatePasswordPage() {
   };
 
   return (
-    <AuthShell title="Choose a new password" subtitle="You're signed in via the reset link you opened.">
+    <AuthShell title="Choose a password" subtitle="You're signed in from the link in your email.">
       <form onSubmit={submit} className="space-y-4">
         <Field
           label="New password"
