@@ -1,10 +1,39 @@
 // OpenScientist landing page (v3, from the landing handoff). Signed-out visitors to "/"
 // are rewritten here by src/lib/supabase/proxy.ts; signed-in users get the app at "/".
+import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import InvestigationFigure from "@/components/InvestigationFigure";
 import { SiteFooter, SiteHeader } from "@/components/Site";
+import { SITE_DESCRIPTION, SITE_NAME, SITE_URL } from "@/lib/site";
+
+// Served at "/" for signed-out visitors, so "/" is the address search engines should index.
+export const metadata: Metadata = { alternates: { canonical: "/" } };
+
+// Tells Google the site's name ("OpenScientist", not the domain) and who publishes it.
+const JSON_LD = JSON.stringify({
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebSite",
+      "@id": `${SITE_URL}/#website`,
+      name: SITE_NAME,
+      alternateName: ["Open Scientist", "The Open Scientist", "theopenscientist.com"],
+      url: `${SITE_URL}/`,
+      description: SITE_DESCRIPTION,
+      publisher: { "@id": `${SITE_URL}/#organization` },
+    },
+    {
+      "@type": "Organization",
+      "@id": `${SITE_URL}/#organization`,
+      name: SITE_NAME,
+      alternateName: "Open Scientist",
+      url: `${SITE_URL}/`,
+      logo: `${SITE_URL}/icon.png`,
+    },
+  ],
+}).replace(/</g, "\\u003c");
 
 const METHOD: [string, string][] = [
   ["Clarify", "A few multiple-choice questions turn a loose idea into a precise research brief."],
@@ -52,6 +81,7 @@ export default async function Landing({ searchParams }: PageProps<"/welcome">) {
 
   return (
     <div className="flex min-h-full flex-col bg-paper text-ink">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON_LD }} />
       {/* Hero */}
       <section className="graph-paper relative flex min-h-[min(92vh,900px)] flex-col">
         <SiteHeader />

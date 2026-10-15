@@ -2,7 +2,11 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 // Pages reachable without a session. Everything else redirects to /login.
-const PUBLIC_PATHS = ["/login", "/signup", "/forgot-password", "/auth", "/welcome", "/waitlist", "/demo"];
+// robots.txt, the sitemap and the share image must stay public for search engines.
+const PUBLIC_PATHS = [
+  "/login", "/signup", "/forgot-password", "/auth", "/welcome", "/waitlist", "/demo",
+  "/robots.txt", "/sitemap.xml", "/opengraph-image",
+];
 
 function isPublic(path: string): boolean {
   return PUBLIC_PATHS.some((p) => path === p || path.startsWith(`${p}/`));

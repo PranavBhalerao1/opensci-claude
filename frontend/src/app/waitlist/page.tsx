@@ -3,7 +3,7 @@ import { Suspense } from "react";
 import { SiteFooter, SiteHeader } from "@/components/Site";
 import Waitlist from "@/components/Waitlist";
 
-export const metadata = { title: "Join the waitlist · OpenScientist" };
+export const metadata = { title: "Join the waitlist", alternates: { canonical: "/waitlist" } };
 
 export default function WaitlistPage() {
   return (

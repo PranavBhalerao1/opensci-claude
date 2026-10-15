@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { connection } from "next/server";
 
 import { getAdminEmail, listMembers, listPending, listWaitlist } from "@/lib/admin";
 import { approveAction, inviteAction, revokeAction, setCapAction } from "./actions";
 import SubmitButton from "./SubmitButton";
 
-export const metadata: Metadata = { title: "Admin · OpenScientist", robots: { index: false, follow: false } };
+export const metadata: Metadata = { title: "Admin", robots: { index: false, follow: false } };
 
 function ago(iso: string): string {
   const s = Math.max(0, (Date.now() - new Date(iso).getTime()) / 1000);
@@ -47,6 +48,7 @@ function Empty({ children }: { children: React.ReactNode }) {
 }
 
 export default async function AdminPage({ searchParams }: PageProps<"/admin">) {
+  await connection(); // always per request: who is admin depends on the visitor's session
   const admin = await getAdminEmail();
   if (!admin) notFound();
 
