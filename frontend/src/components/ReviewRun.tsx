@@ -64,7 +64,7 @@ export default function ReviewRun({ project, review, enabled, run, log, onAction
   ).length;
   const scored = iterations.filter((it) => typeof it.score === "number");
   const lastScored = scored[scored.length - 1];
-  const target = review.target_score ?? 8;
+  const target = review.target_score ?? 10;
   const file = (name: string, iteration?: number) => reviewApi.fileUrl(project.id, name, token, iteration);
 
   return (
@@ -95,7 +95,7 @@ export default function ReviewRun({ project, review, enabled, run, log, onAction
               <div className="mb-5 flex flex-wrap items-end gap-x-8 gap-y-3 border-b border-rule pb-5">
                 <div>
                   <div className="font-mono text-[10px] uppercase tracking-[0.14em] text-faint">
-                    Reviewer score · top-venue standard
+                    Reviewer score · how close to perfect
                   </div>
                   <div className="mt-1 flex items-baseline gap-2">
                     <span className="font-serif text-[44px] leading-none">{fmtScore(lastScored.score)}</span>
@@ -197,7 +197,7 @@ export default function ReviewRun({ project, review, enabled, run, log, onAction
             {lastScored?.upgrades && lastScored.upgrades.length > 0 && (
               <div className="mt-6">
                 <div className="mb-2 font-mono text-[10px] uppercase tracking-[0.14em] text-faint">
-                  What would make it outstanding · review {lastScored.n}
+                  Changes needed for a 10/10 · review {lastScored.n}
                 </div>
                 <ol className="grid gap-2.5">
                   {lastScored.upgrades.map((u) => (
@@ -250,10 +250,11 @@ export default function ReviewRun({ project, review, enabled, run, log, onAction
             {log.length > 0 && <ReviewLog log={log} live={active} />}
 
             <p className="mt-6 text-[12px] leading-relaxed text-faint">
-              Each round, a fresh reviewer that has never seen the paper scores it against the standard of a top venue
-              and lists what to fix and what would make it outstanding. The loop goes back to whichever stage needs to
-              change (plan, experiments or writing) and repeats until the paper reaches {target.toFixed(1)}/10, stops
-              improving, or you stop it. Approval is a quality gate, not a guarantee of correctness.
+              Each round, a fresh reviewer that has never seen the paper scores how close it is to perfect (10 = no
+              errors, no obvious flaws, nothing easy left to improve) and lists every change still needed. All of them
+              are made, going back to whichever stage has to change (plan, experiments or writing), and the loop repeats
+              until the paper reaches {target.toFixed(1)}/10, stops improving for three rounds, or you stop it. Approval
+              is a quality gate, not a guarantee of correctness.
             </p>
           </div>
         )}

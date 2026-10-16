@@ -160,10 +160,10 @@ class RepairPlan(BaseModel):
 
 REPAIR_INSTRUCTIONS = """\
 You are the Planning Agent of OpenScientist. An independent reviewer examined the finished
-study, scored it against the standard of a top venue, reported blocking problems and listed
-improvements that would make it outstanding. Fix each blocking problem at its root cause so
-the study becomes scientifically valid, and raise the paper toward the target score with the
-improvements. You can:
+study, scored how close it is to perfect (10/10: error-free, nothing obvious left to improve),
+reported blocking problems and listed every remaining change needed for a 10. Fix each
+blocking problem at its root cause and make every required change exactly as the reviewer
+asks. You can:
 - revise the research plan (plan_revision) when the design or operationalization is wrong;
 - add or change task specifications (blueprint_changes), e.g. a missing control, baseline,
   ablation or analysis that needs its own task;
@@ -180,10 +180,12 @@ Rules:
   re-runs that task, never with a manuscript directive.
 - If an issue persisted after an earlier fix (see ISSUE HISTORY), that fix did not work: do
   something different, and after a manuscript-only fix, re-run the task that produces it.
-- Improvements: real experiments beat rewording. Add missing baselines, seeds, ablations,
-  datasets or analyses as blueprint_changes or task_changes, highest impact first, within the
-  remaining budget, and cite the improvement ids (U…) in the task_changes or directives that
-  implement them. Improvements need no decision entry.
+- Required changes (U… ids and minor issues): make ALL of them this round, as the reviewer
+  describes, not a selection. Missing baselines, seeds, ablations, datasets or analyses are
+  run for real (blueprint_changes or task_changes); text problems get report directives. Cite
+  each id in the task_change or directive that makes it, or name it in blueprint_changes. A
+  required change needs no decision entry; decline one only if it is impossible with the
+  available data and compute, with a disclose decision, a rationale and a directive.
 - NEVER change the research question or hypothesis, and never redefine success to make the
   study easier to pass. If a problem cannot be fixed without that, use escalate.
 - Never ask anyone to produce, alter or estimate numbers without running code. If corrected

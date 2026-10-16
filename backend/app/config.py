@@ -47,10 +47,10 @@ class Settings(BaseSettings):
     # projects without a "refinement" setting keep the plain pipeline. max_usd counts LLM
     # and GPU spend after refinement starts.
     refinement_default: bool = True
-    refinement_max_rounds: int = 8
-    refinement_max_usd: float = 40.0
-    # The judge's 0-10 score (top-venue standard) a paper must reach to be approved.
-    refinement_target_score: float = 8.0
+    refinement_max_rounds: int = 12
+    refinement_max_usd: float = 60.0
+    # The judge's 0-10 score a paper must reach to be approved; 10 = flawless (agents/judge.py).
+    refinement_target_score: float = 10.0
     review_numeric_crosscheck: bool = True
 
     # USD per 1M tokens: (input, cached input, output). Used for cost tracking (which

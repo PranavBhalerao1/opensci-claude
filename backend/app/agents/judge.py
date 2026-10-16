@@ -191,26 +191,29 @@ Issues:
 verdict: accept (no FATAL/MAJOR issues), minor_revision (MINOR issues only), major_revision
 (MAJOR issues), reject (any FATAL issue).
 
-score (0-10, one decimal): how good the paper is as a submission to a top venue of its field,
-as it stands now. Weigh correctness, rigour (baselines, ablations, seeds, statistics), scale
-and difficulty of the evidence, significance, novelty, depth of analysis and clarity. Anchors:
-- 10: outstanding; a best-paper candidate. 9: strong accept. 8: clear accept at a top venue.
-- 7: weak accept; solid but limited. 6: borderline. 5: weak reject; real contribution, not yet
-  convincing. 4: reject; serious gaps. 2-3: fundamentally flawed or trivial. 0-1: invalid.
-- A correct but small or routine study (toy scale, a single dataset or seed, missing standard
-  baselines, an unsurprising result) is a 4-6, not an 8. Any FATAL issue caps the score at 3;
-  any MAJOR issue caps it at 6. Do not inflate the score to be encouraging.
-score_rationale: two to four sentences naming what holds the score down.
+score (0-10, one decimal): how close the paper is to PERFECT, judged with the rigour of a top
+venue. The benchmark: is it error-free, with no obvious flaw and nothing that could easily be
+done better? Genuine ambiguity and judgment calls do not cost points; errors, gaps and
+oversights do. Anchors:
+- 10: nothing left to fix. No errors; every claim supported at the strength stated; standard
+  baselines, controls, seeds and statistics in place; figures, tables, numbers and text agree;
+  no obvious, easily made improvement remains. Only matters of judgment are left.
+- 9: one or two small flaws, each easy to fix. 8: several small flaws, or one notable gap.
+- 6-7: gaps a careful reviewer flags at once (a missing standard baseline, a single seed, an
+  unsupported or overstated claim, a figure that disagrees with the data).
+- 4-5: significant errors or missing evidence. 0-3: fatal problems.
+Any FATAL issue caps the score at 3; any MAJOR issue caps it at 6. Never round up, and do not
+inflate the score to be encouraging: a 10 means you would sign off on it as flawless.
+score_rationale: two to four sentences naming what keeps it from a 10.
 
-upgrades: what would turn this into an outstanding paper (a 10/10, ideally beyond): the
-changes a top-venue area chair would ask for that are NOT already listed as issues, such as
-stronger or standard baselines, more seeds and confidence intervals, ablations, additional
-datasets or scales, a sharper analysis of why the result holds, or a clearer contribution.
-Each must be concrete and doable by an automated system with code, public data, CPU sandboxes
-and cloud GPUs within hours (no new human studies, no proprietary data, no wet lab). action
-says exactly what to run or change; origin is the earliest stage that must change;
-expected_gain is your estimate of score points it adds. Highest impact first, at most 8, refs
-U1, U2, …; an empty list only for a paper that is already a 10."""
+upgrades: EVERY remaining change needed to make the paper a 10 that is not already a FATAL or
+MAJOR issue: small errors, inconsistencies, unclear or overstated sentences, missing standard
+baselines, seeds, confidence intervals, ablations, analyses or disclosures. Be exhaustive; the
+system will make all of them. Each must be concrete and doable by an automated system with
+code, public data, CPU sandboxes and cloud GPUs within hours (no new human studies, no
+proprietary data, no wet lab). action says exactly what to run or change; origin is the
+earliest stage that must change; expected_gain is the score points it adds. Highest impact
+first, at most 12, refs U1, U2, …; an empty list only when the score is 10."""
 
 # Added only to the one fresh attempt after a review was cut off by the output limit.
 OUTPUT_LIMIT_NOTE = """
@@ -865,7 +868,7 @@ async def review(project_id: str, h: RunHandle, iteration: int, previous: dict |
             **base, "judged": True, "valid": True, "verdict": report.verdict, "summary": report.summary,
             "score": capped_score(report.score, issues), "score_claimed": report.score,
             "score_rationale": report.score_rationale,
-            "upgrades": [{**u.model_dump(), "id": f"R{iteration}-{u.ref}"} for u in report.upgrades][:8],
+            "upgrades": [{**u.model_dump(), "id": f"R{iteration}-{u.ref}"} for u in report.upgrades][:12],
             "objective_alignment": {"value": report.objective_alignment, "note": report.objective_alignment_note},
             "hypothesis_support": report.hypothesis_support, "rubric": [r.model_dump() for r in report.rubric],
             "issues": issues, "verification": verification if claims else "not_needed",

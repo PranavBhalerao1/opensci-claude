@@ -410,10 +410,10 @@ def decide(st: dict, mistakes: dict, spent_usd: float) -> tuple[str, str]:
             return "unresolved", f"Scored {shown} after {rounds} rounds; the target of {target:.1f} was not reached."
         if spent_usd >= max_usd:
             return "budget_exhausted", f"The refinement budget (${max_usd:.2f}) is used up at {shown}."
-        # Improving without getting better: two improvement rounds in a row did not raise the score.
-        if len(scores) >= 2 and score is not None and score <= scores[-1] + 0.2 and scores[-1] <= scores[-2] + 0.2 \
-                and session[-1].get("decision") == "improve":
-            return "unresolved", f"The last two improvement rounds did not raise the score ({shown})."
+        # Improving without getting better: three rounds of changes left the score where it was.
+        if len(scores) >= 3 and score is not None and score <= max(scores[-3:]) + 0.2 \
+                and all(it.get("decision") in REPAIRS for it in session[-3:]):
+            return "unresolved", f"Three rounds of changes in a row did not raise the score ({shown})."
         return "improve", f"Scored {shown}, below the target of {target:.1f}: making the reviewer's top improvements."
     counts = {sev: sum(1 for i in blocking if i["severity"] == sev) for sev in ("FATAL", "MAJOR")}
     if rounds >= max_rounds:
@@ -614,18 +614,25 @@ def repair_context(project_id: str, st: dict, mistakes: dict) -> str:
         + f"\n\nREVIEWER'S SCORE: {_shown(mistakes.get('score'))} at top-venue standard; the target is "
         f"{st.get('target_score', settings.refinement_target_score):.1f}. "
         f"{mistakes.get('score_rationale') or ''}\n\n"
-        + ("IMPROVEMENTS TO REACH AN OUTSTANDING PAPER (no blocking issues are left: implement the highest-impact "
-           "ones that fit the budget, at least one, citing their ids in task_changes or directives):\n"
-           if mistakes.get("decision") == "improve" or not blocking else
-           "IMPROVEMENTS TO REACH AN OUTSTANDING PAPER (optional this round; fix the blocking issues first and add "
-           "an improvement only if it is cheap and fits):\n")
-        + ("\n".join(f"- {u['id']} ({u['impact']} impact, about +{u.get('expected_gain', 0):.1f} points, origin "
-                     f"{u['origin']}): {u['title']}\n  Action: {u['action']}" for u in mistakes.get("upgrades", []))
+        + "REQUIRED CHANGES TO MAKE THE PAPER A 10 (make EVERY one this round, exactly as the reviewer asks, "
+        "citing its id in the task_changes or report_directives that make it, or naming the id in "
+        "blueprint_changes/plan_revision; decline one only if it is impossible with the available data and compute, "
+        "with a decision (disclose) and a rationale):\n"
+        + ("\n".join([f"- {u['id']} ({u['impact']} impact, about +{u.get('expected_gain', 0):.1f} points, origin "
+                      f"{u['origin']}): {u['title']}\n  Action: {u['action']}" for u in mistakes.get("upgrades", [])]
+                     + [f"- {i['id']} (minor {i['category']}, origin {i['origin']}): {i['title']}\n"
+                        f"  Action: {i['corrective_action']}" for i in _minor(mistakes)])
            or "(none)")
         + f"\n\nISSUE HISTORY:\n" + ("\n".join(history) or "(first review)")
         + f"\n\nCURRENT MANUSCRIPT DIRECTIVES (withdraw any that no longer apply):\n{directives}\n\n"
         f"LIMITS: repair round {rounds} of {st['max_rounds']}; about ${remaining:.2f} of the refinement budget left."
     )
+
+
+def _minor(mistakes: dict) -> list[dict]:
+    """Small problems the reviewer found: not blocking, but a perfect paper has none of them."""
+    return [i for i in mistakes.get("issues", []) if i.get("severity") == "MINOR" and not i.get("blocking")
+            and not i.get("open_concern") and i.get("corrective_action", "").strip()]
 
 
 def _shown(score) -> str:
@@ -639,19 +646,24 @@ def validate_repair(rp: plan_agent.RepairPlan, mistakes: dict, st: dict, mp: dic
     blocking = {i["id"] for i in mistakes["issues"] if i.get("blocking")}
     concerns = {i["id"] for i in mistakes["issues"] if i.get("open_concern")}
     upgrades = {u["id"] for u in mistakes.get("upgrades", [])}
+    required = upgrades | {i["id"] for i in _minor(mistakes)}
     tasks = {t["id"] for t in mp["tasks"]}
     decided = [d.issue_id for d in rp.decisions]
     for iid in sorted(blocking - set(decided)):
         errors.append(f"No decision for blocking issue {iid}.")
     for iid in sorted({d for d in decided if decided.count(d) > 1}):
         errors.append(f"Issue {iid} has more than one decision.")
-    for iid in sorted(set(decided) - blocking - concerns - upgrades):
+    for iid in sorted(set(decided) - blocking - concerns - required):
         errors.append(f"Unknown issue id {iid}.")
-    if mistakes.get("decision") == "improve" and upgrades:
-        cited = {iid for x in [*rp.task_changes, *rp.report_directives] for iid in x.issue_ids}
-        if not cited & upgrades and not rp.blueprint_changes.strip() and not rp.plan_revision.strip():
-            errors.append("No blocking issues are left and the score is below target: implement at least one "
-                          "improvement (cite its id in task_changes or report_directives, or amend the blueprint).")
+    # Every change the reviewer asked for is made (or declined as impossible, with a reason).
+    cited = {iid for x in [*rp.task_changes, *rp.report_directives] for iid in x.issue_ids}
+    text = rp.blueprint_changes + "\n" + rp.plan_revision
+    declined = {d.issue_id for d in rp.decisions if d.disposition != "fix" and d.rationale.strip()}
+    missing = sorted(iid for iid in required if iid not in cited and iid not in declined
+                     and not re.search(rf"\b{re.escape(iid)}\b", text))
+    if missing:
+        errors.append("Make every required change: " + ", ".join(missing) + " are neither made (cite the id in a "
+                      "task_change or report directive, or name it in blueprint_changes) nor declined with a reason.")
     for tc in rp.task_changes:
         if tc.task_id not in tasks:
             errors.append(f"task_changes names unknown task {tc.task_id}.")
@@ -1303,10 +1315,10 @@ def write_history(project_id: str) -> None:
     lines = [f"# Scientific review: {o.get('status') or st.get('status')}", "", o.get("reason", ""), "", LIMITATION, ""]
     last = next((it for it in reversed(st.get("iterations", [])) if it.get("score") is not None), None)
     if last:
-        lines += [f"## Score: {_shown(last['score'])} (target {st.get('target_score', settings.refinement_target_score):.1f})",
+        lines += [f"## Score: {_shown(last['score'])} (target {st.get('target_score', settings.refinement_target_score):.1f}; 10 = flawless)",
                   "", last.get("score_rationale") or "", ""]
         if last.get("upgrades"):
-            lines += ["## What would make it outstanding",
+            lines += ["## Changes needed for a 10/10",
                       *[f"- ({u['impact']}, +{u.get('expected_gain') or 0:.1f}) {u['title']}: {u['action']}"
                         for u in last["upgrades"]], ""]
     if o.get("unresolved"):

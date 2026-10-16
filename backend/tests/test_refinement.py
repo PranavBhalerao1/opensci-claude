@@ -870,23 +870,39 @@ def _up(ref="U1"):
 
 def test_a_correct_but_weak_paper_is_improved_until_it_reaches_the_target(env):
     study, llm_, lab = env()
-    llm_.add(JudgeReport, report(verdict="accept", score=6.0, upgrades=[_up()]), report(verdict="accept", score=8.4))
+    llm_.add(JudgeReport, report(verdict="accept", score=6.0, upgrades=[_up()]), report(verdict="accept", score=10.0))
     llm_.add(RepairPlan, repair([], task_changes=[TaskChange(
         task_id="T2.2", change="Also train ResNet-18 as a baseline under the same protocol.", issue_ids=["R1-U1"])]))
     st = loop(study.pid)
-    assert st["status"] == "approved" and "8.4/10" in st["outcome"]["reason"], st
+    assert st["status"] == "approved" and "10.0/10" in st["outcome"]["reason"], st
     assert [it["decision"] for it in st["iterations"]] == ["improve", "approved"]
-    assert [it["score"] for it in st["iterations"]] == [6.0, 8.4]
+    assert [it["score"] for it in st["iterations"]] == [6.0, 10.0]
     assert st["iterations"][0]["upgrades"][0]["id"] == "R1-U1" and "T2.2" in lab.ran
-    assert "IMPROVEMENTS TO REACH AN OUTSTANDING PAPER (no blocking issues" in llm_.text(1)
+    assert "REQUIRED CHANGES TO MAKE THE PAPER A 10" in llm_.text(1)
 
 
-def test_an_improvement_round_must_actually_improve_something(env):
+def test_every_change_the_reviewer_asks_for_must_be_made(env):
     study, llm_, lab = env()
-    llm_.add(JudgeReport, report(verdict="accept", score=6.0, upgrades=[_up()]))
-    llm_.add(RepairPlan, repair([]), repair([]))  # does nothing, twice
+    minor = issue("I1", "MINOR", category="figures_tables", origin="report", title="Axis unit missing",
+                  corrective_action="Add the unit (%) to the y-axis label in the text.")
+    llm_.add(JudgeReport, report([minor], verdict="minor_revision", score=8.0, upgrades=[_up("U1"), _up("U2")]))
+    only_one = repair([], task_changes=[TaskChange(task_id="T2.2", change="Add ResNet-18.", issue_ids=["R1-U1"])])
+    llm_.add(RepairPlan, only_one, only_one)  # skips U2 and the minor issue, twice
     st = loop(study.pid)
-    assert st["status"] == "attention" and "implement at least one improvement" in st["attention"]
+    assert st["status"] == "attention" and "R1-01, R1-U2" in st["attention"]
+
+
+def test_a_change_may_be_declined_only_with_a_reason(env):
+    study, llm_, lab = env()
+    llm_.add(JudgeReport, report(verdict="accept", score=9.0, upgrades=[_up("U1"), _up("U2")]),
+             report(verdict="accept", score=10.0))
+    plan = repair([IssueDecision(issue_id="R1-U2", disposition="disclose", root_cause="execution",
+                                 rationale="ImageNet-scale training does not fit the GPU budget.")],
+                  task_changes=[TaskChange(task_id="T2.2", change="Add ResNet-18.", issue_ids=["R1-U1"])],
+                  directives=[Directive(issue_ids=["R1-U2"], text="State that larger datasets were out of scope.")])
+    llm_.add(RepairPlan, plan)
+    st = loop(study.pid)
+    assert st["status"] == "approved", st
 
 
 def test_a_manuscript_fix_that_did_not_hold_must_rerun_the_task(env):
@@ -906,16 +922,17 @@ def test_a_manuscript_fix_that_did_not_hold_must_rerun_the_task(env):
 
 
 @pytest.mark.parametrize("st,mistakes,decision,words", [
-    (_st(), {**_m(verdict="accept"), "score": 8.0, "upgrades": [{"id": "U1"}]}, "approved", "8.0/10"),
-    (_st(), {**_m(verdict="accept"), "score": 7.9, "upgrades": [{"id": "U1"}]}, "improve", "below the target"),
-    (_st(target_score=9.0), {**_m(verdict="accept"), "score": 8.5, "upgrades": [{"id": "U1"}]}, "improve", "9.0"),
+    (_st(), {**_m(verdict="accept"), "score": 10.0, "upgrades": []}, "approved", "10.0/10"),
+    (_st(), {**_m(verdict="accept"), "score": 9.8, "upgrades": [{"id": "U1"}]}, "improve", "below the target of 10.0"),
+    (_st(target_score=9.0), {**_m(verdict="accept"), "score": 9.0, "upgrades": [{"id": "U1"}]}, "approved", "9.0"),
     (_st(), {**_m(verdict="reject"), "score": 4.0, "upgrades": [{"id": "U1"}]}, "improve", "4.0/10"),
     (_st(), {**_m(verdict="accept"), "score": 7.0, "upgrades": []}, "unresolved", "no further improvements"),
-    (_st(max_rounds=8, iterations=[{"n": 1, "decision": "improve", "judged": True, "score": 6.0}] * 8),
-     {**_m(verdict="accept"), "score": 7.0, "upgrades": [{"id": "U1"}]}, "unresolved", "after 8 rounds"),
-    (_st(iterations=[{"n": 1, "decision": "improve", "judged": True, "score": 6.0},
-                     {"n": 2, "decision": "improve", "judged": True, "score": 6.1}]),
-     {**_m(verdict="accept"), "score": 6.0, "upgrades": [{"id": "U1"}]}, "unresolved", "did not raise the score"),
+    (_st(max_rounds=12, iterations=[{"n": 1, "decision": "improve", "judged": True, "score": 6.0}] * 12),
+     {**_m(verdict="accept"), "score": 7.0, "upgrades": [{"id": "U1"}]}, "unresolved", "after 12 rounds"),
+    (_st(max_rounds=12, iterations=[{"n": k, "decision": "improve", "judged": True, "score": 8.0} for k in (1, 2, 3)]),
+     {**_m(verdict="accept"), "score": 8.1, "upgrades": [{"id": "U1"}]}, "unresolved", "did not raise the score"),
+    (_st(max_rounds=12, iterations=[{"n": k, "decision": "improve", "judged": True, "score": 8.0} for k in (1, 2)]),
+     {**_m(verdict="accept"), "score": 8.0, "upgrades": [{"id": "U1"}]}, "improve", "8.0/10"),
     (_st(iterations=[{"n": 1, "decision": "improve", "judged": True, "score": 6.0},
                      {"n": 2, "decision": "improve", "judged": True, "score": 6.8}]),
      {**_m(verdict="accept"), "score": 7.5, "upgrades": [{"id": "U1"}]}, "improve", "7.5/10"),
