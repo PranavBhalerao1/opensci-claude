@@ -33,7 +33,9 @@ from .tools import TOOLS, ToolContext
 # Network and provider failures, not the task's: they do not use up an attempt; the run waits.
 INFRASTRUCTURE = (SandboxUnreachable, *TRANSIENT_ERRORS)
 NETWORK_PAUSE = "network: "
-NETWORK_RETRY = (30, 60, 120, 240, 480)  # seconds before each automatic resume; then wait for the user
+# Seconds before each automatic resume; past the last, it keeps trying at that interval. Waiting
+# costs nothing (an offline try stops before anything is billed), and an outage can last hours.
+NETWORK_RETRY = (30, 60, 120, 240, 480, 600)
 FENCE_RETRY = (15, 45)  # seconds before asking the sandbox again whether an earlier attempt's processes stopped
 MAX_PARALLEL = 4
 MAX_AGENT_STEPS = 80
@@ -819,11 +821,12 @@ async def run(project_id: str, h: RunHandle) -> dict:
                 if not ctl.go.is_set():
                     if not running:
                         h.phase(f"paused:{ctl.reason}")
-                        if ctl.reason.startswith(NETWORK_PAUSE) and network_waits < len(NETWORK_RETRY):
+                        if ctl.reason.startswith(NETWORK_PAUSE):
                             # Try again by itself. Still offline, a try stops at the fence or the first
                             # model request, which is not billed and uses up no attempt.
                             with contextlib.suppress(TimeoutError):
-                                await asyncio.wait_for(ctl.go.wait(), NETWORK_RETRY[network_waits])
+                                await asyncio.wait_for(ctl.go.wait(),
+                                                       NETWORK_RETRY[min(network_waits, len(NETWORK_RETRY) - 1)])
                             network_waits += 1
                             if not ctl.go.is_set() and (ctl.reason or "").startswith(NETWORK_PAUSE):
                                 ctl.resume()

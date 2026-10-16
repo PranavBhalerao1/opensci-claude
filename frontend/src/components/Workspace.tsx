@@ -667,6 +667,8 @@ export default function Workspace({ projectId: initialId }: { projectId?: string
                         run={review.run}
                         log={review.log}
                         onAction={reviewAction}
+                        execPaused={exec?.live ? exec.paused : null}
+                        onResumeExecution={() => execAction(() => executionApi.resume(project.id, {}))}
                       />
                     )}
                   </>

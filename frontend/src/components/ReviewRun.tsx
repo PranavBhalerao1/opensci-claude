@@ -20,6 +20,9 @@ interface Props {
   run: Run | null;
   log: ReviewLogLine[];
   onAction: (action: "start" | "resume" | "stop") => Promise<void>;
+  /** Why the repair execution is paused, if it is (it then waits for Resume). */
+  execPaused?: string | null;
+  onResumeExecution?: () => Promise<void>;
 }
 
 const DECISION: Record<ReviewIteration["decision"], string> = {
@@ -48,7 +51,15 @@ const STEP: Record<string, string> = {
 
 const fmtScore = (s: number | null | undefined) => (typeof s === "number" ? s.toFixed(1) : "—");
 
-export default function ReviewRun({ project, review, enabled, run, log, onAction }: Props) {
+function pausedText(reason: string): string {
+  if (reason.startsWith("network")) return "Paused: the model service was unavailable. It retries by itself; Resume to try now.";
+  if (reason.startsWith("budget")) return "Paused: the refinement budget for re-running tasks is used up.";
+  if (reason.startsWith("beta_limit_reached")) return "Paused: out of credits. Upgrade your plan, then resume.";
+  if (reason.startsWith("human")) return "Paused: a task needs a person (see 06 · Execution).";
+  return "Paused.";
+}
+
+export default function ReviewRun({ project, review, enabled, run, log, onAction, execPaused, onResumeExecution }: Props) {
   const { session } = useAuth();
   const token = session?.access_token ?? null;
   const status = review.status;
@@ -143,6 +154,17 @@ export default function ReviewRun({ project, review, enabled, run, log, onAction
                   {iterations.length} review{iterations.length === 1 ? "" : "s"} · {rounds} repair round
                   {rounds === 1 ? "" : "s"} · ${review.spent_usd.toFixed(2)} spent on refinement
                 </p>
+              </div>
+            )}
+
+            {active && review.step === "execute" && execPaused && (
+              <div className="mt-3 border border-ink bg-wash px-4 py-3">
+                <p className="text-[13.5px] leading-relaxed">{pausedText(execPaused)}</p>
+                {onResumeExecution && !execPaused.startsWith("human") && (
+                  <div className="mt-2">
+                    <Button onClick={() => onResumeExecution()} label="Resume" strong />
+                  </div>
+                )}
               </div>
             )}
 

@@ -293,8 +293,27 @@ function PausedBanner({ exec, onResume, onOpenFiles }: Pick<Props, "onResume" | 
           <span className="font-mono">✋</span> A task needs a person. Open it below and mark it done (with a note) or skip
           it.
         </p>
+      ) : reason.startsWith("network") ? (
+        <>
+          <p className="text-[13.5px]">
+            Paused: the model service was unavailable. It retries by itself every few minutes; nothing is spent while
+            it waits.
+          </p>
+          <div className="mt-3">
+            <button onClick={() => onResume()} className="bg-ink px-4 py-2 text-[13px] text-paper">
+              Resume now →
+            </button>
+          </div>
+        </>
       ) : (
-        <p className="text-[13.5px]">Paused. Running tasks finish; nothing new starts until you resume.</p>
+        <>
+          <p className="text-[13.5px]">Paused. Running tasks finish; nothing new starts until you resume.</p>
+          <div className="mt-3">
+            <button onClick={() => onResume()} className="bg-ink px-4 py-2 text-[13px] text-paper">
+              Resume →
+            </button>
+          </div>
+        </>
       )}
     </div>
   );

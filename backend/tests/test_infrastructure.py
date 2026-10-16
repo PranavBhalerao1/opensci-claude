@@ -456,8 +456,20 @@ def test_outage_pauses_and_resumes_by_itself_without_rerunning_done_tasks(chain,
     assert chain.sb._sbx is chain.fake
 
 
-def test_outage_waits_for_resume_once_automatic_retries_are_spent(chain, monkeypatch):
-    monkeypatch.setattr(orchestrator, "NETWORK_RETRY", ())
+def test_long_outage_keeps_retrying_by_itself(chain, monkeypatch):
+    """Live regression: an overnight run gave up after ~15 minutes of outage and waited hours for a
+    click. Past the listed delays it keeps trying at the last interval."""
+    monkeypatch.setattr(orchestrator, "NETWORK_RETRY", (0.01,))
+    chain.script["T1"] = [_writes("data/a.csv")]
+    down = _raises(_status(anthropic.ServiceUnavailableError, 503))
+    chain.script["T2"] = [down, down, down, down, _writes("data/b.csv")]
+    result = asyncio.run(chain.run())
+    assert result["counts"]["done"] == 2 and chain.calls == ["T1"] + ["T2"] * 5
+    assert chain.states()["T2"].attempts == 1
+
+
+def test_outage_resumes_at_once_on_resume(chain, monkeypatch):
+    monkeypatch.setattr(orchestrator, "NETWORK_RETRY", (3600,))
     chain.script["T1"] = [_writes("data/a.csv")]
     chain.script["T2"] = [_raises(_status(anthropic.ServiceUnavailableError, 503)), _writes("data/b.csv")]
 
