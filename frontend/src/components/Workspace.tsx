@@ -30,8 +30,10 @@ import {
   type Run,
   type Turn,
 } from "@/lib/api";
+import { useBeta } from "./BetaGate";
 import BlueprintRun from "./BlueprintRun";
 import BriefCard from "./BriefCard";
+import { CreditsChip } from "./Credits";
 import ExecutionRun from "./ExecutionRun";
 import GapsRun from "./GapsRun";
 import Library from "./Library";
@@ -54,6 +56,7 @@ const EXAMPLES = [
 type AnswersMessage = Extract<Message, { kind: "answers" }>;
 
 export default function Workspace({ projectId: initialId }: { projectId?: string }) {
+  const beta = useBeta();
   const [projectId, setProjectId] = useState<string | null>(initialId ?? null);
   const [project, setProject] = useState<Project | null>(null);
   const [projects, setProjects] = useState<Project[]>([]);
@@ -562,6 +565,7 @@ export default function Workspace({ projectId: initialId }: { projectId?: string
               </button>
             )}
             {project ? (project.autonomous ? "Autonomous" : "Guided") : ""}
+            {beta && <CreditsChip me={beta} />}
           </span>
         </header>
 

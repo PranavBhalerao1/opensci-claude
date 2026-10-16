@@ -471,7 +471,7 @@ def test_parse_refuses_before_any_request_when_credits_are_exhausted(provider):
         s.add(Usage(project_id=pid, user_id=uid, model=settings.model_standard, cost=1.0))
         s.commit()
     provider.parse_result(_verdict())
-    with pytest.raises(beta.BetaLimitReached, match="Beta usage limit reached"):
+    with pytest.raises(beta.BetaLimitReached, match="Out of credits"):
         _owned_parse(pid)
     assert provider.requests == []  # no Bedrock request was issued
     assert len(_project_rows(pid)) == 1 and beta.get_user_spend(uid) == pytest.approx(1.0)

@@ -4,8 +4,9 @@ import { NextResponse, type NextRequest } from "next/server";
 // Pages reachable without a session. Everything else redirects to /login.
 // robots.txt, the sitemap and the share image must stay public for search engines.
 const PUBLIC_PATHS = [
-  "/login", "/signup", "/forgot-password", "/auth", "/welcome", "/waitlist", "/demo",
+  "/login", "/signup", "/forgot-password", "/auth", "/welcome", "/waitlist", "/demo", "/pricing",
   "/robots.txt", "/sitemap.xml", "/opengraph-image",
+  "/api/stripe", // Stripe's webhook; it authenticates by signature, not session
 ];
 
 function isPublic(path: string): boolean {
@@ -56,7 +57,7 @@ export async function updateSession(request: NextRequest) {
   if (!user && !isPublic(path)) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
-    url.search = `?next=${encodeURIComponent(path)}`;
+    url.search = `?next=${encodeURIComponent(path + request.nextUrl.search)}`;
     return NextResponse.redirect(url);
   }
 

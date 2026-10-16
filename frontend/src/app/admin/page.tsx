@@ -3,7 +3,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
 
-import { getAdminEmail, listMembers, listPending, listWaitlist } from "@/lib/admin";
+import { getAdminEmail, listLabInquiries, listMembers, listPending, listSubscribers, listWaitlist } from "@/lib/admin";
+import { planById, toCredits } from "@/lib/plans";
 import { approveAction, inviteAction, revokeAction, setCapAction } from "./actions";
 import SubmitButton from "./SubmitButton";
 
@@ -53,10 +54,12 @@ export default async function AdminPage({ searchParams }: PageProps<"/admin">) {
   if (!admin) notFound();
 
   const { ok, err } = await searchParams;
-  const [pending, members, waitlist] = await Promise.all([
+  const [pending, members, waitlist, subscribers, inquiries] = await Promise.all([
     listPending().catch(() => null),
     listMembers().catch(() => null),
     listWaitlist().catch(() => null),
+    listSubscribers().catch(() => null),
+    listLabInquiries().catch(() => null),
   ]);
   const memberEmails = new Set(members?.map((m) => m.email.toLowerCase()));
   const pendingEmails = new Set(pending?.map((p) => p.email.toLowerCase()));
@@ -150,6 +153,49 @@ export default async function AdminPage({ searchParams }: PageProps<"/admin">) {
                 </div>
                 <p className="mt-2 text-right font-mono text-[11px] text-faint">Empty cap = unlimited</p>
               </details>
+            </li>
+          ))}
+        </ul>
+      </Section>
+
+      <Section title="Subscribers" count={subscribers?.length}>
+        {subscribers && !subscribers.length && <Empty>No paying users yet.</Empty>}
+        {!subscribers && <Empty>Subscribers unavailable. Run the billing SQL.</Empty>}
+        <ul>
+          {subscribers?.map((s) => (
+            <li key={s.email} className="border-b border-rule py-4">
+              <div className="flex items-baseline justify-between gap-3">
+                <span className="min-w-0 truncate text-[15px]">{s.email}</span>
+                <span className="shrink-0 font-mono text-[12px]">
+                  {toCredits(s.spent_usd).toLocaleString("en-US")}
+                  <span className="text-faint"> / {toCredits(s.credits_usd).toLocaleString("en-US")} cr</span>
+                </span>
+              </div>
+              <div className="mt-1 font-mono text-[11px] uppercase tracking-[0.1em] text-faint">
+                {planById(s.plan)?.name ?? s.plan} · {s.status}
+                {s.period_end ? ` · renews ${new Date(s.period_end).toLocaleDateString("en-US", { month: "short", day: "numeric" })}` : ""}
+              </div>
+            </li>
+          ))}
+        </ul>
+      </Section>
+
+      <Section title="Lab inquiries" count={inquiries?.length}>
+        {inquiries && !inquiries.length && <Empty>No lab inquiries yet.</Empty>}
+        {!inquiries && <Empty>Lab inquiries unavailable. Run the billing SQL.</Empty>}
+        <ul>
+          {inquiries?.map((q) => (
+            <li key={q.created_at + q.email} className="border-b border-rule py-4">
+              <div className="flex items-baseline justify-between gap-3">
+                <a href={`mailto:${q.email}`} className="min-w-0 truncate text-[15px] underline underline-offset-2">
+                  {q.name} · {q.email}
+                </a>
+                <span className="shrink-0 font-mono text-[11px] text-faint">{ago(q.created_at)}</span>
+              </div>
+              <div className="mt-1 font-mono text-[11px] text-faint">
+                {[q.organization, q.team_size && `${q.team_size} people`].filter(Boolean).join(" · ") || "—"}
+              </div>
+              {q.message && <p className="mt-2 whitespace-pre-wrap text-[14px] text-muted">{q.message}</p>}
             </li>
           ))}
         </ul>

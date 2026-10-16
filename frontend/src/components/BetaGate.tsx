@@ -60,6 +60,13 @@ export default function BetaGate({ children }: { children: React.ReactNode }) {
           <p>OpenScientist is currently in private beta.</p>
           <p>Your account has been created successfully and is awaiting beta approval.</p>
           <p>We&apos;ll enable your account once your request is approved.</p>
+          <p className="border-t border-rule pt-3">
+            Don&apos;t want to wait?{" "}
+            <a href="/pricing" className="text-ink underline underline-offset-2">
+              Choose a plan
+            </a>{" "}
+            and start right away.
+          </p>
         </div>
       </AuthShell>
     );

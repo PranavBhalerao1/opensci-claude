@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from uuid import uuid4
 
-from sqlalchemy import JSON, Column, Uuid, inspect, text
+from sqlalchemy import JSON, Column, DateTime, Uuid, inspect, text
 from sqlmodel import Field, Session, SQLModel, create_engine
 
 from .config import settings
@@ -224,6 +224,23 @@ class BetaUser(SQLModel, table=True):
     approved: bool = False
     cap_usd: float | None = None
     created_at: datetime = Field(default_factory=_now)
+
+
+class Subscription(SQLModel, table=True):
+    """A paid plan, one row per Supabase user. Written only by the Stripe webhook on the
+    website (frontend/src/app/api/stripe/webhook); the backend just reads it (app/beta.py)."""
+
+    __tablename__ = "subscriptions"
+
+    user_id: str = Field(sa_column=Column(Uuid(as_uuid=False), primary_key=True))
+    plan: str  # light | intensive | ultra
+    status: str  # Stripe's subscription status: active, trialing, past_due, canceled, ...
+    credits_usd: float = 0.0  # compute allowance per billing period, in USD of metered cost
+    period_start: datetime | None = Field(default=None, sa_column=Column(DateTime(timezone=True)))
+    period_end: datetime | None = Field(default=None, sa_column=Column(DateTime(timezone=True)))
+    stripe_customer_id: str | None = None
+    stripe_subscription_id: str | None = None
+    updated_at: datetime = Field(default_factory=_now)
 
 
 def _engine_url(url: str) -> str:

@@ -1,8 +1,10 @@
 """Private beta: access gate, per-user spending cap, and cost attribution (app/beta.py)."""
 
 import asyncio
+import math
 import contextlib
 import uuid
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -13,7 +15,7 @@ from sqlmodel import Session, select
 
 from app import beta, jobs
 from app.auth import CurrentUser, get_current_user
-from app.db import BetaUser, GpuUsage, Project, Run, TaskState, Usage, engine
+from app.db import BetaUser, GpuUsage, Project, Run, Subscription, TaskState, Usage, engine
 from app.execution import colab_runner, orchestrator
 from app.execution.sandbox import Sandbox
 from app.main import app
@@ -556,3 +558,75 @@ def test_gpu_budget_respects_allowance(cap, spent, expected):
     pid = _project(uid, settings={"gpu_budget_usd": 10.0})
     _spend(uid, gpu=0.25, project_id=pid)  # GPU spend counts toward the cap and toward the project
     assert colab_runner.gpu_budget(pid) == pytest.approx(expected)
+
+
+# ── Paid plans ─────────────────────────────────────────────────────────────
+
+
+def _subscribe(uid: str, credits: float = 40.0, status: str = "active", started_days_ago: float = 1.0,
+               plan: str = "light") -> None:
+    now = datetime.now(timezone.utc)
+    start = now - timedelta(days=started_days_ago)
+    with Session(engine) as s:
+        sub = s.get(Subscription, uid) or Subscription(user_id=uid, plan=plan, status=status)
+        sub.plan, sub.status, sub.credits_usd = plan, status, credits
+        sub.period_start, sub.period_end = start, start + timedelta(days=30)
+        s.add(sub)
+        s.commit()
+
+
+def test_a_paid_plan_grants_access_without_beta_approval():
+    for uid in (_user(approved=None), _user(approved=False)):
+        _subscribe(uid, credits=40.0)
+        with _client(uid) as client:
+            assert client.get("/api/projects").status_code == 200
+            me = client.get("/api/me").json()
+        assert me == {**me, "beta_approved": True, "unlimited": False, "cap_usd": 40.0, "spent_usd": 0.0,
+                      "remaining_usd": 40.0, "plan": "light"}
+        assert me["period_end"]
+
+
+def test_plan_credits_count_only_this_periods_spend():
+    uid = _user(approved=None)
+    _subscribe(uid, credits=40.0, started_days_ago=1)
+    with Session(engine) as s:  # spent in an earlier period: does not count
+        s.add(Usage(user_id=uid, model="m", cost=100.0, created_at=datetime.now(timezone.utc) - timedelta(days=5)))
+        s.commit()
+    _spend(uid, llm=10.0, gpu=2.5)
+    assert beta.get_user_remaining(uid) == pytest.approx(27.5)
+    _subscribe(uid, credits=40.0, started_days_ago=0)  # renewal: a fresh period
+    assert beta.get_user_remaining(uid) == pytest.approx(40.0)
+
+
+def test_plan_replaces_a_beta_cap_but_not_unlimited_team_access():
+    capped = _user(approved=True, cap=5.0)
+    _spend(capped, llm=5.0)
+    assert beta.get_user_remaining(capped) == 0
+    _subscribe(capped, credits=175.0, plan="intensive", started_days_ago=0)
+    assert beta.get_user_remaining(capped) == pytest.approx(175.0)
+    team = _user(approved=True, cap=None)
+    _subscribe(team, credits=40.0)
+    _spend(team, llm=500.0)
+    assert beta.get_user_remaining(team) == math.inf and beta.status(team)["plan"] == "light"
+
+
+def test_lapsed_or_cancelled_plans_stop_access():
+    for status, days in (("canceled", 1), ("past_due", 1), ("incomplete", 1), ("active", 33)):
+        uid = _user(approved=None)
+        _subscribe(uid, status=status, started_days_ago=days)  # 33 days: ended 3 days ago, past the grace
+        assert beta.get_plan(uid) is None and beta.get_user_remaining(uid) == 0
+        with _client(uid) as client:
+            assert _code(client.get("/api/projects")) == "beta_pending"
+    uid = _user(approved=None)
+    _subscribe(uid, started_days_ago=31)  # ended a day ago: renewal webhook may still be on its way
+    assert beta.get_plan(uid) is not None
+
+
+def test_a_plan_out_of_credits_hits_the_limit():
+    uid = _user(approved=None)
+    _subscribe(uid, credits=1.0)
+    _spend(uid, llm=1.0)
+    pid = _project(uid)
+    with _client(uid) as client:
+        r = client.post(f"/api/projects/{pid}/messages", json={"content": "hi"})
+    assert r.status_code == 403 and _code(r) == "beta_limit_reached"

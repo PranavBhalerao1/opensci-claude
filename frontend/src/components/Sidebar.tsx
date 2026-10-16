@@ -1,6 +1,7 @@
 import { reviewBadge, type Project } from "@/lib/api";
 import { useAuth } from "@/lib/supabase/AuthProvider";
 import { useBeta } from "./BetaGate";
+import { CreditsPanel } from "./Credits";
 
 interface Props {
   projects: Project[];
@@ -54,11 +55,7 @@ export default function Sidebar({ projects, activeId, onSelect, onNew, onDelete 
           </div>
         ))}
       </nav>
-      {beta && beta.cap_usd !== null && (
-        <div className="border-t border-rule px-3 pt-3 font-mono text-[11px] text-muted">
-          Beta usage: ${beta.spent_usd.toFixed(2)} / ${beta.cap_usd.toFixed(2)}
-        </div>
-      )}
+      {beta && <CreditsPanel me={beta} />}
       {user && (
         <div className="flex items-center justify-between gap-2 border-t border-rule px-3 py-3">
           <span className="min-w-0 truncate font-mono text-[11px] text-faint" title={user.email ?? undefined}>

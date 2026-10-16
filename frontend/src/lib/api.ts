@@ -102,7 +102,7 @@ export const DEPTHS: { key: Depth; label: string; papers: number; note: string }
 export const BETA_PENDING_MESSAGE =
   "OpenScientist is currently in private beta. Your account has been created successfully and is awaiting beta approval.";
 export const BETA_LIMIT_MESSAGE =
-  "Beta usage limit reached. You've used your current beta allowance. Contact the OpenScientist team if you need additional access.";
+  "You're out of credits. Upgrade your plan on the Pricing page, or wait for your credits to renew.";
 
 /** A refusal from the private-beta gate, identified by the API's machine-readable code.
  * toString() is the plain message, so existing `setError(String(e))` sites show it as-is. */
@@ -166,6 +166,8 @@ export interface Me {
   cap_usd: number | null;
   spent_usd: number;
   remaining_usd: number | null;
+  plan: "light" | "intensive" | "ultra" | null; // paid plan, if any
+  period_end: string | null; // when the plan's credits renew
 }
 
 export const meApi = {

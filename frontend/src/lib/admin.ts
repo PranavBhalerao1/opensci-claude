@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { supabaseAdmin } from "@/lib/supabase/service";
 
 /**
  * Server-only helpers for /admin. They call Supabase with the project's secret key
@@ -22,6 +23,24 @@ export interface Member {
   joined: string;
 }
 
+export interface Subscriber {
+  email: string;
+  plan: string;
+  status: string;
+  credits_usd: number;
+  spent_usd: number;
+  period_end: string | null;
+}
+
+export interface LabInquiry {
+  name: string;
+  email: string;
+  organization: string | null;
+  team_size: string | null;
+  message: string | null;
+  created_at: string;
+}
+
 export interface WaitlistEntry {
   email: string;
   created_at: string;
@@ -42,29 +61,6 @@ export async function getAdminEmail(): Promise<string | null> {
   return email && admins.includes(email) ? email : null;
 }
 
-async function supabaseAdmin<T>(path: string, init: { method?: string; body?: unknown } = {}): Promise<T> {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\/+$/, "");
-  const key = process.env.SUPABASE_SECRET_KEY;
-  if (!url || !key) throw new Error("SUPABASE_SECRET_KEY is not set on the server.");
-  const headers: Record<string, string> = { apikey: key, "Content-Type": "application/json" };
-  // New sb_secret_ keys go in `apikey` only; legacy service_role JWTs also go in Authorization.
-  if (!key.startsWith("sb_")) headers.Authorization = `Bearer ${key}`;
-  const res = await fetch(`${url}${path}`, {
-    method: init.method ?? "POST",
-    headers,
-    body: init.body === undefined ? undefined : JSON.stringify(init.body),
-    cache: "no-store",
-  });
-  const text = await res.text();
-  const data = text ? JSON.parse(text) : null;
-  if (!res.ok) {
-    const err = new Error(data?.message ?? data?.msg ?? data?.error_description ?? `Supabase error ${res.status}`);
-    Object.assign(err, { status: res.status, code: data?.error_code ?? data?.code });
-    throw err;
-  }
-  return data as T;
-}
-
 const rpc = <T>(fn: string, args: Record<string, unknown> = {}) => supabaseAdmin<T>(`/rest/v1/rpc/${fn}`, { body: args });
 
 export const listPending = () => rpc<PendingRequest[]>("beta_requests");
@@ -73,6 +69,13 @@ export const listWaitlist = () =>
   supabaseAdmin<WaitlistEntry[]>("/rest/v1/waitlist?select=email,created_at&order=created_at.desc&limit=500", {
     method: "GET",
   });
+
+export const listSubscribers = () => rpc<Subscriber[]>("billing_subscribers");
+export const listLabInquiries = () =>
+  supabaseAdmin<LabInquiry[]>(
+    "/rest/v1/lab_inquiries?select=name,email,organization,team_size,message,created_at&order=created_at.desc&limit=200",
+    { method: "GET" },
+  );
 
 export const approve = (email: string, cap: number | null) =>
   rpc<string>("approve_beta", { p_email: email, p_cap_usd: cap });
