@@ -160,8 +160,10 @@ class RepairPlan(BaseModel):
 
 REPAIR_INSTRUCTIONS = """\
 You are the Planning Agent of OpenScientist. An independent reviewer examined the finished
-study and reported the blocking problems below. Decide how to fix each one at its root
-cause, so the study becomes scientifically valid. You can:
+study, scored it against the standard of a top venue, reported blocking problems and listed
+improvements that would make it outstanding. Fix each blocking problem at its root cause so
+the study becomes scientifically valid, and raise the paper toward the target score with the
+improvements. You can:
 - revise the research plan (plan_revision) when the design or operationalization is wrong;
 - add or change task specifications (blueprint_changes), e.g. a missing control, baseline,
   ablation or analysis that needs its own task;
@@ -173,6 +175,15 @@ cause, so the study becomes scientifically valid. You can:
 Rules:
 - Fix each problem at the earliest stage where it was introduced, with the smallest change
   that fully fixes it. A flawed experiment or analysis is never fixed by rewording the paper.
+- Anything drawn inside a figure (titles, axis labels, legends, panel captions rendered in
+  the image, plotted values) comes from the code that made it: fix it with a task_change that
+  re-runs that task, never with a manuscript directive.
+- If an issue persisted after an earlier fix (see ISSUE HISTORY), that fix did not work: do
+  something different, and after a manuscript-only fix, re-run the task that produces it.
+- Improvements: real experiments beat rewording. Add missing baselines, seeds, ablations,
+  datasets or analyses as blueprint_changes or task_changes, highest impact first, within the
+  remaining budget, and cite the improvement ids (U…) in the task_changes or directives that
+  implement them. Improvements need no decision entry.
 - NEVER change the research question or hypothesis, and never redefine success to make the
   study easier to pass. If a problem cannot be fixed without that, use escalate.
 - Never ask anyone to produce, alter or estimate numbers without running code. If corrected

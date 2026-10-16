@@ -100,14 +100,26 @@ class RubricItem(BaseModel):
     note: str
 
 
+class Upgrade(BaseModel):
+    ref: str
+    title: str
+    action: str
+    origin: Literal["plan", "blueprint", "execution", "analysis", "report", "literature"]
+    impact: Literal["high", "medium", "low"]
+    expected_gain: float  # points on the 0-10 score this upgrade alone would add
+
+
 class JudgeReport(BaseModel):
     summary: str
+    score: float
+    score_rationale: str
     objective_alignment: Literal["answers", "partially_answers", "does_not_answer"]
     objective_alignment_note: str
     hypothesis_support: Literal["supported", "not_supported", "inconclusive", "mixed"]
     rubric: list[RubricItem]
     issues: list[JudgeIssue]
     verdict: Literal["accept", "minor_revision", "major_revision", "reject"]
+    upgrades: list[Upgrade]
 
 
 class IssueCheck(BaseModel):
@@ -125,7 +137,9 @@ class VerificationReport(BaseModel):
 
 JUDGE_SYSTEM = """\
 You are an independent scientific reviewer for OpenScientist, an automated research system.
-You review completed studies with the rigour of a demanding peer reviewer at a top venue.
+You review completed studies with the rigour of a demanding peer reviewer at a top venue
+(NeurIPS, ICML, ICLR, Nature, Science, or the leading venue of the paper's field): the paper
+is judged as if it had been submitted there today, and leniency helps no one.
 You know nothing about how the study was produced beyond the evidence in front of you, and
 you do not assume that any part of the pipeline checked its own work correctly. Every claim
 you make must be grounded in the numbered sources provided."""
@@ -175,7 +189,28 @@ Issues:
 - At most 15 issues; merge duplicates; FATAL and MAJOR first.
 
 verdict: accept (no FATAL/MAJOR issues), minor_revision (MINOR issues only), major_revision
-(MAJOR issues), reject (any FATAL issue)."""
+(MAJOR issues), reject (any FATAL issue).
+
+score (0-10, one decimal): how good the paper is as a submission to a top venue of its field,
+as it stands now. Weigh correctness, rigour (baselines, ablations, seeds, statistics), scale
+and difficulty of the evidence, significance, novelty, depth of analysis and clarity. Anchors:
+- 10: outstanding; a best-paper candidate. 9: strong accept. 8: clear accept at a top venue.
+- 7: weak accept; solid but limited. 6: borderline. 5: weak reject; real contribution, not yet
+  convincing. 4: reject; serious gaps. 2-3: fundamentally flawed or trivial. 0-1: invalid.
+- A correct but small or routine study (toy scale, a single dataset or seed, missing standard
+  baselines, an unsurprising result) is a 4-6, not an 8. Any FATAL issue caps the score at 3;
+  any MAJOR issue caps it at 6. Do not inflate the score to be encouraging.
+score_rationale: two to four sentences naming what holds the score down.
+
+upgrades: what would turn this into an outstanding paper (a 10/10, ideally beyond): the
+changes a top-venue area chair would ask for that are NOT already listed as issues, such as
+stronger or standard baselines, more seeds and confidence intervals, ablations, additional
+datasets or scales, a sharper analysis of why the result holds, or a clearer contribution.
+Each must be concrete and doable by an automated system with code, public data, CPU sandboxes
+and cloud GPUs within hours (no new human studies, no proprietary data, no wet lab). action
+says exactly what to run or change; origin is the earliest stage that must change;
+expected_gain is your estimate of score points it adds. Highest impact first, at most 8, refs
+U1, U2, …; an empty list only for a paper that is already a 10."""
 
 # Added only to the one fresh attempt after a review was cut off by the output limit.
 OUTPUT_LIMIT_NOTE = """
@@ -591,6 +626,11 @@ def semantic_errors(report: JudgeReport) -> list[str]:
     if missing or extra:
         errors.append(f"rubric must assess each criterion exactly once; missing: {missing or 'none'}; "
                       f"unknown or repeated: {extra or 'none'}.")
+    if not 0 <= report.score <= 10:
+        errors.append(f"score must be between 0 and 10 (got {report.score}).")
+    urefs = [u.ref for u in report.upgrades]
+    if len(set(urefs)) != len(urefs) or set(urefs) & set(refs):
+        errors.append("Upgrade refs must be unique and distinct from issue refs.")
     for i in report.issues:
         if i.category not in CRITERIA:
             errors.append(f"Issue {i.ref}: category '{i.category}' is not one of {', '.join(CRITERIA)}.")
@@ -626,6 +666,16 @@ def classify(issue: dict, check: IssueCheck | None, verification: str) -> None:
         grounded = issue["grounding"] not in ("unverified", "absence_contradicted")
         issue["blocking"] = serious and issue["certainty"] in ("demonstrated", "likely") and grounded
         issue["open_concern"] = serious and not issue["blocking"]
+
+
+SCORE_CAPS = {"FATAL": 3.0, "MAJOR": 6.0}
+
+
+def capped_score(score: float, issues: list[dict]) -> float:
+    """The judge's score, held to the caps its own rules set for the blocking issues that
+    survived verification (a refuted claim no longer caps it)."""
+    cap = min([SCORE_CAPS[i["severity"]] for i in issues if i.get("blocking")], default=10.0)
+    return round(max(0.0, min(score, cap, 10.0)), 1)
 
 
 # ── Model calls ────────────────────────────────────────────────────────────
@@ -813,6 +863,9 @@ async def review(project_id: str, h: RunHandle, iteration: int, previous: dict |
         consistent = bool(blocking) or (report.verdict in ("accept", "minor_revision") and not contradicts)
         result = {
             **base, "judged": True, "valid": True, "verdict": report.verdict, "summary": report.summary,
+            "score": capped_score(report.score, issues), "score_claimed": report.score,
+            "score_rationale": report.score_rationale,
+            "upgrades": [{**u.model_dump(), "id": f"R{iteration}-{u.ref}"} for u in report.upgrades][:8],
             "objective_alignment": {"value": report.objective_alignment, "note": report.objective_alignment_note},
             "hypothesis_support": report.hypothesis_support, "rubric": [r.model_dump() for r in report.rubric],
             "issues": issues, "verification": verification if claims else "not_needed",

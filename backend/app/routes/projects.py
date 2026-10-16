@@ -547,13 +547,19 @@ REVIEW_SUMMARIES = {"HISTORY.md": "text/markdown", "REVIEW.md": "text/markdown"}
 @router.get("/{project_id}/review")
 def get_review(project_id: str, session: Session = Depends(get_session),
                user: CurrentUser = Depends(get_current_user)) -> dict:
-    """Scientific review state (effective status, iterations, issue tracks) and the latest review run."""
+    """Scientific review state (effective status, iterations, issue tracks), the latest review run,
+    and the loop's log: every review and repair step of the current session, oldest first."""
     project = _get(session, project_id, user)
-    run = session.exec(
+    view = refine.view(project_id)
+    runs = session.exec(
         select(Run).where(Run.project_id == project_id, Run.kind.in_(("review", "repair")))
-        .order_by(Run.started_at.desc())
-    ).first()
-    return {"review": refine.view(project_id), "run": run, "project": project,
+        .order_by(Run.started_at.desc()).limit(40)
+    ).all()
+    since = view.get("started_at")
+    log = [{"t": line.get("t"), "text": line.get("text", ""), "kind": r.kind}
+           for r in reversed(runs) if not since or r.started_at.isoformat() >= since[:19]
+           for line in (r.log or [])][-400:]
+    return {"review": view, "run": runs[0] if runs else None, "log": log, "project": project,
             "enabled": refine.config(project)["enabled"]}
 
 

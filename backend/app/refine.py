@@ -44,7 +44,7 @@ log = logging.getLogger("openscientist.refine")
 
 ACTIVE = ("reviewing", "repairing", "attention")
 FINAL = ("approved", "unresolved", "budget_exhausted", "stopped")
-REPAIRS = ("repair", "repair_gates")
+REPAIRS = ("repair", "repair_gates", "improve")
 STAGES = ("plan", "blueprint", "execution", "report")
 ORIGIN_STAGE = {"plan": "plan", "blueprint": "blueprint", "execution": "execution", "analysis": "execution",
                 "report": "report", "literature": "report"}
@@ -72,6 +72,7 @@ def config(project: Project) -> dict:
         "max_rounds": int(cfg.get("max_rounds", settings.refinement_max_rounds)),
         "max_usd": float(cfg.get("max_usd", settings.refinement_max_usd)),
         "verify": bool(cfg.get("verify", True)),
+        "target_score": float(cfg.get("target_score", settings.refinement_target_score)),
     }
 
 
@@ -175,6 +176,7 @@ def begin_session(project_id: str) -> dict:
         enabled=True, status="reviewing", step="review", stale=False, attention=None,
         session=prev.get("session", 0) + 1, iteration=n, session_first_iteration=n + 1,
         max_rounds=cfg["max_rounds"], max_usd=cfg["max_usd"], verify=cfg["verify"],
+        target_score=cfg["target_score"],
         started_at=_now().isoformat(), budget_override=None,
         preregistration=prev.get("preregistration") or judge.preregistration_of(plan),
         tracks=prev.get("tracks", {}), iterations=prev.get("iterations", []),
@@ -313,6 +315,9 @@ async def _review_job(project_id: str, h: RunHandle) -> dict:
         "judged": mistakes.get("judged", False), "decision": decision, "reason": reason,
         "blocking": {sev: sum(1 for i in blocking if i["severity"] == sev) for sev in ("FATAL", "MAJOR")},
         "open_concerns": sum(1 for i in mistakes.get("issues", []) if i.get("open_concern")),
+        "score": mistakes.get("score"), "score_rationale": mistakes.get("score_rationale"),
+        "upgrades": [{k: u.get(k) for k in ("id", "title", "action", "impact", "expected_gain", "origin")}
+                     for u in mistakes.get("upgrades", [])][:8],
         "issues": [{k: i.get(k) for k in ("id", "track_id", "severity", "category", "title", "blocking",
                                           "open_concern", "verification", "grounding", "tracking")}
                    for i in mistakes.get("issues", [])][:30],
@@ -322,8 +327,13 @@ async def _review_job(project_id: str, h: RunHandle) -> dict:
     write_history(project_id)
     h.counts(fatal=record["blocking"]["FATAL"], major=record["blocking"]["MAJOR"],
              issues=len(mistakes.get("issues", [])))
+    if mistakes.get("score") is not None:
+        h.note(f"Score {mistakes['score']:.1f}/10: {mistakes.get('score_rationale') or ''}"[:600])
+    for u in mistakes.get("upgrades", [])[:8]:
+        h.note(f"To improve ({u['impact']}, +{u['expected_gain']:.1f}): {u['title']}"[:300])
     h.note(f"Review {n}: {mistakes.get('verdict') or 'not judged'} → {decision}: {reason}")
     return {"iteration": n, "decision": decision, "reason": reason, "verdict": mistakes.get("verdict"),
+            "score": mistakes.get("score"),
             "blocking": record["blocking"], "valid": mistakes.get("valid")}
 
 
@@ -348,7 +358,7 @@ async def _after_review(project_id: str) -> None:
         update(project_id, status="review_failed", attention=reason)
     elif decision == "repair_gates":
         start_gate_repair(project_id)
-    elif decision == "repair":
+    elif decision in ("repair", "improve"):
         start_repair(project_id)
 
 
@@ -376,6 +386,10 @@ def decide(st: dict, mistakes: dict, spent_usd: float) -> tuple[str, str]:
             return "budget_exhausted", f"The refinement budget (${max_usd:.2f}) is used up."
         return "repair_gates", f"Integrity gates failed ({gates}); the manuscript is rebuilt before review."
     blocking = [i for i in mistakes["issues"] if i.get("blocking")]
+    target = st.get("target_score", settings.refinement_target_score)
+    score = mistakes.get("score")  # None for reviews made before scoring existed
+    shown = f"{score:.1f}/10" if score is not None else "unscored"
+    scores = [it["score"] for it in session if it.get("judged") and it.get("score") is not None]
     if not blocking:
         if mistakes.get("verification") == "failed" and any(
                 i.get("severity") in judge.BLOCKING_SEVERITIES for i in mistakes["issues"]):
@@ -384,10 +398,23 @@ def decide(st: dict, mistakes: dict, spent_usd: float) -> tuple[str, str]:
         if not mistakes.get("verdict_consistent", True):
             return "unresolved", ("The reviewer's verdict contradicts its own findings in two independent reviews; "
                                   "a human decision is needed.")
-        if mistakes.get("verdict") in ("accept", "minor_revision"):
-            return "approved", "No blocking issues remain; the reviewer accepted the study."
-        return "unresolved", ("The reviewer rejected the study without issues that could be verified; "
-                              "a human decision is needed.")
+        if mistakes.get("verdict") in ("accept", "minor_revision") and (score is None or score >= target):
+            return "approved", (f"Scored {shown} (target {target:.1f}) with no blocking issues left."
+                                if score is not None else "No blocking issues remain; the reviewer accepted the study.")
+        if not mistakes.get("upgrades"):
+            return "unresolved", (f"Scored {shown}, below the target of {target:.1f}, and the reviewer named no "
+                                  "further improvements; a human decision is needed." if score is not None else
+                                  "The reviewer rejected the study without issues that could be verified; "
+                                  "a human decision is needed.")
+        if rounds >= max_rounds:
+            return "unresolved", f"Scored {shown} after {rounds} rounds; the target of {target:.1f} was not reached."
+        if spent_usd >= max_usd:
+            return "budget_exhausted", f"The refinement budget (${max_usd:.2f}) is used up at {shown}."
+        # Improving without getting better: two improvement rounds in a row did not raise the score.
+        if len(scores) >= 2 and score is not None and score <= scores[-1] + 0.2 and scores[-1] <= scores[-2] + 0.2 \
+                and session[-1].get("decision") == "improve":
+            return "unresolved", f"The last two improvement rounds did not raise the score ({shown})."
+        return "improve", f"Scored {shown}, below the target of {target:.1f}: making the reviewer's top improvements."
     counts = {sev: sum(1 for i in blocking if i["severity"] == sev) for sev in ("FATAL", "MAJOR")}
     if rounds >= max_rounds:
         return "unresolved", f"{len(blocking)} blocking issues remain after {rounds} repair rounds."
@@ -397,14 +424,15 @@ def decide(st: dict, mistakes: dict, spent_usd: float) -> tuple[str, str]:
     for tid, t in tracks.items():
         if t.get("severity") == "FATAL" and t.get("status") == "open" and t.get("open_streak", 0) >= 3:
             return "unresolved", f"A fatal issue ({tid}: {t['title']}) persisted through two repair attempts."
-    # No convergence: two repair rounds without fewer blocking issues and without resolving any
-    # (fixing one problem and then finding a different one is progress, not oscillation).
+    # No convergence: two repair rounds without fewer blocking issues, without resolving any and
+    # without a better score (fixing one problem and then finding a different one is progress).
     n = mistakes.get("iteration", 0)
-    scores = [_score(it.get("blocking", {})) for it in session if it.get("judged")] + [_score(counts)]
-    progress = any(t.get("resolved_at") in (n - 1, n) for t in tracks.values())
-    if len(scores) >= 3 and scores[-1] >= scores[-2] >= scores[-3] and not progress:
+    weights = [_score(it.get("blocking", {})) for it in session if it.get("judged")] + [_score(counts)]
+    progress = any(t.get("resolved_at") in (n - 1, n) for t in tracks.values()) or \
+        (score is not None and bool(scores) and score > scores[-1] + 0.2)
+    if len(weights) >= 3 and weights[-1] >= weights[-2] >= weights[-3] and not progress:
         return "unresolved", "Two repair rounds in a row neither reduced nor resolved the blocking issues."
-    return "repair", f"{counts['FATAL']} fatal and {counts['MAJOR']} major issues to repair."
+    return "repair", f"{counts['FATAL']} fatal and {counts['MAJOR']} major issues to repair ({shown})."
 
 
 _STOP = {"the", "and", "for", "with", "not", "are", "was", "from", "that", "this", "into", "than", "does", "uses"}
@@ -560,6 +588,7 @@ def repair_context(project_id: str, st: dict, mistakes: dict) -> str:
             history.append(f"- {tid} \"{t['title']}\" ({t['category']}): seen in reviews {t.get('seen')}, now "
                            f"{t['status']}; fix attempts {t.get('fix_attempts', 0)}; last disposition "
                            f"{t.get('last_disposition') or 'none'}{'; disputed before' if t.get('disputed') else ''}"
+                           f"{'; last fixed at the ' + t['last_root_cause'] + ' stage' if t.get('last_root_cause') else ''}"
                            f"{'; last action: ' + t['last_action'] if t.get('last_action') else ''}")
     tasks = "\n".join(
         f"- {t['id']} [{states[t['id']].status if t['id'] in states else 'not started'}] {t['title']}: "
@@ -582,10 +611,25 @@ def repair_context(project_id: str, st: dict, mistakes: dict) -> str:
         f"{mistakes.get('summary')}\n\nBLOCKING ISSUES (decide each):\n" + "\n".join(issue_text(i) for i in blocking)
         + "\n\nOPEN CONCERNS (must be disclosed in the manuscript):\n"
         + ("\n".join(issue_text(i) for i in concerns) or "(none)")
+        + f"\n\nREVIEWER'S SCORE: {_shown(mistakes.get('score'))} at top-venue standard; the target is "
+        f"{st.get('target_score', settings.refinement_target_score):.1f}. "
+        f"{mistakes.get('score_rationale') or ''}\n\n"
+        + ("IMPROVEMENTS TO REACH AN OUTSTANDING PAPER (no blocking issues are left: implement the highest-impact "
+           "ones that fit the budget, at least one, citing their ids in task_changes or directives):\n"
+           if mistakes.get("decision") == "improve" or not blocking else
+           "IMPROVEMENTS TO REACH AN OUTSTANDING PAPER (optional this round; fix the blocking issues first and add "
+           "an improvement only if it is cheap and fits):\n")
+        + ("\n".join(f"- {u['id']} ({u['impact']} impact, about +{u.get('expected_gain', 0):.1f} points, origin "
+                     f"{u['origin']}): {u['title']}\n  Action: {u['action']}" for u in mistakes.get("upgrades", []))
+           or "(none)")
         + f"\n\nISSUE HISTORY:\n" + ("\n".join(history) or "(first review)")
         + f"\n\nCURRENT MANUSCRIPT DIRECTIVES (withdraw any that no longer apply):\n{directives}\n\n"
         f"LIMITS: repair round {rounds} of {st['max_rounds']}; about ${remaining:.2f} of the refinement budget left."
     )
+
+
+def _shown(score) -> str:
+    return f"{score:.1f}/10" if isinstance(score, (int, float)) else "unscored"
 
 
 def validate_repair(rp: plan_agent.RepairPlan, mistakes: dict, st: dict, mp: dict,
@@ -594,14 +638,20 @@ def validate_repair(rp: plan_agent.RepairPlan, mistakes: dict, st: dict, mp: dic
     issues = {i["id"]: i for i in mistakes["issues"]}
     blocking = {i["id"] for i in mistakes["issues"] if i.get("blocking")}
     concerns = {i["id"] for i in mistakes["issues"] if i.get("open_concern")}
+    upgrades = {u["id"] for u in mistakes.get("upgrades", [])}
     tasks = {t["id"] for t in mp["tasks"]}
     decided = [d.issue_id for d in rp.decisions]
     for iid in sorted(blocking - set(decided)):
         errors.append(f"No decision for blocking issue {iid}.")
     for iid in sorted({d for d in decided if decided.count(d) > 1}):
         errors.append(f"Issue {iid} has more than one decision.")
-    for iid in sorted(set(decided) - blocking - concerns):
+    for iid in sorted(set(decided) - blocking - concerns - upgrades):
         errors.append(f"Unknown issue id {iid}.")
+    if mistakes.get("decision") == "improve" and upgrades:
+        cited = {iid for x in [*rp.task_changes, *rp.report_directives] for iid in x.issue_ids}
+        if not cited & upgrades and not rp.blueprint_changes.strip() and not rp.plan_revision.strip():
+            errors.append("No blocking issues are left and the score is below target: implement at least one "
+                          "improvement (cite its id in task_changes or report_directives, or amend the blueprint).")
     for tc in rp.task_changes:
         if tc.task_id not in tasks:
             errors.append(f"task_changes names unknown task {tc.task_id}.")
@@ -613,7 +663,7 @@ def validate_repair(rp: plan_agent.RepairPlan, mistakes: dict, st: dict, mp: dic
 
     for d in rp.decisions:
         issue = issues.get(d.issue_id)
-        if issue is None:
+        if issue is None:  # an improvement (upgrade) needs no decision; its actions cite its id
             continue
         track = st.get("tracks", {}).get(issue.get("track_id") or "", {})
         if d.disposition == "fix":
@@ -621,6 +671,12 @@ def validate_repair(rp: plan_agent.RepairPlan, mistakes: dict, st: dict, mp: dic
             if STAGES.index(d.root_cause) > STAGES.index(origin):
                 errors.append(f"{d.issue_id} originates at the {origin} stage; it cannot be fixed at the later "
                               f"{d.root_cause} stage (fix the cause, or disclose it).")
+            # A manuscript-only fix that did not hold is not tried again: the problem lives in the
+            # results (e.g. a figure a directive cannot redraw), so its task must be re-run.
+            if track.get("last_root_cause") == "report" and d.root_cause == "report" \
+                    and issue.get("tracking", {}).get("status") == "persisting":
+                errors.append(f"{d.issue_id} persisted after a manuscript-only fix; fix it by re-running the task "
+                              "that produces it (or an earlier stage), or disclose it.")
             cites = any(d.issue_id in tc.issue_ids for tc in rp.task_changes)
             need = {
                 "plan": bool(rp.plan_revision.strip()) and (bool(rp.blueprint_changes.strip()) or bool(rp.task_changes)),
@@ -862,6 +918,7 @@ def _update_tracks_after_repair(project_id: str, rp: plan_agent.RepairPlan, mist
             t["disputed"] = True
         if d.disposition == "fix":
             t["fix_attempts"] = t.get("fix_attempts", 0) + 1
+            t["last_root_cause"] = d.root_cause
             acts = [f"re-run {c['task_id']}: {c['change'][:160]}" for c in changes if d.issue_id in c["issue_ids"]]
             if rp.plan_revision.strip() and d.root_cause == "plan":
                 acts.append("plan revised: " + rp.plan_revision[:160])
@@ -1231,10 +1288,11 @@ def write_history(project_id: str) -> None:
     st = state(project_id)
     out = judge.review_dir(project_id)
     out.mkdir(parents=True, exist_ok=True)
-    rows = ["| Review | Verdict | Decision | Fatal | Major | Repair level | Re-run tasks | Cost |",
-            "|---|---|---|---|---|---|---|---|"]
+    rows = ["| Review | Score | Verdict | Decision | Fatal | Major | Repair level | Re-run tasks | Cost |",
+            "|---|---|---|---|---|---|---|---|---|"]
     for it in st.get("iterations", []):
-        rows.append(f"| {it['n']} | {it.get('verdict') or '—'} | {it['decision']} | {it['blocking'].get('FATAL', 0)} | "
+        rows.append(f"| {it['n']} | {_shown(it.get('score'))} | {it.get('verdict') or '—'} | {it['decision']} | "
+                    f"{it['blocking'].get('FATAL', 0)} | "
                     f"{it['blocking'].get('MAJOR', 0)} | {it.get('level', '—')} | "
                     f"{', '.join(it.get('rerun_tasks', [])) or '—'} | ${it.get('cost_usd', 0):.2f} |")
     tracks = [f"- {k} [{t['status']}] {t['severity']} {t['category']}: {t['title']} (seen in reviews "
@@ -1243,6 +1301,14 @@ def write_history(project_id: str) -> None:
                                     + ("\n".join(tracks) or "(none)") + "\n", encoding="utf-8")
     o = st.get("outcome") or {}
     lines = [f"# Scientific review: {o.get('status') or st.get('status')}", "", o.get("reason", ""), "", LIMITATION, ""]
+    last = next((it for it in reversed(st.get("iterations", [])) if it.get("score") is not None), None)
+    if last:
+        lines += [f"## Score: {_shown(last['score'])} (target {st.get('target_score', settings.refinement_target_score):.1f})",
+                  "", last.get("score_rationale") or "", ""]
+        if last.get("upgrades"):
+            lines += ["## What would make it outstanding",
+                      *[f"- ({u['impact']}, +{u.get('expected_gain') or 0:.1f}) {u['title']}: {u['action']}"
+                        for u in last["upgrades"]], ""]
     if o.get("unresolved"):
         lines += ["## Unresolved blocking issues", *[f"- {u['track']} ({u['severity']}): {u['title']}" for u in
                                                    o["unresolved"]], ""]

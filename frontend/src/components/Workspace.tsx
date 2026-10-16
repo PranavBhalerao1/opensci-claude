@@ -26,6 +26,7 @@ import {
   type PlanRun as PlanRunT,
   type Project,
   type ReportRun as ReportRunT,
+  type ReviewLogLine,
   type ReviewView,
   type Run,
   type Turn,
@@ -74,7 +75,12 @@ export default function Workspace({ projectId: initialId }: { projectId?: string
   const [execKick, setExecKick] = useState(0);
   const [files, setFiles] = useState<{ focus?: string } | null>(null);
   const [reportRun, setReportRun] = useState<ReportRunT | null>(null);
-  const [review, setReview] = useState<{ view: ReviewView; enabled: boolean; run: Run | null } | null>(null);
+  const [review, setReview] = useState<{
+    view: ReviewView;
+    enabled: boolean;
+    run: Run | null;
+    log: ReviewLogLine[];
+  } | null>(null);
   const [library, setLibrary] = useState<{ focus?: string } | null>(null);
   // A project created in this tab already has its state locally; skip the reload.
   const justCreated = useRef<string | null>(null);
@@ -292,7 +298,7 @@ export default function Workspace({ projectId: initialId }: { projectId?: string
   const loadReview = useCallback(
     (id: string) =>
       reviewApi.get(id).then((d) => {
-        setReview({ view: d.review, enabled: d.enabled, run: d.run });
+        setReview({ view: d.review, enabled: d.enabled, run: d.run, log: d.log ?? [] });
         setProject(d.project);
         return d;
       }),
@@ -659,6 +665,7 @@ export default function Workspace({ projectId: initialId }: { projectId?: string
                         review={review.view}
                         enabled={review.enabled}
                         run={review.run}
+                        log={review.log}
                         onAction={reviewAction}
                       />
                     )}

@@ -44,10 +44,11 @@ def issue(ref="I1", severity="MAJOR", quote=RESULTS_LINE, source="manuscript", l
     return JudgeIssue(**fields)
 
 
-def report(issues=(), verdict="accept", rubric_items=None) -> JudgeReport:
-    return JudgeReport(summary="Reviewed.", objective_alignment="answers", objective_alignment_note="",
-                       hypothesis_support="supported", rubric=rubric_items or rubric(), issues=list(issues),
-                       verdict=verdict)
+def report(issues=(), verdict="accept", rubric_items=None, score=8.5, upgrades=()) -> JudgeReport:
+    return JudgeReport(summary="Reviewed.", score=score, score_rationale="Solid.", objective_alignment="answers",
+                       objective_alignment_note="", hypothesis_support="supported",
+                       rubric=rubric_items or rubric(), issues=list(issues), verdict=verdict,
+                       upgrades=list(upgrades))
 
 
 def garbage(provider: Provider, text="not json at all") -> None:

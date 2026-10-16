@@ -1,8 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
-import { reviewApi, reviewBadge, type Project, type ReviewIteration, type ReviewView, type Run } from "@/lib/api";
+import {
+  reviewApi,
+  reviewBadge,
+  type Project,
+  type ReviewIteration,
+  type ReviewLogLine,
+  type ReviewView,
+  type Run,
+} from "@/lib/api";
 import { useAuth } from "@/lib/supabase/AuthProvider";
 
 interface Props {
@@ -10,6 +18,7 @@ interface Props {
   review: ReviewView;
   enabled: boolean;
   run: Run | null;
+  log: ReviewLogLine[];
   onAction: (action: "start" | "resume" | "stop") => Promise<void>;
 }
 
@@ -17,6 +26,7 @@ const DECISION: Record<ReviewIteration["decision"], string> = {
   approved: "Approved",
   repair: "Repair",
   repair_gates: "Rebuild paper",
+  improve: "Improve",
   unresolved: "Unresolved",
   budget_exhausted: "Budget used",
   review_failed: "Review failed",
@@ -31,12 +41,14 @@ const LEVEL: Record<NonNullable<ReviewIteration["level"]>, string> = {
 
 const STEP: Record<string, string> = {
   review: "Independent review",
-  repair: "Planning Agent choosing fixes",
+  repair: "Planning Agent choosing fixes and improvements",
   execute: "Re-running invalidated tasks",
   report: "Rewriting the paper",
 };
 
-export default function ReviewRun({ project, review, enabled, run, onAction }: Props) {
+const fmtScore = (s: number | null | undefined) => (typeof s === "number" ? s.toFixed(1) : "—");
+
+export default function ReviewRun({ project, review, enabled, run, log, onAction }: Props) {
   const { session } = useAuth();
   const token = session?.access_token ?? null;
   const status = review.status;
@@ -46,8 +58,13 @@ export default function ReviewRun({ project, review, enabled, run, onAction }: P
   const live = Object.values(review.live ?? {}).some(Boolean);
   const active = status === "reviewing" || status === "repairing";
   const rounds = iterations.filter(
-    (it) => it.n >= (review.session_first_iteration ?? 1) && (it.decision === "repair" || it.decision === "repair_gates"),
+    (it) =>
+      it.n >= (review.session_first_iteration ?? 1) &&
+      (it.decision === "repair" || it.decision === "repair_gates" || it.decision === "improve"),
   ).length;
+  const scored = iterations.filter((it) => typeof it.score === "number");
+  const lastScored = scored[scored.length - 1];
+  const target = review.target_score ?? 8;
   const file = (name: string, iteration?: number) => reviewApi.fileUrl(project.id, name, token, iteration);
 
   return (
@@ -74,6 +91,34 @@ export default function ReviewRun({ project, review, enabled, run, onAction }: P
 
         {status && (
           <div className="px-6 py-5">
+            {lastScored && (
+              <div className="mb-5 flex flex-wrap items-end gap-x-8 gap-y-3 border-b border-rule pb-5">
+                <div>
+                  <div className="font-mono text-[10px] uppercase tracking-[0.14em] text-faint">
+                    Reviewer score · top-venue standard
+                  </div>
+                  <div className="mt-1 flex items-baseline gap-2">
+                    <span className="font-serif text-[44px] leading-none">{fmtScore(lastScored.score)}</span>
+                    <span className="font-mono text-[12px] text-muted">/ 10 · target {target.toFixed(1)}</span>
+                  </div>
+                </div>
+                {scored.length > 1 && (
+                  <div className="font-mono text-[11.5px] text-muted">
+                    {scored.map((it, k) => (
+                      <span key={it.n}>
+                        {k > 0 && <span className="text-faint"> → </span>}
+                        <span className={k === scored.length - 1 ? "text-ink" : ""}>
+                          R{it.n} {fmtScore(it.score)}
+                        </span>
+                      </span>
+                    ))}
+                  </div>
+                )}
+                {lastScored.score_rationale && (
+                  <p className="basis-full text-[13.5px] leading-relaxed text-muted">{lastScored.score_rationale}</p>
+                )}
+              </div>
+            )}
             {active && (
               <div className="flex items-baseline gap-3 text-[14px]">
                 <span className="relative flex h-2.5 w-2.5 shrink-0">
@@ -149,6 +194,30 @@ export default function ReviewRun({ project, review, enabled, run, onAction }: P
               </div>
             )}
 
+            {lastScored?.upgrades && lastScored.upgrades.length > 0 && (
+              <div className="mt-6">
+                <div className="mb-2 font-mono text-[10px] uppercase tracking-[0.14em] text-faint">
+                  What would make it outstanding · review {lastScored.n}
+                </div>
+                <ol className="grid gap-2.5">
+                  {lastScored.upgrades.map((u) => (
+                    <li key={u.id} className="grid grid-cols-[64px_1fr] gap-3 text-[13px] leading-relaxed">
+                      <span className="font-mono text-[10.5px] uppercase tracking-[0.1em]">
+                        +{u.expected_gain.toFixed(1)}
+                      </span>
+                      <div>
+                        <p>{u.title}</p>
+                        <p className="text-muted">{u.action}</p>
+                        <p className="font-mono text-[10.5px] uppercase tracking-[0.08em] text-faint">
+                          {u.impact} impact · {u.origin}
+                        </p>
+                      </div>
+                    </li>
+                  ))}
+                </ol>
+              </div>
+            )}
+
             {iterations.length > 0 && (
               <div className="mt-6">
                 <div className="mb-2 font-mono text-[10px] uppercase tracking-[0.14em] text-faint">Iterations</div>
@@ -157,6 +226,7 @@ export default function ReviewRun({ project, review, enabled, run, onAction }: P
                     <div key={it.n} className="grid grid-cols-[28px_1fr_auto] items-baseline gap-3 text-[13px] leading-relaxed">
                       <span className="font-mono text-[11px] text-faint">R{it.n}</span>
                       <span>
+                        {typeof it.score === "number" && <span className="font-mono text-[12px]">{fmtScore(it.score)}/10 · </span>}
                         {it.judged ? (it.verdict ?? "—").replace("_", " ") : "integrity gates failed"} →{" "}
                         <span className="font-mono text-[11px] uppercase">{DECISION[it.decision]}</span>
                         <span className="text-muted">
@@ -177,10 +247,13 @@ export default function ReviewRun({ project, review, enabled, run, onAction }: P
               </div>
             )}
 
+            {log.length > 0 && <ReviewLog log={log} live={active} />}
+
             <p className="mt-6 text-[12px] leading-relaxed text-faint">
-              Approval means an independent model reviewer (the same model family that wrote the study) found no
-              blocking scientific problems in the paper and its evidence, and the platform&apos;s integrity checks
-              passed. It is a quality gate, not a guarantee of correctness.
+              Each round, a fresh reviewer that has never seen the paper scores it against the standard of a top venue
+              and lists what to fix and what would make it outstanding. The loop goes back to whichever stage needs to
+              change (plan, experiments or writing) and repeats until the paper reaches {target.toFixed(1)}/10, stops
+              improving, or you stop it. Approval is a quality gate, not a guarantee of correctness.
             </p>
           </div>
         )}
@@ -225,5 +298,30 @@ function Group({ title, items }: { title: string; items: string[] }) {
         ))}
       </ul>
     </div>
+  );
+}
+
+function ReviewLog({ log, live }: { log: ReviewLogLine[]; live: boolean }) {
+  const box = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (box.current) box.current.scrollTop = box.current.scrollHeight;
+  }, [log.length]);
+  return (
+    <details open className="group mt-6">
+      <summary className="mb-2 cursor-pointer list-none font-mono text-[10px] uppercase tracking-[0.14em] text-faint">
+        Review log · {log.length} entries{live ? " · live" : ""}
+      </summary>
+      <div ref={box} className="max-h-72 overflow-y-auto border border-rule bg-wash px-3 py-2 font-mono text-[11.5px] leading-relaxed">
+        {log.map((l, k) => (
+          <div key={k} className="grid grid-cols-[44px_56px_1fr] gap-2">
+            <span className="text-faint">
+              {l.t ? new Date(l.t).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: false }) : ""}
+            </span>
+            <span className="uppercase text-faint">{l.kind}</span>
+            <span className="min-w-0 break-words">{l.text}</span>
+          </div>
+        ))}
+      </div>
+    </details>
   );
 }

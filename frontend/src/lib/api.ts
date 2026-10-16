@@ -644,14 +644,26 @@ export interface ReviewIssueSummary {
   tracking: { status: "new" | "persisting" | "resurfaced" | "regression"; previous_ids: string[] } | null;
 }
 
+export interface ReviewUpgrade {
+  id: string;
+  title: string;
+  action: string;
+  impact: "high" | "medium" | "low";
+  expected_gain: number;
+  origin: string;
+}
+
 export interface ReviewIteration {
   n: number;
   session: number;
   review_run_id: string;
   verdict: "accept" | "minor_revision" | "major_revision" | "reject" | null;
   judged: boolean;
-  decision: "approved" | "repair" | "repair_gates" | "unresolved" | "budget_exhausted" | "review_failed";
+  decision: "approved" | "repair" | "repair_gates" | "improve" | "unresolved" | "budget_exhausted" | "review_failed";
   reason: string;
+  score?: number | null; // 0-10 at top-venue standard
+  score_rationale?: string | null;
+  upgrades?: ReviewUpgrade[];
   blocking: { FATAL: number; MAJOR: number };
   open_concerns: number;
   issues: ReviewIssueSummary[];
@@ -680,6 +692,7 @@ export interface ReviewState {
   session_first_iteration?: number;
   max_rounds?: number;
   max_usd?: number;
+  target_score?: number;
   attention?: string | null;
   iterations?: ReviewIteration[];
   tracks?: Record<string, ReviewTrack>;
@@ -692,6 +705,12 @@ export interface ReviewState {
   } | null;
 }
 
+export interface ReviewLogLine {
+  t: string;
+  text: string;
+  kind: "review" | "repair";
+}
+
 export interface ReviewView extends ReviewState {
   spent_usd: number;
   live: Record<"review" | "repair" | "execute" | "report", boolean>;
@@ -700,7 +719,7 @@ export interface ReviewView extends ReviewState {
 export const reviewApi = {
   get: (id: string) =>
     apiFetch(`${API_URL}/api/projects/${id}/review`).then(
-      json<{ review: ReviewView; run: Run | null; project: Project; enabled: boolean }>,
+      json<{ review: ReviewView; run: Run | null; log?: ReviewLogLine[]; project: Project; enabled: boolean }>,
     ),
   start: (id: string) => post(`${API_URL}/api/projects/${id}/review/start`).then(json<{ review: ReviewView }>),
   resume: (id: string) => post(`${API_URL}/api/projects/${id}/review/resume`).then(json<{ review: ReviewView }>),
