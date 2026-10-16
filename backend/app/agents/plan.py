@@ -123,6 +123,78 @@ instruction does not touch. Keep task ids stable where tasks are unchanged and k
 the dependency graph valid."""
 
 
+# ── Audit before approval: is the question worth the compute? ───────────────
+# The plan of project 0c58935aa0be set out to measure an exponent that the equation's exact
+# scaling symmetry fixes in two lines, and treated a sufficient energy criterion as the
+# threshold; ~$60 of execution later, an outside referee pointed both out. A domain expert
+# reading the plan first catches that before anything runs.
+
+
+class PlanProblem(BaseModel):
+    severity: Literal["FATAL", "MAJOR", "MINOR"]
+    kind: Literal["follows_from_known_theory", "bound_not_threshold", "ill_posed_case", "not_measurable",
+                  "confound", "precision_beyond_method", "convergence", "statistics", "other"]
+    problem: str = Field(description="What is wrong, with the reasoning or derivation that shows it")
+    fix: str = Field(description="How the plan must change (question, hypothesis, cases, methods)")
+
+
+class PlanAudit(BaseModel):
+    field: str
+    established_theory: list[str] = Field(description="Known results that bear on the hypothesis, each with "
+                                                      "its consequence for this study")
+    contribution: str = Field(description="What a non-trivial answer would add beyond the established theory")
+    problems: list[PlanProblem]
+
+
+AUDIT_INSTRUCTIONS = """\
+You are a senior expert in this plan's field, refereeing a research plan BEFORE any compute is
+spent on it. Leniency here wastes the whole budget. In your reasoning, write out the established
+theory that bears on the hypothesis (exact symmetries and invariances such as scaling, conservation
+laws, dimensional analysis, classical theorems, known solutions and bounds) and DERIVE what it
+already implies for the quantities the plan will measure. Then report every problem:
+- follows_from_known_theory: the hypothesis or the main expected result follows directly from that
+  theory (e.g. an exponent fixed by an exact scaling symmetry); measuring it is not a contribution
+  (FATAL when it is the main result).
+- bound_not_threshold: a sufficient condition, bound or estimate is treated as the sharp quantity.
+- ill_posed_case: some cases studied make the quantity zero, infinite, trivial or undefined
+  (critical exponents, whole space vs bounded domain, boundary conditions); they must be excluded
+  or treated separately.
+- not_measurable, confound, precision_beyond_method (precision claimed beyond what the method's
+  tolerances allow), convergence (no plan to check resolution, domain size, time horizon,
+  detection thresholds), statistics (deterministic reruns as replicates, trivial nulls), other.
+Severity: FATAL if the study as planned cannot produce a valid, non-trivial main result; MAJOR if
+it must change for the result to be trusted; MINOR otherwise. In contribution, say what the
+genuinely open, non-trivial question is (e.g. the sharp constant, the bound's gap, the regime
+where the theory says nothing). Return no problems only if you would fund the plan as written."""
+
+AUDIT_REVISE_INSTRUCTIONS = """\
+Revise the research plan to fix the problems an expert found before execution. FATAL and MAJOR
+problems must be fixed: when the hypothesis follows from established theory, reframe the question
+and hypothesis around the genuinely open contribution the expert names (using the known result as
+a check, not as a finding); when a bound is treated as a threshold, measure the sharp quantity and
+compare it with the bound; exclude or separate ill-posed cases; add the convergence and statistics
+checks asked for. Stay within the user's research brief and its constraints. Keep task ids stable
+where tasks are unchanged and keep the dependency graph valid."""
+
+
+async def audit_plan(context: str, plan: ResearchPlan) -> PlanAudit:
+    return await parse(
+        model=settings.model_judge,
+        instructions=AUDIT_INSTRUCTIONS,
+        messages=[{"role": "user", "content": context + "\n\nRESEARCH PLAN TO AUDIT:\n" + plan.model_dump_json()}],
+        schema=PlanAudit,
+        reasoning_effort="high",
+        max_tokens=LONG_MAX_TOKENS,
+    )
+
+
+def audit_findings(audit: PlanAudit) -> str:
+    serious = [p for p in audit.problems if p.severity != "MINOR"]
+    return ("Field: " + audit.field + "\nEstablished theory:\n" + "\n".join(f"- {t}" for t in audit.established_theory)
+            + f"\nThe open contribution: {audit.contribution}\nProblems:\n"
+            + "\n".join(f"- {p.severity} {p.kind}: {p.problem}\n  Fix: {p.fix}" for p in serious))
+
+
 # ── Repair after an independent scientific review (see refine.py) ──────────
 
 
@@ -156,6 +228,10 @@ class RepairPlan(BaseModel):
     rerun_failed_tasks: list[str] = Field(description="Unfinished task ids worth retrying; others are skipped")
     report_directives: list[Directive]
     withdraw_directives: list[str] = Field(description="Ids of earlier manuscript directives that no longer apply")
+    reframe: str = Field(description="Only when a blocking issue shows the research question or hypothesis is "
+                                     "implied by established theory, treats a bound as the sharp quantity, or is "
+                                     "ill-posed in cases studied: the reframed, non-trivial question and hypothesis "
+                                     "(within the user's brief) and why. Empty otherwise.")
 
 
 REPAIR_INSTRUCTIONS = """\
@@ -186,8 +262,17 @@ Rules:
   each id in the task_change or directive that makes it, or name it in blueprint_changes. A
   required change needs no decision entry; decline one only if it is impossible with the
   available data and compute, with a disclose decision, a rationale and a directive.
-- NEVER change the research question or hypothesis, and never redefine success to make the
-  study easier to pass. If a problem cannot be fixed without that, use escalate.
+- Order: fix conceptual problems first (what the central result means, whether it is new, which
+  cases it covers), then experiments and analyses, then the text. Rewording the paper never fixes
+  a conceptual problem in its central result.
+- Never change the research question or hypothesis to make the study easier to pass, and never
+  redefine success for that purpose. The one exception, and then it is required: when a blocking
+  issue shows the hypothesis or headline result follows directly from established theory, treats
+  a bound or sufficient condition as the sharp quantity, or is ill-posed in cases studied, the
+  question itself must change. Put the reframed, non-trivial question and hypothesis in reframe
+  (within the user's brief; the known result becomes a check, the open part becomes the study),
+  give a plan_revision and blueprint_changes for it, and fix the issue at the plan stage.
+  Otherwise, if a problem cannot be fixed without changing the question, use escalate.
 - Never ask anyone to produce, alter or estimate numbers without running code. If corrected
   results contradict the hypothesis, the paper reports that honestly.
 - disclose: the problem is real but cannot be fixed with the available data or compute; add a
@@ -204,6 +289,12 @@ REPAIR_REVISE_GUARD = """
 This revision follows an independent scientific review. Change only what the instruction
 requires. Do not change the research question, hypothesis or null hypothesis. Keep task ids
 of unchanged tasks."""
+
+REFRAME_GUARD = """
+This revision follows an independent scientific review that found the research question or
+hypothesis trivial or ill-posed. Reframe the research question, hypothesis and null hypothesis
+exactly as the instruction says, stay within the user's research brief, and change the rest of
+the plan only as the new question requires. Keep task ids of unchanged tasks."""
 
 PROTECTED_FIELDS = ("research_question", "hypothesis", "null_hypothesis")
 OBJECTIVE_FIELDS = ("metrics", "success_criteria", "validation_strategy", "baselines")
@@ -222,16 +313,25 @@ async def draft_repair(context: str, errors: list[str] | None = None) -> RepairP
     )
 
 
+def carried(result: dict) -> dict:
+    """A plan run's result carried over to a revision: an expert audit is marked as being of the
+    earlier version."""
+    return {**result, "audit": {**result["audit"], "stale": True}} if result.get("audit") else dict(result)
+
+
 def current_plan(project: Project) -> dict:
     return {k: v for k, v in (project.plan or {}).items() if k not in ("run_id", "approved_at", "schema")}
 
 
-async def revise_for_repair(prev: dict, instruction: str, h: RunHandle) -> tuple[dict, list[str]]:
-    """Revise the plan for a review finding. The question and hypotheses are restored in code;
-    changed metrics, success criteria, validation or baselines are returned for the record."""
+async def revise_for_repair(prev: dict, instruction: str, h: RunHandle, reframe: str = "") -> tuple[dict, list[str]]:
+    """Revise the plan for a review finding. The question and hypotheses are restored in code
+    unless the repair reframes them (RepairPlan.reframe); changed metrics, success criteria,
+    validation or baselines (and a reframed question) are returned for the record."""
+    if reframe:
+        instruction = f"Reframe the question: {reframe}\n\n{instruction}"
     plan = await parse(
         model=settings.model_reasoning,
-        instructions=REVISE_INSTRUCTIONS + REPAIR_REVISE_GUARD,
+        instructions=REVISE_INSTRUCTIONS + (REFRAME_GUARD if reframe else REPAIR_REVISE_GUARD),
         messages=[{"role": "user", "content": f"Instruction: {instruction}\n\nCurrent plan:\n" + json.dumps(prev)}],
         schema=ResearchPlan,
         # High: this regenerates the research plan, same quality bar as drafting one.
@@ -239,9 +339,9 @@ async def revise_for_repair(prev: dict, instruction: str, h: RunHandle) -> tuple
     )
     plan = await _finalise(plan, h, settings.model_reasoning, [])
     data = plan.model_dump()
-    for f in PROTECTED_FIELDS:
+    for f in () if reframe else PROTECTED_FIELDS:
         data[f] = prev.get(f, data[f])
-    changed = [f for f in OBJECTIVE_FIELDS
+    changed = [f for f in (*PROTECTED_FIELDS, *OBJECTIVE_FIELDS)
                if json.dumps(prev.get(f), sort_keys=True) != json.dumps(data.get(f), sort_keys=True)]
     return data, changed
 
@@ -255,7 +355,7 @@ def save_plan_run(project_id: str, plan: dict, instruction: str) -> Run:
             project_id=project_id, kind="plan", status="done", phase="done",
             counts=_summary(ResearchPlan.model_validate(plan)),
             log=[{"t": now.isoformat(), "text": "Revised after the scientific review"}],
-            result={**(prev.result if prev else {}), "plan": plan, "instruction": instruction},
+            result={**carried(prev.result if prev else {}), "plan": plan, "instruction": instruction},
             finished_at=now,
         )
         s.add(run)
@@ -422,10 +522,46 @@ async def run(project_id: str, h: RunHandle) -> dict:
     )
     h.phase("validating", "Checking the task graph")
     plan = await _finalise(plan, h, settings.model_reasoning, [{"role": "user", "content": context}])
+    audit = None
+    if settings.plan_audit:
+        plan, audit = await _audited(context, plan, h)
     data = _cite_all(plan.model_dump(), papers)
     h.counts(**_summary(plan))
     h.note("Plan ready for review")
-    return {"plan": data, "gap_id": project.chosen_gap["id"], "gaps_run_id": project.chosen_gap["run_id"]}
+    return {"plan": data, "gap_id": project.chosen_gap["id"], "gaps_run_id": project.chosen_gap["run_id"],
+            **({"audit": audit} if audit else {})}
+
+
+async def _audited(context: str, plan: ResearchPlan, h: RunHandle) -> tuple[ResearchPlan, dict]:
+    """An expert audit of the drafted plan; FATAL or MAJOR problems get one revision, which is
+    audited again so what the user approves says what is still open."""
+    h.phase("auditing", "A domain expert is checking the question against established theory")
+    first = await audit_plan(context, plan)
+    record = {"first": first.model_dump(), "revised": False, "final": first.model_dump()}
+    serious = [p for p in first.problems if p.severity != "MINOR"]
+    if not serious:
+        h.note("Expert audit: no serious problems with the question or design")
+        return plan, record
+    h.note(f"Expert audit found {len(serious)} serious problems "
+           f"({', '.join(sorted({p.kind.replace('_', ' ') for p in serious}))}); revising the plan")
+    h.phase("revising", "Revising the plan to fix the expert's findings")
+    revised = await parse(
+        model=settings.model_reasoning,
+        instructions=AUDIT_REVISE_INSTRUCTIONS,
+        messages=[{"role": "user", "content": context + "\n\nEXPERT FINDINGS:\n" + audit_findings(first)
+                   + "\n\nCurrent plan:\n" + plan.model_dump_json()}],
+        schema=ResearchPlan,
+        reasoning_effort="high",
+        max_tokens=LONG_MAX_TOKENS,
+    )
+    plan = await _finalise(revised, h, settings.model_reasoning, [{"role": "user", "content": context}])
+    h.phase("auditing", "Checking the revised plan")
+    final = await audit_plan(context, plan)
+    record.update(revised=True, final=final.model_dump())
+    left = [p for p in final.problems if p.severity != "MINOR"]
+    h.note("Revised plan passed the expert audit" if not left else
+           f"{len(left)} serious problems remain after the revision; see the audit before approving")
+    return plan, record
 
 
 def latest_plan_run(project_id: str) -> Run | None:
@@ -456,7 +592,7 @@ def make_revision_job(instruction: str):
         plan = await _finalise(plan, h, settings.model_standard, [])
         h.counts(**_summary(plan))
         h.note("Revision ready for review")
-        return {**prev.result, "plan": plan.model_dump(), "instruction": instruction}
+        return {**carried(prev.result), "plan": plan.model_dump(), "instruction": instruction}
 
     return revise
 
@@ -471,7 +607,7 @@ def save_manual_edit(project_id: str, plan: ResearchPlan) -> Run:
         run = Run(
             project_id=project_id, kind="plan", status="done", phase="done", counts=_summary(plan),
             log=[{"t": now.isoformat(), "text": "Edited by hand"}],
-            result={**prev.result, "plan": plan.model_dump(), "instruction": "Edited by hand"},
+            result={**carried(prev.result), "plan": plan.model_dump(), "instruction": "Edited by hand"},
             finished_at=now,
         )
         s.add(run)

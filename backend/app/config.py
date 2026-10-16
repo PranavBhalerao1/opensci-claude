@@ -52,6 +52,13 @@ class Settings(BaseSettings):
     # The judge's 0-10 score a paper must reach to be approved; 10 = flawless (agents/judge.py).
     refinement_target_score: float = 10.0
     review_numeric_crosscheck: bool = True
+    # Reviews by a panel: the lead judge plus specialist theory and methods referees, in parallel
+    # (agents/judge.py REFEREES). Off, a review is the lead judge alone.
+    review_panel: bool = True
+    # Before a plan is shown for approval, a domain-expert audit checks whether its hypothesis is
+    # already implied by established theory, ill-posed in some regime, or confuses a bound with a
+    # threshold, and the plan is revised once if so (agents/plan.py audit_plan).
+    plan_audit: bool = True
     # Attempts per execution task before it is left failed. Every retry gets a fresh model's
     # diagnosis of the failure and the exact fix to make (orchestrator._advise).
     task_max_attempts: int = 6

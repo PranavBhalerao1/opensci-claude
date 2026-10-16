@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 
-import { PlanEditError, planApi, type PlanRun as PlanRunT, type PlanTask, type Project, type ResearchPlan } from "@/lib/api";
+import { PlanEditError, planApi, type PlanAudit, type PlanRun as PlanRunT, type PlanTask, type Project, type ResearchPlan } from "@/lib/api";
 import { useAuth } from "@/lib/supabase/AuthProvider";
 
 interface Props {
@@ -50,6 +50,7 @@ export default function PlanRun({ project, run, revisions, onApprove, onRetry, o
           </div>
         )}
 
+        {plan && current && !editing && run?.result?.audit && <AuditCard {...run.result.audit} />}
         {plan && current && !editing && <PlanDocument plan={plan} note={run?.result?.instruction} />}
         {plan && current && editing && (
           <JsonEditor
@@ -520,5 +521,53 @@ function Bullets({ items, mark }: { items: string[]; mark: string }) {
         </li>
       ))}
     </ul>
+  );
+}
+
+/** The domain expert's check of the question against established theory, before approval. */
+function AuditCard({ first, final, revised, stale }: { first: PlanAudit; final: PlanAudit; revised: boolean; stale?: boolean }) {
+  const serious = (a: PlanAudit) => a.problems.filter((x) => x.severity !== "MINOR");
+  const fixed = revised ? serious(first) : [];
+  const open = serious(final);
+  return (
+    <div className="border-b border-ink px-6 py-4">
+      <div className="mb-2 flex flex-wrap items-baseline justify-between gap-2">
+        <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-faint">Expert check · {final.field}</span>
+        <span className={`font-mono text-[10.5px] uppercase tracking-[0.1em] ${open.length ? "underline" : "text-muted"}`}>
+          {stale ? "Of an earlier version" : open.length ? `${open.length} serious problem${open.length > 1 ? "s" : ""} open` : revised ? "Fixed before approval" : "Passed"}
+        </span>
+      </div>
+      {final.contribution && <p className="text-[13.5px] leading-relaxed">{final.contribution}</p>}
+      {fixed.length > 0 && (
+        <details className="mt-2 text-[13px]">
+          <summary className="cursor-pointer text-muted">The first draft had {fixed.length} serious problem{fixed.length > 1 ? "s" : ""}; the plan was revised</summary>
+          <ul className="mt-1.5 grid gap-1.5">
+            {fixed.map((x, i) => (
+              <li key={i} className="leading-relaxed">
+                <span className="font-mono text-[10.5px]">{x.severity} · {x.kind.replace(/_/g, " ")}</span> {x.problem}
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
+      {open.length > 0 && (
+        <ul className="mt-2 grid gap-2 text-[13px]">
+          {open.map((x, i) => (
+            <li key={i} className="leading-relaxed">
+              <span className="font-mono text-[10.5px]">{x.severity} · {x.kind.replace(/_/g, " ")}</span> {x.problem}
+              <span className="text-muted"> → {x.fix}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+      {final.established_theory.length > 0 && (
+        <details className="mt-2 text-[13px]">
+          <summary className="cursor-pointer text-muted">Established theory considered</summary>
+          <ul className="mt-1.5 grid list-disc gap-1 pl-5 leading-relaxed">
+            {final.established_theory.map((t, i) => <li key={i}>{t}</li>)}
+          </ul>
+        </details>
+      )}
+    </div>
   );
 }

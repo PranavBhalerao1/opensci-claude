@@ -1,6 +1,9 @@
 """Stage 8 · Independent scientific review (the Judge Agent).
 
-Every review is a fresh, single model call that sees the finished study as a skeptical peer
+A review is a panel (settings.review_panel): a lead reviewer plus theory and methods referees
+(REFEREES), each a fresh model call on the same evidence, all starting with a conceptual audit
+of what the central result means against the field's established theory. Their findings are
+merged (merge_panel) and verified together. Each reviewer sees the finished study as a skeptical peer
 reviewer would: the user's original question, the pre-registered plan and what changed since,
 protocol amendments, platform facts about execution, the manuscript (line-numbered), its
 figures as images, the result files and analysis code behind it, the cited papers' abstracts,
@@ -63,6 +66,8 @@ RETRY_DELAY = 30.0  # one extra retry after the SDK's own retries
 # At high effort the review's thinking plus its JSON reached the old 32K ceiling in 4 of 5 calls
 # (project 6d8c3c93c209); only generated tokens are billed, so the larger ceiling costs nothing extra.
 JUDGE_MAX_TOKENS = llm.LONG_MAX_TOKENS
+# Version of the review rules: a review made under other rules (or another panel) is never reused.
+REVIEW_RULES = 2
 _REVIEW_IDS = re.compile(r"\b(?:R\d+-P?\d+|T-\d{3,})\b")
 
 
@@ -122,6 +127,17 @@ class JudgeReport(BaseModel):
     upgrades: list[Upgrade]
 
 
+class RefereeReport(BaseModel):
+    """A specialist referee's report (see REFEREES): its issues and upgrades join the lead review's."""
+    field: str
+    established_theory: list[str]  # results of the field that bear on the central claims, with consequences
+    summary: str
+    score: float
+    score_rationale: str
+    issues: list[JudgeIssue]
+    upgrades: list[Upgrade]
+
+
 class IssueCheck(BaseModel):
     ref: str
     outcome: Literal["confirmed", "refuted", "uncertain"]
@@ -142,11 +158,58 @@ You review completed studies with the rigour of a demanding peer reviewer at a t
 is judged as if it had been submitted there today, and leniency helps no one.
 You know nothing about how the study was produced beyond the evidence in front of you, and
 you do not assume that any part of the pipeline checked its own work correctly. Every claim
-you make must be grounded in the numbered sources provided."""
+you make must be grounded in the numbered sources provided, or in the established theory of the
+paper's field: you are an expert in that field, and you judge the paper against what the field
+already knows (exact symmetries, scaling laws, conservation laws, classical theorems, known
+closed-form results), not only against its own files."""
+
+# The conceptual audit every reviewer and referee does first. The single reviewer of project
+# 0c58935aa0be wrote that its headline exponent "is analytically exact" and that one regime's
+# threshold is "trivially" zero, then filed both as MINOR and scored 7: it checked details and
+# never asked what the central result means. These steps make that question explicit.
+CONCEPTUAL_AUDIT = """\
+CONCEPTUAL AUDIT. Do this first, before checking details: it is where the most damaging errors
+hide, and a paper can be internally consistent while being wrong about what it found.
+1. Field and theory: name the field and the established results that bear on the central
+   claims (exact symmetries and invariances such as scaling, conservation laws, dimensional
+   analysis, classical theorems, known closed-form solutions or bounds). Work out their
+   consequences for this study yourself, in your reasoning.
+2. Triviality: does any headline result follow directly from that theory (e.g. an exponent
+   fixed by an exact scaling symmetry, a relation forced by dimensional analysis, a known
+   theorem restated)? Presented as a discovery or as numerical evidence for something provable
+   in a few lines, that is FATAL (category novelty or research_question), unless the paper
+   itself says it is a known consequence and uses it only as a check.
+3. Logical status: is each key quantity what the paper says it is? A sufficient condition
+   treated as the threshold, a bound treated as the sharp value, an estimate treated as exact,
+   correlation treated as cause: FATAL when it is the central result, else MAJOR.
+4. Regimes: is the quantity well-defined and non-trivial in every case included in the claims
+   and statistics (critical or degenerate cases where a threshold is zero or infinite, whole
+   space vs bounded domain, boundary conditions, limits)? Mixing such cases into aggregate,
+   universality or hypothesis-test claims is at least MAJOR.
+5. Direction and sign: check every comparative word (over/under-estimates, higher/lower,
+   improves, within X%) against the actual numbers and ratios.
+6. Numerics: reported precision vs the method's own tolerance (a fitted value cannot be more
+   precise than the solver, grid or bisection tolerance that produced its inputs); convergence
+   in every numerical parameter (resolution, domain size, time horizon, detection criterion);
+   finite-horizon or finite-domain artefacts (e.g. "no blow-up" that only means "not before T").
+7. Statistics: deterministic reruns are not independent replicates; tests that include cases
+   where the null is trivially true or false; multiple comparisons; effect sizes.
+8. Consistency: methods vs appendix vs code (grid sizes, tolerances, normalizations, profiles,
+   sample sizes) and abstract vs results."""
+
+SEVERITY_CALIBRATION = """\
+- Severity is about the consequence for the paper's central conclusions, not about how easy
+  the fix is. An error in what the central result means, how it is framed, whether it is new,
+  or which cases it covers is FATAL or MAJOR, never MINOR, even when the fix is "only text".
+  MINOR is only for problems that leave every headline conclusion and its interpretation intact.
+  If you find yourself writing that a headline result is exact, trivial, a bound, or undefined
+  in some case, decide what that means for the paper and grade it accordingly."""
 
 JUDGE_INSTRUCTIONS = """\
 Review the study above. Decide whether its conclusions are scientifically valid and supported
 by its own evidence, and find every substantive mistake.
+
+{audit}
 
 Assess each of these criteria exactly once in `rubric` (criterion names verbatim):
 - research_question: is the question operationalized validly, and does the paper answer the
@@ -169,6 +232,7 @@ Issues:
 - severity FATAL: invalidates an essential finding or the study. MAJOR: a substantial weakness
   that must be corrected. MINOR: does not undermine validity. Ignore writing style unless it
   causes misinterpretation. Honest negative or inconclusive results are acceptable.
+{calibration}
 - certainty demonstrated: the cited evidence shows it; likely: strong but indirect; uncertain:
   a concern you cannot establish from the evidence (say what evidence would settle it in
   evidence_needed, and list workspace files you need in requested_files).
@@ -177,7 +241,10 @@ Issues:
   "literature:smith2020data", "plan_current"), a locator (manuscript line range like "L120-L131",
   table row, figure panel) and a verbatim quote copied from that source (leave quote empty only
   for figures). For "X is missing" claims, put the search terms whose absence you verified in
-  absence_terms.
+  absence_terms. For a conceptual issue, quote the manuscript passage that makes the claim and
+  add one evidence item with source "domain_knowledge": locator names the established result
+  (e.g. "scaling invariance of the equation"), quote states it precisely, observation shows how
+  it applies (the derivation in a few lines). It is checked by reasoning, not verbatim.
 - why_it_matters: why it undermines validity. corrective_action: the concrete fix (what to run,
   change or withdraw), not generic advice.
 - origin: where the mistake was introduced: plan (design/operationalization), blueprint (a task
@@ -202,7 +269,8 @@ oversights do. Anchors:
 - 6-7: gaps a careful reviewer flags at once (a missing standard baseline, a single seed, an
   unsupported or overstated claim, a figure that disagrees with the data).
 - 4-5: significant errors or missing evidence. 0-3: fatal problems.
-Any FATAL issue caps the score at 3; any MAJOR issue caps it at 6. Never round up, and do not
+A headline result that is an immediate consequence of established theory, presented as a
+finding, scores at most 3. Any FATAL issue caps the score at 3; any MAJOR issue caps it at 6. Never round up, and do not
 inflate the score to be encouraging: a 10 means you would sign off on it as flawless.
 score_rationale: two to four sentences naming what keeps it from a 10.
 
@@ -214,6 +282,8 @@ code, public data, CPU sandboxes and cloud GPUs within hours (no new human studi
 proprietary data, no wet lab). action says exactly what to run or change; origin is the
 earliest stage that must change; expected_gain is the score points it adds. Highest impact
 first, at most 12, refs U1, U2, …; an empty list only when the score is 10."""
+JUDGE_INSTRUCTIONS = JUDGE_INSTRUCTIONS.replace("{audit}", CONCEPTUAL_AUDIT).replace(
+    "{calibration}", SEVERITY_CALIBRATION)
 
 # Added only to the one fresh attempt after a review was cut off by the output limit.
 OUTPUT_LIMIT_NOTE = """
@@ -231,7 +301,73 @@ evidence above. Try to show each claim is wrong before you accept it.
 - refuted: the evidence contradicts the claim, or its quotes/facts do not support it.
 - uncertain: the evidence cannot settle it either way.
 corrected_severity may be lower than claimed, never higher. Platform GROUNDING facts tell you
-whether each quote was found verbatim in its source. Return one check per claimed issue (same ref)."""
+whether each quote was found verbatim in its source. Return one check per claimed issue (same ref).
+- Conceptual claims (a result follows from an established theorem or exact symmetry, a bound or
+  sufficient condition is treated as the sharp value, a case is ill-posed or degenerate, a sign
+  or direction is wrong) are checked by reasoning: do the mathematics yourself. Established
+  results of the field are valid evidence even though no workspace file states them; a
+  "domain_knowledge" evidence item is never refuted for not being quoted from a file. Refute
+  such a claim only if its reasoning is wrong or the paper already states and handles the point.
+- Lower a severity only when the consequence is smaller than claimed, never because the fix is
+  easy: an error in the meaning, framing, novelty or scope of the central result stays FATAL or
+  MAJOR even when it is corrected by rewriting."""
+
+
+# The panel: specialist referees who review the same evidence independently of the lead review
+# and of each other. Their issues and upgrades are merged into the lead review (merge_panel);
+# the lowest credible score counts. settings.review_panel turns the panel on.
+REFEREES = {
+    "theory": ("TH", """\
+You are the THEORY REFEREE on a review panel: the expert in the mathematics and established theory
+of this paper's field. Other referees check the numerics, statistics and presentation; your job is
+whether the central results are true, mean what the paper says, and are new.
+- Steps 1-5 of the conceptual audit are yours. In your reasoning, write out the field's relevant
+  symmetries, invariances, theorems and known results and DERIVE their consequences for this study
+  (e.g. apply the equation's scaling symmetry to the quantity studied) before reading the claims.
+- Then go through every headline claim (abstract, contributions, conclusions): is it implied by
+  that theory, is its logical status (bound, sufficient condition, sharp value, estimate) stated
+  correctly, is it well-defined in every case included, and is the claimed direction right?
+- Say what the genuine, non-trivial contribution could be, as a corrective_action or upgrade.
+- established_theory: each relevant result, one line each, with its consequence for this study."""),
+    "methods": ("ME", """\
+You are the METHODS REFEREE on a review panel: the expert in numerical methods, experimental design
+and statistics. Another referee checks the theory; your job is whether the numbers can be trusted
+and are interpreted correctly.
+- Steps 5-8 of the conceptual audit are yours. Check every number in the abstract and conclusions
+  against the result files, every comparative word against its numbers, every precision claim
+  against the tolerance of the method that produced it, and every parameter (grid, domain, time
+  horizon, tolerances, normalizations, profiles, sample sizes) across methods, appendix and code.
+- Demand convergence evidence in every numerical parameter that affects a classification or a
+  fitted value, and ask what a finite horizon or finite domain does to each classification.
+- Treat deterministic reruns as one sample, and check each statistical test's null is non-trivial
+  for every case included.
+- established_theory: methodological standards the study must meet, one line each.""")}
+
+REFEREE_INSTRUCTIONS = """\
+Review the study above as one referee of a panel. Find every substantive mistake in your area;
+the other referees cover theirs. Use the same issue format, severity, certainty, evidence,
+origin and refs rules as below, and score the paper (0-10, how close to perfect at a top venue)
+from your area alone.
+
+""" + CONCEPTUAL_AUDIT + """
+
+Issues (at most 12, FATAL and MAJOR first, refs I1, I2, ...):
+- category: one of """ + ", ".join(CRITERIA) + """.
+- severity FATAL: invalidates an essential finding or the study. MAJOR: a substantial weakness
+  that must be corrected. MINOR: leaves every headline conclusion and its interpretation intact.
+""" + SEVERITY_CALIBRATION + """
+- certainty demonstrated / likely / uncertain (say what would settle it in evidence_needed).
+- Every FATAL or MAJOR issue needs evidence: source ids exactly as given, a locator and a verbatim
+  quote (manuscript quotes from the cited lines). For a conceptual issue add an evidence item with
+  source "domain_knowledge": locator names the established result, quote states it precisely,
+  observation gives the derivation in a few lines.
+- corrective_action: the concrete fix (what to run, prove, change, reframe or withdraw).
+- origin: plan, blueprint, execution, analysis, report or literature (where the mistake was made;
+  a research question or hypothesis that is trivial or ill-posed originates at plan).
+upgrades (refs U1, U2, ...): changes in your area, beyond the issues, that a 10 needs; concrete and
+doable with code, public data and cloud compute; expected_gain in score points; at most 6.
+A headline result that is an immediate consequence of established theory, presented as a finding,
+scores at most 3; any FATAL issue caps your score at 3, any MAJOR at 6."""
 
 
 # ── Bundle ─────────────────────────────────────────────────────────────────
@@ -586,7 +722,7 @@ def _line_range(locator: str) -> tuple[int, int] | None:
 def _quote_found(bundle: Bundle, ev: Evidence) -> bool | None:
     """Whether the quote appears verbatim (whitespace-normalised) in its source; None for
     figures, whose claims are visual. Manuscript quotes must lie within the cited lines ±3."""
-    if ev.source.startswith("figure:"):
+    if ev.source.startswith("figure:") or ev.source == "domain_knowledge":
         return None
     quote = _norm(ev.quote)
     if not quote:
@@ -612,7 +748,9 @@ def ground(issue: JudgeIssue, bundle: Bundle) -> tuple[str, list[bool | None]]:
         if not checkable or not any(checkable):
             return "absence_ok", found
     if not checkable:
-        return ("visual" if found else "unverified"), found
+        if not found:
+            return "unverified", found
+        return ("visual" if any(ev.source.startswith("figure:") for ev in issue.evidence) else "reasoning"), found
     if all(checkable):
         return "verified", found
     return ("partial" if any(checkable) else "unverified"), found
@@ -643,6 +781,84 @@ def semantic_errors(report: JudgeReport) -> list[str]:
             if not i.corrective_action.strip():
                 errors.append(f"Issue {i.ref}: a {i.severity} issue needs a corrective_action.")
     return errors
+
+
+def referee_errors(report: RefereeReport) -> list[str]:
+    errors = []
+    refs = [i.ref for i in report.issues]
+    urefs = [u.ref for u in report.upgrades]
+    if len(set(refs)) != len(refs) or len(set(urefs)) != len(urefs) or set(urefs) & set(refs):
+        errors.append("Issue and upgrade refs must be unique and distinct from each other.")
+    if not 0 <= report.score <= 10:
+        errors.append(f"score must be between 0 and 10 (got {report.score}).")
+    for i in report.issues:
+        if i.category not in CRITERIA:
+            errors.append(f"Issue {i.ref}: category '{i.category}' is not one of {', '.join(CRITERIA)}.")
+        if i.severity in BLOCKING_SEVERITIES:
+            if not i.evidence and not i.absence_terms:
+                errors.append(f"Issue {i.ref}: a {i.severity} issue needs evidence (or absence_terms).")
+            if not i.corrective_action.strip():
+                errors.append(f"Issue {i.ref}: a {i.severity} issue needs a corrective_action.")
+    return errors
+
+
+_WORDS = re.compile(r"[a-z0-9]{3,}")
+
+
+def _same_issue(a: JudgeIssue, b: JudgeIssue) -> bool:
+    """Whether two reviewers' issues are the same problem: same criterion and mostly the same title words."""
+    ta, tb = set(_WORDS.findall(a.title.lower())), set(_WORDS.findall(b.title.lower()))
+    return a.category == b.category and bool(ta and tb) and len(ta & tb) / len(ta | tb) >= 0.5
+
+
+def merge_panel(lead: JudgeReport, panel: list[tuple[str, RefereeReport]]) -> tuple[JudgeReport, dict[str, str], dict]:
+    """The lead review with the referees' issues and upgrades merged in.
+
+    Returns (merged report, issue ref → referee, referee name → {score, refs}). Each referee's
+    issues get refs of its own (TH1, ME2, ...). An issue that duplicates one already present
+    replaces it only when it is more severe. The merged score is set later (panel_score), once
+    verification has shown which claims hold."""
+    issues: list[JudgeIssue] = list(lead.issues)
+    by: dict[str, str] = {i.ref: "lead" for i in issues}
+    upgrades = list(lead.upgrades)
+    scores: dict = {}
+    for name, rep in panel:
+        prefix = REFEREES[name][0]
+        refs = []
+        for k, i in enumerate(rep.issues, start=1):
+            i = i.model_copy(update={"ref": f"{prefix}{k}"})
+            dup = next((j for j, x in enumerate(issues) if _same_issue(x, i)), None)
+            if dup is not None:
+                if SEVERITY_RANK[i.severity] <= SEVERITY_RANK[issues[dup].severity]:
+                    continue
+                by.pop(issues[dup].ref, None)
+                issues[dup] = i
+            else:
+                issues.append(i)
+            by[i.ref] = name
+            refs.append(i.ref)
+        for k, u in enumerate(rep.upgrades, start=1):
+            upgrades.append(u.model_copy(update={"ref": f"U{prefix}{k}"}))
+        scores[name] = {"score": rep.score, "rationale": rep.score_rationale, "refs": refs}
+    issues.sort(key=lambda i: -SEVERITY_RANK[i.severity])
+    upgrades.sort(key=lambda u: -u.expected_gain)
+    rationale = " ".join([lead.score_rationale] + [f"{n.capitalize()} referee: {r.score_rationale}" for n, r in panel])
+    merged = lead.model_copy(update={"issues": issues[:24], "upgrades": upgrades[:12], "score_rationale": rationale,
+                                     "summary": " ".join([lead.summary] + [r.summary for _, r in panel])})
+    return merged, by, scores
+
+
+VERDICT_RANK = {"accept": 0, "minor_revision": 1, "major_revision": 2, "reject": 3}
+ASSESSMENT_FOR = {"FATAL": "fatal", "MAJOR": "major_concerns"}
+ASSESSMENT_RANK = {"not_applicable": 0, "sound": 0, "minor_concerns": 1, "major_concerns": 2, "fatal": 3}
+
+
+def panel_score(lead_score: float, scores: dict, issues: list[dict]) -> float:
+    """The lowest score among the lead and the referees whose serious claims all survived
+    verification (a referee whose claim was refuted does not set the score with it)."""
+    refuted = {i["ref"] for i in issues if i.get("verification") == "refuted"}
+    credible = [v["score"] for v in scores.values() if not refuted & set(v["refs"])]
+    return min([lead_score, *credible])
 
 
 def classify(issue: dict, check: IssueCheck | None, verification: str) -> None:
@@ -698,25 +914,36 @@ async def _parse(**kw):
 
 
 async def judge_call(bundle: Bundle, h: RunHandle | None = None) -> JudgeReport:
-    """The review: at most two model calls, adaptive thinking on in both, each with the full
+    """The lead review (see _review_call)."""
+    return await _review_call(bundle, h, JudgeReport, JUDGE_INSTRUCTIONS, semantic_errors, "The judge")
+
+
+async def referee_call(bundle: Bundle, name: str, h: RunHandle | None = None) -> RefereeReport:
+    """One specialist referee of the panel (REFEREES), on the same evidence, independently."""
+    return await _review_call(bundle, h, RefereeReport, REFEREES[name][1] + "\n\n" + REFEREE_INSTRUCTIONS,
+                              referee_errors, f"The {name} referee")
+
+
+async def _review_call(bundle: Bundle, h: RunHandle | None, schema, instructions: str, validate, label: str):
+    """A review: at most two model calls, adaptive thinking on in both, each with the full
     JUDGE_MAX_TOKENS budget (streamed). A second call is made only when the first was unusable:
     - cut off by the output limit, or all reasoning and no answer (llm.OutputLimitReached): it is
       discarded, never parsed, and the one fresh attempt runs at medium effort with a note to reason
       economically, so it fits; the review's instructions and criteria are unchanged;
-    - invalid, refused or empty, or failing semantic_errors: retried once with the errors fed back.
+    - invalid, refused or empty, or failing validation: retried once with the errors fed back.
     A second failure raises ReviewFailed, which never counts as approval."""
     errors: list[str] = []
     effort, note = "high", ""
     problem = "no attempt was made"
     for attempt in range(2):
-        tail = JUDGE_INSTRUCTIONS + note
+        tail = instructions + note
         if errors:
             tail += ("\n\nYOUR PREVIOUS OUTPUT WAS INVALID. Fix these problems:\n- " + "\n- ".join(errors))
         try:
             # max_tokens stays at the full budget whatever the effort: dropping effort after a
             # truncation is meant to free up room for the JSON by thinking less, not to also
             # shrink the total budget available for it.
-            report = await _parse(model=settings.model_judge, instructions=JUDGE_SYSTEM, schema=JudgeReport,
+            report = await _parse(model=settings.model_judge, instructions=JUDGE_SYSTEM, schema=schema,
                                   messages=[{"role": "user", "content": [*bundle.request_blocks(),
                                                                          {"type": "text", "text": tail}]}],
                                   reasoning_effort=effort, max_tokens=JUDGE_MAX_TOKENS)
@@ -727,22 +954,22 @@ async def judge_call(bundle: Bundle, h: RunHandle | None = None) -> JudgeReport:
             problem = str(exc)
             effort, note, errors = "medium", OUTPUT_LIMIT_NOTE, []
             if h:
-                h.note(f"Review output hit the output limit and was discarded ({problem[:160]}); "
+                h.note(f"{label}'s review hit the output limit and was discarded ({problem[:160]}); "
                        "retrying once with less reasoning")
             continue
         except RuntimeError as exc:  # invalid, refused or empty structured output
             problem = str(exc)[:600]
             errors = [problem]
             if h:
-                h.note(f"Review output rejected ({problem[:120]}); retrying once")
+                h.note(f"{label}'s review was rejected ({problem[:120]}); retrying once")
             continue
-        errors = semantic_errors(report)
+        errors = validate(report)
         if not errors:
             return report
         problem = "; ".join(errors)
         if h:
-            h.note(f"Review output incomplete ({errors[0][:120]}); retrying once")
-    raise ReviewFailed("The judge did not return a valid review: " + problem[:800])
+            h.note(f"{label}'s review was incomplete ({errors[0][:120]}); retrying once")
+    raise ReviewFailed(f"{label} did not return a valid review: " + problem[:800])
 
 
 async def verify_call(bundle: Bundle, claims: list[dict], root: Path) -> VerificationReport:
@@ -809,6 +1036,7 @@ async def review(project_id: str, h: RunHandle, iteration: int, previous: dict |
         "schema": "openscientist.mistakes/v1", "project_id": project_id, "iteration": iteration,
         "review_run_id": llm.current_run.get(), "created_at": datetime.now(timezone.utc).isoformat(),
         "model": tier_of(settings.model_judge),
+        "rules": REVIEW_RULES, "referees": list(REFEREES) if settings.review_panel else [],
         "inputs": {"report_run_id": report_run.id if report_run else None,
                    "plan_run_id": d["plan"].get("run_id"), "blueprint_run_id": d["bp_run_id"],
                    "manuscript_sha256": _sha_file(root / "paper" / "paper.tex"),
@@ -835,18 +1063,32 @@ async def review(project_id: str, h: RunHandle, iteration: int, previous: dict |
         "omitted": bundle.omitted,
     })
     if previous and previous.get("valid") and previous.get("judged") and \
-            (previous.get("inputs") or {}).get("bundle_sha256") == bundle.sha256:
+            (previous.get("inputs") or {}).get("bundle_sha256") == bundle.sha256 and \
+            (previous.get("rules"), previous.get("referees")) == (base["rules"], base["referees"]):
         h.note("Evidence unchanged since the last valid review; reusing it")
         reused = {**previous, "iteration": iteration, "review_run_id": base["review_run_id"],
                   "created_at": base["created_at"], "reused_from": previous.get("review_run_id")}
         return reused, bundle
 
     result = None
+    panel: list[tuple[str, RefereeReport]] | None = None
     for attempt in range(2):  # a second, fresh review only if verdict and verified issues disagree
-        h.phase("judging", "Independent review of the manuscript and its evidence"
-                if attempt == 0 else "Second independent review (verdict and issues disagreed)")
-        report = await judge_call(bundle, h)
+        if settings.review_panel and panel is None:
+            # The lead review and the referees, in parallel; a second attempt re-asks only the lead.
+            h.phase("judging", f"Independent review by a panel: a lead reviewer and {len(REFEREES)} specialist "
+                               f"referees ({', '.join(REFEREES)})")
+            results = await asyncio.gather(judge_call(bundle, h),
+                                           *[referee_call(bundle, name, h) for name in REFEREES])
+            lead, panel = results[0], list(zip(REFEREES, results[1:]))
+        else:
+            h.phase("judging", "Independent review of the manuscript and its evidence"
+                    if attempt == 0 else "Second independent review (verdict and issues disagreed)")
+            lead = await judge_call(bundle, h)
+        report, by, scores = merge_panel(lead, panel) if panel else (lead, {}, {})
         issues = [_issue_dict(iteration, k, i, bundle) for k, i in enumerate(report.issues, start=1)]
+        for i in issues:
+            if by:
+                i["referee"] = by.get(i["ref"], "lead")
         claims = [i for i in issues if i["severity"] in BLOCKING_SEVERITIES]
         checks: dict[str, IssueCheck] = {}
         verification = "ok" if verify else "disabled"
@@ -860,21 +1102,38 @@ async def review(project_id: str, h: RunHandle, iteration: int, previous: dict |
         for i in issues:
             classify(i, checks.get(i["ref"]), verification)
         blocking = [i for i in issues if i["blocking"]]
+        verdict, rubric = report.verdict, [r.model_dump() for r in report.rubric]
+        if panel:
+            # A referee's verified issue makes the verdict and the rubric at least as severe as it is.
+            worst = max((i["severity"] for i in blocking), key=SEVERITY_RANK.get, default=None)
+            implied = {"FATAL": "reject", "MAJOR": "major_revision"}.get(worst, verdict)
+            verdict = max(verdict, implied, key=VERDICT_RANK.get)
+            for r in rubric:
+                found = [i for i in blocking if i["category"] == r["criterion"]]
+                worse = max((ASSESSMENT_FOR[i["severity"]] for i in found), key=ASSESSMENT_RANK.get, default=None)
+                if worse and ASSESSMENT_RANK[worse] > ASSESSMENT_RANK[r["assessment"]]:
+                    r["assessment"] = worse
+                    r["note"] = (r["note"] + " Panel: " + "; ".join(i["title"] for i in found)).strip()
         # Approval needs a verdict that agrees with the reviewer's own assessment, too.
-        contradicts = any(r.assessment == "fatal" for r in report.rubric) or \
+        contradicts = any(r["assessment"] == "fatal" for r in rubric) or \
             report.objective_alignment == "does_not_answer"
-        consistent = bool(blocking) or (report.verdict in ("accept", "minor_revision") and not contradicts)
+        consistent = bool(blocking) or (verdict in ("accept", "minor_revision") and not contradicts)
+        score = panel_score(report.score, scores, issues) if panel else report.score
         result = {
-            **base, "judged": True, "valid": True, "verdict": report.verdict, "summary": report.summary,
-            "score": capped_score(report.score, issues), "score_claimed": report.score,
+            **base, "judged": True, "valid": True, "verdict": verdict, "summary": report.summary,
+            "score": capped_score(score, issues), "score_claimed": report.score,
             "score_rationale": report.score_rationale,
             "upgrades": [{**u.model_dump(), "id": f"R{iteration}-{u.ref}"} for u in report.upgrades][:12],
             "objective_alignment": {"value": report.objective_alignment, "note": report.objective_alignment_note},
-            "hypothesis_support": report.hypothesis_support, "rubric": [r.model_dump() for r in report.rubric],
+            "hypothesis_support": report.hypothesis_support, "rubric": rubric,
             "issues": issues, "verification": verification if claims else "not_needed",
             "verdict_consistent": consistent, "rejudged": attempt == 1,
             "grammar_mode": llm._GRAMMAR_FALLBACK.get(JudgeReport, "default"),
         }
+        if panel:
+            result["panel"] = {name: {"field": rep.field, "established_theory": rep.established_theory,
+                                      "score": rep.score, "score_rationale": rep.score_rationale,
+                                      "issues": scores[name]["refs"]} for name, rep in panel}
         if consistent:
             break
     return result, bundle

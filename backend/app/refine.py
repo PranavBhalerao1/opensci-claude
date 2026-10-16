@@ -48,6 +48,8 @@ REPAIRS = ("repair", "repair_gates", "improve")
 STAGES = ("plan", "blueprint", "execution", "report")
 ORIGIN_STAGE = {"plan": "plan", "blueprint": "blueprint", "execution": "execution", "analysis": "execution",
                 "report": "report", "literature": "report"}
+# Criteria of the blocking issues that can justify reframing the research question (RepairPlan.reframe).
+REFRAME_CATEGORIES = ("research_question", "novelty", "math_computation", "claims_support", "experimental_design")
 UNFINISHED = ("failed", "blocked", "human", "pending", "cancelled", "running")
 WATCH_INTERVAL = 10.0  # seconds between checks of a live repair execution
 STALL_SECONDS = 120.0  # a finished step with nothing started after it for this long has stalled
@@ -319,7 +321,7 @@ async def _review_job(project_id: str, h: RunHandle) -> dict:
         "upgrades": [{k: u.get(k) for k in ("id", "title", "action", "impact", "expected_gain", "origin")}
                      for u in mistakes.get("upgrades", [])][:8],
         "issues": [{k: i.get(k) for k in ("id", "track_id", "severity", "category", "title", "blocking",
-                                          "open_concern", "verification", "grounding", "tracking")}
+                                          "open_concern", "verification", "grounding", "tracking", "referee")}
                    for i in mistakes.get("issues", [])][:30],
         "cost_usd": mistakes["cost_usd"],
     }
@@ -664,6 +666,13 @@ def validate_repair(rp: plan_agent.RepairPlan, mistakes: dict, st: dict, mp: dic
     if missing:
         errors.append("Make every required change: " + ", ".join(missing) + " are neither made (cite the id in a "
                       "task_change or report directive, or name it in blueprint_changes) nor declined with a reason.")
+    if rp.reframe.strip():
+        grounds = [i for i in mistakes["issues"] if i.get("blocking") and i.get("category") in REFRAME_CATEGORIES]
+        if not grounds:
+            errors.append("reframe is only for a blocking issue showing the question or hypothesis is trivial, "
+                          "a bound mistaken for the sharp quantity, or ill-posed; leave it empty.")
+        if not rp.plan_revision.strip():
+            errors.append("A reframed question needs a plan_revision that redesigns the study around it.")
     for tc in rp.task_changes:
         if tc.task_id not in tasks:
             errors.append(f"task_changes names unknown task {tc.task_id}.")
@@ -745,7 +754,9 @@ async def _repair_job(project_id: str, h: RunHandle) -> dict:
     try:
         # 1 · The Planning Agent's decision (saved before anything changes; reused on resume)
         try:
-            rp = plan_agent.RepairPlan.model_validate(_load(out / "repair_plan.json") or {})
+            saved = _load(out / "repair_plan.json") or {}
+            # Plans saved before RepairPlan.reframe existed never reframe.
+            rp = plan_agent.RepairPlan.model_validate({"reframe": "", **saved} if saved else {})
             h.note("Reusing the saved repair plan")
         except ValidationError:  # none saved yet (or unreadable): plan the repair
             rp = None
@@ -773,7 +784,7 @@ async def _repair_job(project_id: str, h: RunHandle) -> dict:
             with Session(engine) as s:
                 prev = plan_agent.current_plan(s.get(Project, project_id))
             h.phase("replanning", "Revising the research plan")
-            plan, objective_changes = await plan_agent.revise_for_repair(prev, rp.plan_revision, h)
+            plan, objective_changes = await plan_agent.revise_for_repair(prev, rp.plan_revision, h, rp.reframe.strip())
             revision = {"plan": plan, "objective_changes": objective_changes, "committed_run": None}
             _save(out / "plan_revision.json", revision)
         delta = _load(out / "blueprint_delta.json")
@@ -827,6 +838,12 @@ def _commit(project_id: str, n: int, rp: plan_agent.RepairPlan, mistakes: dict, 
             revision["committed_run"] = run.id
             _save(out / "plan_revision.json", revision)
         plan_run_id = revision["committed_run"]
+        if rp.reframe.strip() and not revision.get("amended"):
+            # The reviewer of the re-run study sees why the question differs from the pre-registration.
+            orchestrator._record_amendment(project_id, "plan", "Research question reframed after review: "
+                                           + judge._REVIEW_IDS.sub("", rp.reframe).strip())
+            revision["amended"] = True
+            _save(out / "plan_revision.json", revision)
     old_run, old_mp, old_states = _bp(project_id)
     unfinished_before = {t for t, s in old_states.items() if s.status in UNFINISHED}
     reasons = {t: f"{s.status}: {s.note or s.status}" for t, s in old_states.items()}
@@ -1291,9 +1308,10 @@ def start(project_id: str) -> Run | None:
 
 # ── History files ──────────────────────────────────────────────────────────
 
-LIMITATION = ("Approval means an independent model reviewer (a separate reviewer running on the same model "
-              "that wrote the study) found no blocking scientific problems in the paper and its evidence, and "
-              "the platform's integrity checks passed. It is a quality gate, not a guarantee of correctness.")
+LIMITATION = ("Approval means independent model reviewers (a lead reviewer and theory and methods referees, "
+              "running on the same model that wrote the study) found no blocking scientific problems in the paper "
+              "and its evidence, and the platform's integrity checks passed. It is a quality gate, not a guarantee "
+              "of correctness: a higher review score is not a proof that the mathematics or science is right.")
 
 
 def write_history(project_id: str) -> None:

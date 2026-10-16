@@ -208,6 +208,7 @@ export default function ReviewRun({ project, review, enabled, run, log, onAction
                         <p className="font-mono text-[10.5px] uppercase tracking-[0.08em] text-faint">
                           {i.category.replace(/_/g, " ")} · {i.blocking ? "blocking" : i.open_concern ? "open concern" : i.verification === "refuted" ? "refuted" : "not blocking"}
                           {i.tracking ? ` · ${i.tracking.status}` : ""}
+                          {i.referee && i.referee !== "lead" ? ` · ${i.referee} referee` : ""}
                         </p>
                       </div>
                     </li>

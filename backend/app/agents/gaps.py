@@ -88,7 +88,11 @@ CAD/geometry, statistical analyses, ML, meta-analyses) within the brief's constr
 
 A good gap is specific, supported by evidence in the notes (limitations, conflicts,
 missing evaluations, untested combinations), testable with a clear outcome, and
-publishable if it works. Avoid vague gaps ("more research is needed"). Make the
+publishable if it works. Avoid vague gaps ("more research is needed"). Reject any gap whose
+answer already follows from established theory (an exact symmetry or scaling law, dimensional
+analysis, a classical theorem, a known closed-form result): measuring it numerically is not a
+contribution. Ask the same of bounds: a known sufficient condition or bound is not the sharp
+answer, and the gap between them may be the real question. Make the
 candidates genuinely different from each other. Score honestly: feasibility must
 reflect the user's stated resources. Cite papers only by [index].
 """
@@ -97,7 +101,10 @@ NOVELTY_INSTRUCTIONS = """\
 You check whether a proposed research gap has already been addressed. Compare the
 gap with the prior-work list. "already_done" only if a paper clearly answers the
 same question with comparable setup; "partially_addressed" if work overlaps but
-leaves the core question open. Be skeptical but fair.
+leaves the core question open. Also "already_done" if the answer follows directly from
+established theory of the field (an exact symmetry or scaling law, dimensional analysis, a
+classical theorem, a known closed-form result), even with no paper on this exact setup: say
+which result implies it. Be skeptical but fair.
 The explanation is shown to the user: name papers by a short title, never by
 index, and do not mention "the list" or its contents being incomplete."""
 

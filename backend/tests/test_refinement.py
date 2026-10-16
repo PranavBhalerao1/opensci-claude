@@ -212,11 +212,11 @@ def fix(issue_id: str, root: str = "execution") -> IssueDecision:
 
 
 def repair(decisions, task_changes=(), directives=(), plan_revision="", blueprint_changes="", rerun=(),
-           withdraw=()) -> RepairPlan:
+           withdraw=(), reframe="") -> RepairPlan:
     return RepairPlan(summary="s", decisions=list(decisions), plan_revision=plan_revision,
                       blueprint_changes=blueprint_changes, task_changes=list(task_changes),
                       rerun_failed_tasks=list(rerun), report_directives=list(directives),
-                      withdraw_directives=list(withdraw))
+                      withdraw_directives=list(withdraw), reframe=reframe)
 
 
 def stats_issue(ref="I1", severity="MAJOR", **kw):

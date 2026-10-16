@@ -411,8 +411,22 @@ export interface ResearchPlan {
   open_questions: string[];
 }
 
+export interface PlanAudit {
+  field: string;
+  established_theory: string[];
+  contribution: string;
+  problems: { severity: "FATAL" | "MAJOR" | "MINOR"; kind: string; problem: string; fix: string }[];
+}
+
 export interface PlanRun extends Omit<Run, "result"> {
-  result: { plan: ResearchPlan; gap_id: string; gaps_run_id: string; instruction?: string } | null;
+  result: {
+    plan: ResearchPlan;
+    gap_id: string;
+    gaps_run_id: string;
+    instruction?: string;
+    // The domain expert's check of the question before approval (first draft and, if revised, the result).
+    audit?: { first: PlanAudit; final: PlanAudit; revised: boolean; stale?: boolean };
+  } | null;
 }
 
 export class PlanEditError extends Error {
@@ -642,6 +656,8 @@ export interface ReviewIssueSummary {
   verification: string;
   grounding: string;
   tracking: { status: "new" | "persisting" | "resurfaced" | "regression"; previous_ids: string[] } | null;
+  // Which reviewer of the panel raised it ("lead", "theory", "methods"); absent for single-reviewer reviews.
+  referee?: string | null;
 }
 
 export interface ReviewUpgrade {

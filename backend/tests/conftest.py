@@ -48,3 +48,6 @@ def _task_retries(monkeypatch):
     monkeypatch.setattr(orchestrator, "_advise", advise)
     monkeypatch.setattr(orchestrator.settings, "task_max_attempts", 2)
     monkeypatch.setattr(orchestrator, "FENCE_RETRY", (0, 0))
+    # One scripted reviewer per review and no plan audit, unless a test turns them on.
+    monkeypatch.setattr(orchestrator.settings, "review_panel", False)
+    monkeypatch.setattr(orchestrator.settings, "plan_audit", False)
