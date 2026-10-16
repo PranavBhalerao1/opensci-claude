@@ -286,11 +286,11 @@ class _FakeSandbox:
         pass
 
 
-def _execution_project(uid: str) -> tuple[str, str]:
+def _execution_project(uid: str, autonomous: bool = True) -> tuple[str, str]:
     from test_core import _mp
 
     mp = {**_mp(), "python_packages": []}
-    pid = _project(uid, autonomous=True, settings={"budget": {"llm_usd": 15.0}})
+    pid = _project(uid, autonomous=autonomous, settings={"budget": {"llm_usd": 15.0}})
     with Session(engine) as s:
         bp = Run(project_id=pid, kind="blueprint", status="done", result={"master_plan": mp})
         s.add(bp)
@@ -354,9 +354,20 @@ def test_execution_runs_while_credits_remain(fake_execution, cap, spent):
     assert orchestrator.current_budget(pid) == 15.0  # the project's own budget setting is untouched
 
 
-def test_execution_still_pauses_at_the_project_budget(fake_execution):
+def test_autonomous_execution_is_not_paused_at_the_project_budget(fake_execution):
+    """Autonomous runs must not stall overnight on the project budget; credits still limit them."""
     uid = _user(cap=None)
     pid, run_id = _execution_project(uid)
+    with Session(engine) as s:
+        s.add(Usage(project_id=pid, user_id=uid, run_id=run_id, model="m", cost=15.0))
+        s.commit()
+    result = asyncio.run(orchestrator.run(pid, jobs.RunHandle(run_id)))
+    assert fake_execution == ["T1", "T2"] and result["counts"]["done"] == 2
+
+
+def test_execution_still_pauses_at_the_project_budget(fake_execution):
+    uid = _user(cap=None)
+    pid, run_id = _execution_project(uid, autonomous=False)
     with Session(engine) as s:  # the user-set project budget is already spent by this execution
         s.add(Usage(project_id=pid, user_id=uid, run_id=run_id, model="m", cost=15.0))
         s.commit()
@@ -418,7 +429,7 @@ def task_env(monkeypatch, tmp_path):
             (env.root / "data" / "a.csv").write_text("x\n1\n")
         return env.agent.pop(0)
 
-    async def fake_verify(task, sandbox, policy, report=None, amendments=None, leftovers=None):
+    async def fake_verify(task, sandbox, policy, report=None, amendments=None, leftovers=None, events=None):
         env.verified.append(task["id"])
         return [{"check": c, "passed": True, "reason": "ok"} for c in task["acceptance_checks"]]
 

@@ -117,7 +117,7 @@ class Lab:
             os.utime(p, (stamp, stamp))
         return AgentResult("success", f"{tid} done", artifacts=[o["path"] for o in task["outputs"]])
 
-    async def verify(self, task, sandbox, policy, report=None, amendments=None, leftovers=None):
+    async def verify(self, task, sandbox, policy, report=None, amendments=None, leftovers=None, events=None):
         return [{"check": c, "passed": True, "reason": "ok"} for c in task["acceptance_checks"]]
 
     async def report(self, project_id, h):

@@ -14,7 +14,10 @@ from .routes import projects
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     init_db()
-    mark_interrupted()
+    interrupted = mark_interrupted()
+    from . import pipeline
+
+    pipeline.resume_after_restart(interrupted)  # autonomous executions carry on by themselves
     from .execution import colab_runner
 
     colab_runner.start_reaper()  # stop Colab GPU sessions a previous process left running (no-op if unconfigured)

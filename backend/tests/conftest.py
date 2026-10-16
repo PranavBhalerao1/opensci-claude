@@ -31,3 +31,20 @@ if os.environ.get("BEDROCK_INTEGRATION") != "1":
 from app.db import init_db  # noqa: E402 (must follow the os.environ overrides above)
 
 init_db()
+
+
+import pytest  # noqa: E402
+
+
+@pytest.fixture(autouse=True)
+def _task_retries(monkeypatch):
+    """Offline: a failed task's retry advice comes from a stub, not a model. Most scenarios are
+    about one retry, so tasks get the blueprint's own retry count unless a test raises it."""
+    from app.execution import orchestrator
+
+    async def advise(task, problems, report, events, history, policy):
+        return orchestrator.Advice(diagnosis="stub diagnosis", fix=["stub fix"])
+
+    monkeypatch.setattr(orchestrator, "_advise", advise)
+    monkeypatch.setattr(orchestrator.settings, "task_max_attempts", 2)
+    monkeypatch.setattr(orchestrator, "FENCE_RETRY", (0, 0))

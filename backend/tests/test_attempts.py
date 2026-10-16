@@ -136,7 +136,7 @@ def env(tmp_path, monkeypatch):
         pass
 
     e = Env()
-    e.sb, e.fake, e.prompts, e.scripts, e.verdicts, e.specs = sb, fake, [], [], [], []
+    e.sb, e.fake, e.prompts, e.scripts, e.verdicts, e.specs, e.advice_calls = sb, fake, [], [], [], [], []
     e.task = _task()
     e.mp = {"title": "t", "summary": "s", "datasets": [], "tasks": [e.task], "agents": [
         {"id": "A1", "name": "Runner", "model_tier": "standard", "tools": AGENT_TOOLS, "instructions": "i"}]}
@@ -156,6 +156,7 @@ def env(tmp_path, monkeypatch):
 
     async def run_agent(spec, prompt, ctx, on_event=None):
         e.prompts.append(prompt)
+        e.on_event = on_event
         e.specs.append(spec)
         return await e.scripts.pop(0)(ctx)
 
@@ -164,8 +165,16 @@ def env(tmp_path, monkeypatch):
         ok = e.verdicts.pop(0) if e.verdicts else True
         return [{"check": c, "passed": ok, "reason": "seen"} for c in task["acceptance_checks"]]
 
+    async def advise(task, problems, report, events, history, policy):
+        e.advice_calls.append({"problems": problems, "events": events, "history": history})
+        return orchestrator.Advice(diagnosis="the script was never run", fix=["run src/runner.py and print a*"],
+                                   avoid=["copying old outputs"])
+
     monkeypatch.setattr(orchestrator, "run_agent", run_agent)
     monkeypatch.setattr(orchestrator, "_verify", verify)
+    monkeypatch.setattr(orchestrator, "_advise", advise)
+    # These scenarios are about provenance across a few attempts: keep the blueprint's own retry count.
+    monkeypatch.setattr(orchestrator.settings, "task_max_attempts", 2)
 
     async def attempt():
         await orchestrator._execute(e.pid, e.mp, e.task, e.sid, "default", None)
@@ -514,3 +523,110 @@ def test_reaper_script_kills_tagged_trees_only():
     finally:
         for p in (tagged, other, plain):
             p.kill()
+
+
+# ── Failed tasks keep trying, with a reviewer's fix ───────────────────────
+
+
+def test_failed_task_retries_with_advice_until_it_passes(env, monkeypatch):
+    """A failure must not block everything after it: the task is retried, each time told the
+    diagnosis and exact fix, with the earlier failures carried along, until it passes."""
+    monkeypatch.setattr(orchestrator.settings, "task_max_attempts", 6)
+
+    async def works(ctx):
+        await tool(ctx, "write_file", path="src/runner.py", content="v\n")
+        out = await tool(ctx, "run_shell", command=f"python src/runner.py  # produce {OUT}")
+        env.on_event({"type": "tool", "step": 1, "tool": "run_shell", "args": "python src/runner.py", "result": out})
+        return AgentResult("success", "done")
+
+    async def scenario():
+        env.scripts[:] = [works, works, works]
+        env.verdicts[:] = [False, False, True]
+        for _ in range(3):
+            await env.attempt()
+
+    asyncio.run(scenario())
+    st = env.state()
+    assert st.status == "done" and st.attempts == 3 and st.note is None
+    assert len(env.advice_calls) == 2
+    assert "DO EXACTLY THIS" in env.prompts[1] and "run src/runner.py and print a*" in env.prompts[1]
+    assert "DO NOT" in env.prompts[1] and "copying old outputs" in env.prompts[1]
+    # The second advisor sees the first failure; the third attempt is told about both.
+    assert env.advice_calls[0]["history"] is None and "Attempt 1" in env.advice_calls[1]["history"]
+    assert "Attempt 1" in env.prompts[2] and "Attempt 2" in env.prompts[2]
+    # The advisor and the verifier see what the attempt actually ran.
+    assert any(e.get("tool") == "run_shell" for e in env.advice_calls[0]["events"])
+
+
+def test_failed_task_stops_after_the_attempt_limit(env, monkeypatch):
+    monkeypatch.setattr(orchestrator.settings, "task_max_attempts", 4)
+
+    async def fails(ctx):
+        return AgentResult("failed", "cannot")
+
+    async def scenario():
+        env.scripts[:] = [fails] * 4
+        for _ in range(4):
+            await env.attempt()
+
+    asyncio.run(scenario())
+    st = env.state()
+    assert st.status == "failed" and st.attempts == 4 and len(env.advice_calls) == 3
+
+
+def test_verifier_gets_the_platform_log_of_commands_run():
+    events = [{"type": "tool", "step": 1, "tool": "read_file", "args": "{'path': 'a'}", "result": "x"},
+              {"type": "tool", "step": 2, "tool": "run_python", "args": "{'code': 'derive()'}",
+               "result": "exit_code: 0\nalpha=0.5"},
+              {"type": "message", "step": 3, "text": "hi"}]
+    log = orchestrator._command_log(events)
+    assert log.startswith("FACTS: commands the platform executed")
+    assert "run_python" in log and "alpha=0.5" in log and "read_file" not in log
+    assert orchestrator._command_log([]) == ""
+
+
+# ── Autonomous executions survive a server restart ────────────────────────
+
+
+def test_autonomous_execution_resumes_after_a_restart(monkeypatch):
+    from app import jobs, pipeline
+
+    started = []
+    monkeypatch.setattr(pipeline, "start_execution", lambda pid: started.append(pid))
+    ids = []
+    with Session(engine) as s:
+        for autonomous, stage in [(True, "executing"), (False, "executing"), (True, "reporting")]:
+            p = Project(title="_restart", autonomous=autonomous, stage=stage)
+            s.add(p)
+            s.commit()
+            s.refresh(p)
+            ids.append(p.id)
+            s.add(Run(project_id=p.id, kind="execute", status="running"))
+        looping = Project(title="_restart", autonomous=True, stage="executing")
+        s.add(looping)
+        s.commit()
+        s.refresh(looping)
+        for _ in range(pipeline.MAX_RESTART_RESUMES - 1):  # it has died with the server every time
+            s.add(Run(project_id=looping.id, kind="execute", status="error", error=jobs.INTERRUPTED))
+        s.add(Run(project_id=looping.id, kind="execute", status="running"))
+        s.commit()
+    interrupted = jobs.mark_interrupted()
+    resumed = pipeline.resume_after_restart(interrupted)
+    assert resumed == started == [ids[0]]
+
+
+def test_first_attempt_runs_even_if_the_process_check_fails(env, monkeypatch):
+    """Live regression (T1.4): a task that had never run was failed because the sandbox, busy with
+    another task, could not confirm "earlier attempts' processes" stopped. It has none."""
+    async def unsure(task_id):
+        return False
+
+    monkeypatch.setattr(env.sb, "reap", unsure)
+
+    async def works(ctx):
+        await tool(ctx, "run_shell", command=f"python src/runner.py  # produce {OUT}")
+        return AgentResult("success", "done")
+
+    env.scripts[:] = [works]
+    asyncio.run(env.attempt())
+    assert env.state().status == "done", env.state().note

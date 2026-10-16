@@ -34,6 +34,7 @@ from .tools import TOOLS, ToolContext
 INFRASTRUCTURE = (SandboxUnreachable, *TRANSIENT_ERRORS)
 NETWORK_PAUSE = "network: "
 NETWORK_RETRY = (30, 60, 120, 240, 480)  # seconds before each automatic resume; then wait for the user
+FENCE_RETRY = (15, 45)  # seconds before asking the sandbox again whether an earlier attempt's processes stopped
 MAX_PARALLEL = 4
 MAX_AGENT_STEPS = 80
 MAX_EVENTS = 150
@@ -93,10 +94,31 @@ class Verdict(BaseModel):
 VERIFY_INSTRUCTIONS = """\
 You verify a research task's outputs against its acceptance checks, using only the
 evidence given. FACTS are computed by the platform (file statistics, test runs it
-executed itself); trust them. The AGENT REPORT is the agent's own claim: accept it
-only where it is consistent with the files and FACTS, never as sole proof of a
-number. A check passes if the evidence shows it is met; if the evidence cannot
-confirm it, fail it and say what is missing. Your verdict must agree with your reason."""
+executed itself, and its log of the commands the agent ran with their real output);
+trust them. The AGENT REPORT is the agent's own claim: accept it only where it is
+consistent with the files and FACTS, never as sole proof of a number. A check passes
+if the evidence shows it is met; if the evidence cannot confirm it, fail it and say
+what is missing. Your verdict must agree with your reason."""
+
+
+class Advice(BaseModel):
+    diagnosis: str = Field(description="The root cause of the failure, in two or three sentences")
+    fix: list[str] = Field(description="The exact steps the next attempt must take, in order, concrete enough to "
+                                       "follow without guessing (files, commands, parameters, checks to print)")
+    avoid: list[str] = Field(default_factory=list, description="Approaches that already failed and must not be repeated")
+
+
+ADVISE_INSTRUCTIONS = """\
+A research task attempt failed its acceptance checks. You are a senior scientist and
+engineer who has not seen the work before. From the task, the failure, the agent's
+report and the platform's log of what it actually ran, find the root cause and write
+the exact fix the next attempt must make so that every acceptance check passes.
+Be concrete: name files, commands, parameters, and what to print as proof. If the
+failure was only missing evidence (the work may be right but was not shown), say how
+to produce that evidence: run the script and print the values the check needs. If a
+check cannot be met as written (data unavailable, impossible request), give the closest
+honest way to satisfy its intent and say the agent must report the deviation. Never
+suggest fabricating, hard-coding or copying results."""
 
 
 # ── Control ────────────────────────────────────────────────────────────────
@@ -337,11 +359,75 @@ async def _run_tests(sandbox, outputs: list[dict]) -> str | None:
     return f"FACTS: platform ran `pytest -q {' '.join(tests)}` → exit code {res.exit_code}\n{tail}"
 
 
+EXECUTED_TOOLS = {"run_python", "run_shell", "run_gpu_jobs", "install_packages", "install_conda_packages"}
+MAX_LOGGED_COMMANDS = 30
+
+
+def _command_log(events: list[dict], limit: int = MAX_LOGGED_COMMANDS) -> str:
+    """The platform's record of the code this attempt actually ran and what it printed, so a
+    check like "the script runs and gives consistent results" can be confirmed from facts."""
+    ran = [e for e in events if e.get("type") == "tool" and e.get("tool") in EXECUTED_TOOLS]
+    if not ran:
+        return ""
+    lines = [f"[{e.get('sub') or 'agent'} step {e.get('step')}] {e['tool']} {e.get('args', '')}\n→ {e.get('result', '')}"
+             for e in ran[-limit:]]
+    return (f"FACTS: commands the platform executed for this attempt ({len(ran)} in total; the last "
+            f"{len(lines)} shown, input and output excerpts):\n" + "\n\n".join(lines))
+
+
+async def _advise(task: dict, problems: list[str], report: dict, events: list[dict], history: str | None,
+                  policy: str) -> Advice:
+    parts = [
+        f"TASK {task['id']}: {task['title']}\nObjective: {task['objective']}",
+        "Steps:\n" + "\n".join(f"{i + 1}. {s}" for i, s in enumerate(task["steps"])),
+        "Required outputs:\n" + "\n".join(f"- {o['path']}: {o['description']}" for o in task["outputs"]),
+        "Acceptance checks:\n" + "\n".join(f"- {c}" for c in task["acceptance_checks"]),
+        "WHY THIS ATTEMPT FAILED:\n" + "\n".join(f"- {p}" for p in problems),
+        "AGENT REPORT:\n" + json.dumps(report, ensure_ascii=False)[:4000],
+    ]
+    if log := _command_log(events, 20):
+        parts.append(log)
+    if history:
+        parts.append("EARLIER FAILED ATTEMPTS (do not repeat what already failed):\n" + history)
+    return await parse(
+        model=model_for("reasoning", policy),
+        instructions=ADVISE_INSTRUCTIONS,
+        messages=[{"role": "user", "content": "\n\n".join(parts)}],
+        schema=Advice,
+        reasoning_effort="high",
+    )
+
+
+HISTORY_HEADER = "EARLIER FAILED ATTEMPTS:"
+
+
+def _history(note: str | None) -> str | None:
+    if note and HISTORY_HEADER in note:
+        return note.split(HISTORY_HEADER, 1)[1].strip() or None
+    return None
+
+
+def _retry_note(attempt: int, problems: list[str], advice: Advice | None, history: str | None) -> str:
+    """What the next attempt is told: this failure, the advisor's fix, and the earlier failures."""
+    note = "\n".join(problems)
+    if advice:
+        note += ("\n\nDIAGNOSIS (independent reviewer): " + advice.diagnosis
+                 + "\nDO EXACTLY THIS:\n" + "\n".join(f"{i + 1}. {s}" for i, s in enumerate(advice.fix)))
+        if advice.avoid:
+            note += "\nDO NOT:\n" + "\n".join(f"- {a}" for a in advice.avoid)
+    earlier = f"Attempt {attempt}: " + "; ".join(p[:300] for p in problems[:4])
+    history = f"{history}\n{earlier}" if history else earlier
+    return f"{note}\n\n{HISTORY_HEADER}\n{history[-3000:]}"
+
+
 async def _verify(task: dict, sandbox, policy: str, report: dict | None = None,
-                  amendments: str | None = None, leftovers: dict[str, list[str]] | None = None) -> list[dict]:
+                  amendments: str | None = None, leftovers: dict[str, list[str]] | None = None,
+                  events: list[dict] | None = None) -> list[dict]:
     if not task["acceptance_checks"]:
         return []
     evidence = "Output previews:\n" + _previews(sandbox, task["outputs"])
+    if log := _command_log(events or []):
+        evidence += "\n\n" + log
     if facts := _path_facts(sandbox, _named_paths(sandbox, task)):
         evidence += "\n\n" + facts
     if leftovers:
@@ -377,7 +463,8 @@ def _task_tools(task: dict, agent: dict, sandbox) -> list[str]:
     return tools
 
 
-def _subagent_runner(spec: AgentSpec, ctx: ToolContext, state_id: str, cost_box: list[float]):
+def _subagent_runner(spec: AgentSpec, ctx: ToolContext, state_id: str, cost_box: list[float],
+                     events: list[dict] | None = None):
     """Build the spawn callback: children share the workspace and cannot spawn further."""
 
     async def spawn(subtasks: list[dict]) -> list[dict]:
@@ -393,7 +480,7 @@ def _subagent_runner(spec: AgentSpec, ctx: ToolContext, state_id: str, cost_box:
                                     live=ctx.live)
             task = sub["instructions"] + "\n\nRequired outputs:\n" + "\n".join(f"- {o}" for o in sub["outputs"])
             res = await run_agent(child, task, child_ctx,
-                                  on_event=lambda e: _append_event(state_id, {**e, "sub": name}))
+                                  on_event=lambda e: _record_sub(state_id, {**e, "sub": name}, events))
             cost_box[0] += res.cost
             await ctx.sandbox.pull()
             missing = [o for o in sub["outputs"] if not ctx.sandbox.path(o).exists()]
@@ -409,6 +496,12 @@ def _subagent_runner(spec: AgentSpec, ctx: ToolContext, state_id: str, cost_box:
                 for s, r in zip(subtasks, results)]
 
     return spawn
+
+
+def _record_sub(state_id: str, event: dict, events: list[dict] | None) -> None:
+    if events is not None:
+        events.append(event)
+    _append_event(state_id, event)
 
 
 def _requeue_on_credit_limit(state_id: str, me: TaskState, step: int, cost: float) -> None:
@@ -445,7 +538,18 @@ async def _execute(project_id: str, mp: dict, task: dict, state_id: str, policy:
     except SandboxUnreachable as exc:  # nothing can be confirmed stopped, so nothing runs
         _requeue_on_infrastructure(state_id, me, exc, 0.0)
         raise
-    if not fence.clean:
+    # A busy or slow sandbox can fail the check without anything being left: ask again before
+    # giving up. A task that never started has no earlier attempt whose processes could remain.
+    for wait in FENCE_RETRY:
+        if fence.clean or me.started_at is None:
+            break
+        await asyncio.sleep(wait)
+        try:
+            fence = await sandbox.fence(task["id"], outputs)
+        except SandboxUnreachable as exc:
+            _requeue_on_infrastructure(state_id, me, exc, 0.0)
+            raise
+    if not fence.clean and me.started_at is not None:
         # Fail closed: anything written from now on could be theirs. Not run, so no retry is used up.
         problem = ("Processes started by an earlier attempt of this task could not be confirmed stopped, so "
                    "outputs written now could not be told apart from theirs. Not run; resume to try again.")
@@ -476,15 +580,20 @@ async def _execute(project_id: str, mp: dict, task: dict, state_id: str, policy:
     ended: list[bool] = []
     ctx = ToolContext(project_id, sandbox, http, agent_name=agent["name"], owner=task["id"], live=lambda: not ended)
     sub_cost = [0.0]
+    attempt_events: list[dict] = []  # this attempt's tool calls, the verifier's command log
     if "spawn_subagents" in spec.tools:
-        ctx.spawn = _subagent_runner(spec, ctx, state_id, sub_cost)
+        ctx.spawn = _subagent_runner(spec, ctx, state_id, sub_cost, attempt_events)
     prompt = _task_prompt(mp, task, states, feedback, amendments)
     if leftover := fence.leftovers():
         prompt += ("\n\nLEFT OVER FROM AN EARLIER ATTEMPT: " + ", ".join(leftover) + ". These required outputs are "
                    "not accepted unless this attempt writes them again: regenerate them by re-running the code that "
                    "produces them. Copying or touching an old file is not regeneration.")
+    def record(e: dict) -> None:
+        attempt_events.append(e)
+        _append_event(state_id, e)
+
     try:
-        res = await run_agent(spec, prompt, ctx, on_event=lambda e: _append_event(state_id, e))
+        res = await run_agent(spec, prompt, ctx, on_event=record)
     except INFRASTRUCTURE as exc:
         _requeue_on_infrastructure(state_id, me, exc, sub_cost[0])
         raise
@@ -520,7 +629,8 @@ async def _execute(project_id: str, mp: dict, task: dict, state_id: str, policy:
     # may already have finished the work. An explicit "failed" report is trusted.
     verifiable = not missing and not stale and res.status != "failed"
     try:
-        checks = await _verify(task, sandbox, policy, report, amendments, leftovers) if verifiable else []
+        checks = await _verify(task, sandbox, policy, report, amendments, leftovers,
+                               events=attempt_events) if verifiable else []
     except beta.BetaLimitReached:  # the verifier's model call was refused for lack of credit
         _requeue_on_credit_limit(state_id, me, res.steps, res.cost + sub_cost[0])
         return
@@ -538,7 +648,29 @@ async def _execute(project_id: str, mp: dict, task: dict, state_id: str, policy:
     if not passed and res.status not in ("success", "partial"):
         problems.insert(0, f"Agent ended with status {res.status}: {res.summary}")
 
-    retry = not passed and me.attempts + 1 <= int(task.get("retries", 1))
+    # A failed task is not left to block everything after it: it is retried, each time with a
+    # fresh model's diagnosis and exact fix, until it passes or its attempts run out.
+    attempt = me.attempts + 1
+    retry = not passed and attempt < max(settings.task_max_attempts, int(task.get("retries", 1)) + 1)
+    note = None
+    if not passed:
+        history = _history(me.note)
+        advice = None
+        if retry:
+            _append_event(state_id, {"type": "message", "step": 0, "cost": 0.0,
+                                     "text": f"Attempt {attempt} failed; asking a reviewer for the fix"})
+            try:
+                advice = await _advise(task, problems, report, attempt_events, history, policy)
+            except beta.BetaLimitReached:
+                _requeue_on_credit_limit(state_id, me, res.steps, res.cost + sub_cost[0])
+                return
+            except Exception as exc:  # no advice: the retry still gets the verifier's reasons
+                _append_event(state_id, {"type": "message", "step": 0, "cost": 0.0,
+                                         "text": f"Could not get advice: {safe_error(exc)}"[:300]})
+            if advice:
+                _append_event(state_id, {"type": "message", "step": 0, "cost": 0.0,
+                                         "text": ("Fix: " + advice.diagnosis + " → " + " / ".join(advice.fix))[:600]})
+        note = _retry_note(attempt, problems, advice, history)
     _update(
         state_id,
         status="done" if passed else ("pending" if retry else "failed"),
@@ -547,7 +679,7 @@ async def _execute(project_id: str, mp: dict, task: dict, state_id: str, policy:
         artifacts=res.artifacts,
         checks=checks,
         issues=problems,
-        note="\n".join(problems) if not passed else None,
+        note=note,
         finished_at=_now(),
     )
 
@@ -677,7 +809,9 @@ async def run(project_id: str, h: RunHandle) -> dict:
                 h.counts(**{k: sum(1 for st in states.values() if st.status == k)
                             for k in ("done", "running", "pending", "failed", "blocked", "human", "skipped")},
                          spent_cents=round(total * 100))
-                if total >= budget and ctl.go.is_set():
+                # Autonomous runs are limited by the owner's credits, not paused at the project budget;
+                # review repairs still are (refine caps their execution through that budget).
+                if total >= budget and ctl.go.is_set() and (repairing or not autonomous):
                     ctl.pause(f"budget: ${total:.2f} of ${budget:.2f} spent")
                 elif allowance <= 0 and ctl.go.is_set():
                     ctl.pause(beta.LIMIT_PAUSE)

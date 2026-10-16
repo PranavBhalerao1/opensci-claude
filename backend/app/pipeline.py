@@ -10,6 +10,7 @@ review instead of "complete"; repairs re-enter execution and report through the 
 """
 
 import functools
+import logging
 from datetime import datetime, timezone
 
 from sqlmodel import Session, select
@@ -21,6 +22,8 @@ from .agents import plan as plan_agent
 from .agents import report as report_agent
 from .db import Project, Run, TaskState, engine
 from .execution import orchestrator
+
+log = logging.getLogger("openscientist.pipeline")
 
 
 def _set_stage(project_id: str, stage: str) -> None:
@@ -125,6 +128,32 @@ def start_execution(project_id: str) -> Run:
     run = jobs.start(project_id, "execute", orchestrator.run, then=_after_execution)
     refine.ensure_watcher(project_id)
     return run
+
+
+MAX_RESTART_RESUMES = 5  # in a row: a run that keeps dying with the server is left for a person
+
+
+def resume_after_restart(interrupted: list[tuple[str, str]]) -> list[str]:
+    """A restart (deploy, daily dyno cycle) must not strand an autonomous project: executions it
+    cut off start again, and finished tasks are kept. Returns the resumed project ids."""
+    resumed = []
+    for project_id, kind in interrupted:
+        if kind != "execute":
+            continue
+        with Session(engine) as s:
+            project = s.get(Project, project_id)
+            if not project or not project.autonomous or project.stage != "executing":
+                continue
+            recent = s.exec(select(Run).where(Run.project_id == project_id, Run.kind == "execute")
+                            .order_by(Run.started_at.desc()).limit(MAX_RESTART_RESUMES)).all()
+        if len(recent) >= MAX_RESTART_RESUMES and all(r.error == jobs.INTERRUPTED for r in recent):
+            continue
+        try:
+            start_execution(project_id)
+            resumed.append(project_id)
+        except Exception:  # one project's failure must not stop the server from starting
+            log.exception("could not resume %s after restart", project_id)
+    return resumed
 
 
 async def _after_execution(project_id: str) -> None:

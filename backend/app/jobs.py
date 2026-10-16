@@ -135,10 +135,17 @@ def cancel(project_id: str, kind: str) -> bool:
     return True
 
 
-def mark_interrupted() -> None:
-    """Runs left 'running' by a previous process can never finish."""
+INTERRUPTED = "Interrupted by a server restart"
+
+
+def mark_interrupted() -> list[tuple[str, str]]:
+    """Runs left 'running' by a previous process can never finish. Returns their
+    (project_id, kind), so autonomous work can be picked up again."""
+    found = []
     with Session(engine) as s:
         for run in s.exec(select(Run).where(Run.status == "running")):
-            run.status, run.error, run.finished_at = "error", "Interrupted by a server restart", _now()
+            run.status, run.error, run.finished_at = "error", INTERRUPTED, _now()
             s.add(run)
+            found.append((run.project_id, run.kind))
         s.commit()
+    return found

@@ -52,6 +52,9 @@ class Settings(BaseSettings):
     # The judge's 0-10 score a paper must reach to be approved; 10 = flawless (agents/judge.py).
     refinement_target_score: float = 10.0
     review_numeric_crosscheck: bool = True
+    # Attempts per execution task before it is left failed. Every retry gets a fresh model's
+    # diagnosis of the failure and the exact fix to make (orchestrator._advise).
+    task_max_attempts: int = 6
 
     # USD per 1M tokens: (input, cached input, output). Used for cost tracking (which
     # feeds credit and project-budget checks); web searches are billed per call. Bedrock regional (us.)
