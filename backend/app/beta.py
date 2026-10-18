@@ -12,6 +12,7 @@ takes effect on their next request without a token refresh.
 """
 
 import math
+import threading
 from datetime import datetime, timedelta, timezone
 
 from fastapi import Depends, HTTPException
@@ -50,10 +51,7 @@ def _utc(t: datetime) -> datetime:
     return t if t.tzinfo else t.replace(tzinfo=timezone.utc)  # SQLite drops the zone
 
 
-def get_plan(user_id: str) -> Subscription | None:
-    """The user's paid plan while it is in good standing, else None."""
-    with Session(engine) as s:
-        sub = s.get(Subscription, user_id)
+def _in_good_standing(sub: Subscription | None) -> Subscription | None:
     if not sub or sub.status not in PAID_STATUSES:
         return None
     if sub.period_end and _utc(sub.period_end) + RENEWAL_GRACE < datetime.now(timezone.utc):
@@ -61,34 +59,50 @@ def get_plan(user_id: str) -> Subscription | None:
     return sub
 
 
+def get_plan(user_id: str) -> Subscription | None:
+    """The user's paid plan while it is in good standing, else None."""
+    with Session(engine) as s:
+        return _in_good_standing(s.get(Subscription, user_id))
+
+
+def _spend(s: Session, user_id: str, since: datetime | None) -> float:
+    """LLM + GPU spend in one round trip (two scalar subqueries)."""
+    llm = select(func.coalesce(func.sum(Usage.cost), 0.0)).where(Usage.user_id == user_id)
+    gpu = select(func.coalesce(func.sum(GpuUsage.cost), 0.0)).where(GpuUsage.user_id == user_id)
+    if since is not None:
+        llm, gpu = llm.where(Usage.created_at >= since), gpu.where(GpuUsage.created_at >= since)
+    a, b = s.exec(select(llm.scalar_subquery(), gpu.scalar_subquery())).one()
+    return float(a) + float(b)
+
+
 def get_user_spend(user_id: str, since: datetime | None = None) -> float:
     """USD spent by the user, in total or since `since` (a plan's current period)."""
     with Session(engine) as s:
-        llm = select(func.coalesce(func.sum(Usage.cost), 0.0)).where(Usage.user_id == user_id)
-        gpu = select(func.coalesce(func.sum(GpuUsage.cost), 0.0)).where(GpuUsage.user_id == user_id)
-        if since is not None:
-            llm, gpu = llm.where(Usage.created_at >= since), gpu.where(GpuUsage.created_at >= since)
-        return float(s.exec(llm).one()) + float(s.exec(gpu).one())
+        return _spend(s, user_id, since)
 
 
 def _allowance(user_id: str) -> tuple[bool, float | None, float, Subscription | None]:
     """(has access, allowance in USD or None for unlimited, spend counted against it, plan).
 
     An uncapped beta account (the team) stays unlimited; otherwise a paid plan's
-    per-period credits replace any beta cap; otherwise the beta cap applies."""
-    beta = get_beta_user(user_id)
-    plan = get_plan(user_id)
-    approved = bool(beta and beta.approved)
-    if approved and beta.cap_usd is None:
-        return True, None, get_user_spend(user_id), plan
-    if plan:
-        return True, plan.credits_usd, get_user_spend(user_id, _utc(plan.period_start) if plan.period_start else None), plan
-    return approved, beta.cap_usd if beta else None, get_user_spend(user_id), None
+    per-period credits replace any beta cap; otherwise the beta cap applies.
+    Read fresh on every call (one session), so approvals and cap changes apply at once."""
+    with Session(engine) as s:
+        beta = s.get(BetaUser, user_id)
+        plan = _in_good_standing(s.get(Subscription, user_id))
+        approved = bool(beta and beta.approved)
+        if approved and beta.cap_usd is None:
+            return True, None, _spend(s, user_id, None), plan
+        if plan:
+            since = _utc(plan.period_start) if plan.period_start else None
+            return True, plan.credits_usd, _spend(s, user_id, since), plan
+        return approved, beta.cap_usd if beta else None, _spend(s, user_id, None), None
 
 
 def has_access(user_id: str) -> bool:
-    beta = get_beta_user(user_id)
-    return bool(beta and beta.approved) or get_plan(user_id) is not None
+    with Session(engine) as s:
+        beta = s.get(BetaUser, user_id)
+        return bool(beta and beta.approved) or _in_good_standing(s.get(Subscription, user_id)) is not None
 
 
 def get_user_remaining(user_id: str) -> float:
@@ -101,11 +115,25 @@ def get_user_remaining(user_id: str) -> float:
     return max(0.0, allowance - spent)
 
 
+# A project's owner is set once, at creation, and project ids are never reused, so the answer
+# never goes stale. owner_of runs on every model call and credit check (and from Colab worker
+# threads), so it is remembered; a missing project is not.
+_owners: dict[str, str] = {}
+_owners_lock = threading.Lock()
+
+
 def owner_of(project_id: str | None) -> str | None:
     if not project_id:
         return None
+    with _owners_lock:
+        if project_id in _owners:
+            return _owners[project_id]
     with Session(engine) as s:
-        return s.exec(select(Project.user_id).where(Project.id == project_id)).first()
+        owner = s.exec(select(Project.user_id).where(Project.id == project_id)).first()
+    if owner is not None:
+        with _owners_lock:
+            _owners[project_id] = owner
+    return owner
 
 
 def project_allowance(project_id: str) -> float:

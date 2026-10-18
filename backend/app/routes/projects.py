@@ -10,7 +10,7 @@ from anyio import from_thread
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
-from sqlmodel import Session, select
+from sqlmodel import Session, func, select
 from sse_starlette.sse import EventSourceResponse
 
 from .. import beta, jobs, pipeline, refine
@@ -21,7 +21,8 @@ from ..agents import plan as plan_agent
 from ..agents import report as report_agent
 from ..auth import CurrentUser, get_current_user
 from ..config import settings, tier_of
-from ..db import Message, Paper, Project, ProjectPaper, Run, Secret, TaskState, Usage, engine, get_session
+from ..db import (Message, Paper, Project, ProjectPaper, Run, Secret, TaskState, Usage, engine, get_session,
+                  json_length)
 from ..graph import project_graph
 from ..execution import orchestrator
 from ..execution.sandbox import sandbox_for
@@ -74,6 +75,36 @@ def _get(session: Session, project_id: str, user: CurrentUser) -> Project:
     return project
 
 
+def _owned(session: Session, project_id: str, user: CurrentUser) -> None:
+    """Ownership check alone (404 as in _get), for routes that do not use the project row:
+    reads one column instead of the project's plan, brief, gap and review JSON."""
+    owner = session.exec(select(Project.user_id).where(Project.id == project_id)).first()
+    if owner is None or owner != user.id:
+        raise HTTPException(404, "Project not found")
+
+
+def _rev(t: datetime | None) -> str:
+    """The project's revision: an opaque token of its updated_at (bumped by every write, see
+    db.Project). One format for SQLite's naive and Postgres' aware timestamps."""
+    if t is None:
+        return ""
+    t = t if t.tzinfo else t.replace(tzinfo=timezone.utc)
+    return t.astimezone(timezone.utc).strftime("%Y%m%dT%H%M%S.%f")
+
+
+def _poll_project(session: Session, project_id: str, user: CurrentUser, project_rev: str | None, *cols):
+    """For polled routes: (project, revision, row). The project is None when the caller sent the
+    revision it already holds and nothing changed since, so a poll of an unchanged project does not
+    re-read its JSON. `row` carries the ownership columns plus any small `cols` the route needs."""
+    row = session.exec(select(Project.user_id, Project.updated_at, *cols).where(Project.id == project_id)).first()
+    if row is None or row.user_id != user.id:
+        raise HTTPException(404, "Project not found")
+    if project_rev is not None and project_rev == _rev(row.updated_at):
+        return None, project_rev, row
+    project = session.get(Project, project_id)
+    return project, _rev(project.updated_at), row
+
+
 def _no_active_review(project: Project) -> None:
     """Planning changes would pull the ground from under a scientific review in progress."""
     if (project.review or {}).get("status") in refine.ACTIVE:
@@ -85,13 +116,30 @@ def _review_idle(project_id: str) -> None:
         raise HTTPException(409, "The scientific review is working; wait for it or stop it")
 
 
-@router.get("")
+@router.get("", response_model=None)
 def list_projects(
-    session: Session = Depends(get_session), user: CurrentUser = Depends(get_current_user)
-) -> list[Project]:
-    return list(
-        session.exec(select(Project).where(Project.user_id == user.id).order_by(Project.updated_at.desc()))
-    )
+    summary: bool = False, session: Session = Depends(get_session), user: CurrentUser = Depends(get_current_user)
+) -> list[Project] | list[dict]:
+    """The user's projects, newest first. summary=1 (the sidebar) returns only what a list shows:
+    no plan, brief, gap or review JSON, just the review's status, stale flag and iteration."""
+    if not summary:
+        return list(
+            session.exec(select(Project).where(Project.user_id == user.id).order_by(Project.updated_at.desc()))
+        )
+    rows = session.exec(
+        select(Project.id, Project.user_id, Project.title, Project.stage, Project.autonomous, Project.created_at,
+               Project.updated_at, Project.review["status"].as_string().label("review_status"),
+               Project.review["stale"].as_boolean().label("review_stale"),
+               Project.review["iteration"].as_integer().label("review_iteration"))
+        .where(Project.user_id == user.id).order_by(Project.updated_at.desc())
+    ).all()
+    return [
+        {"id": r.id, "user_id": r.user_id, "title": r.title, "stage": r.stage, "autonomous": r.autonomous,
+         "created_at": r.created_at, "updated_at": r.updated_at,
+         "review": {"status": r.review_status, "stale": r.review_stale, "iteration": r.review_iteration}
+         if r.review_status else None}
+        for r in rows
+    ]
 
 
 @router.post("")
@@ -168,29 +216,40 @@ async def rerun_literature(project_id: str, session: Session = Depends(get_sessi
     return pipeline.start_literature(project_id)
 
 
+# What the literature view shows of a paper (not its normalised title or citation list).
+PAPER_FIELDS = tuple(c for c in Paper.__table__.columns if c.name not in ("norm_title", "references", "updated_at"))
+
+
 @router.get("/{project_id}/literature")
-def get_literature(project_id: str, session: Session = Depends(get_session),
+def get_literature(project_id: str, papers_rev: str | None = None, session: Session = Depends(get_session),
                    user: CurrentUser = Depends(get_current_user)) -> dict:
-    _get(session, project_id, user)
+    """The literature run and the included papers. papers_rev: the revision the caller already
+    holds; the paper list is sent again only when it changed (otherwise "papers" is null)."""
+    _owned(session, project_id, user)
     run = session.exec(
         select(Run).where(Run.project_id == project_id, Run.kind == "literature").order_by(Run.started_at.desc())
     ).first()
+    included = (ProjectPaper.project_id == project_id) & ProjectPaper.included
+    n, n_notes = session.exec(
+        select(func.count(), func.count(Paper.notes)).select_from(ProjectPaper)
+        .join(Paper, Paper.id == ProjectPaper.paper_id).where(included)
+    ).one()
+    # A rerun replaces the project's papers, so the run is part of the revision, not just the counts.
+    rev = f"{run.id if run else '-'}:{run.status if run else '-'}:{n}:{n_notes}"
+    if papers_rev is not None and papers_rev == rev:
+        return {"run": run, "papers": None, "papers_rev": rev}
     rows = session.exec(
-        select(ProjectPaper, Paper)
+        select(ProjectPaper.relevance, ProjectPaper.reason, ProjectPaper.origin, *PAPER_FIELDS)
         .join(Paper, Paper.id == ProjectPaper.paper_id)
-        .where(ProjectPaper.project_id == project_id, ProjectPaper.included)
+        .where(included)
         .order_by(ProjectPaper.relevance.desc(), ProjectPaper.score.desc())
     ).all()
     papers = [
-        {
-            **p.model_dump(exclude={"norm_title", "references", "updated_at"}),
-            "relevance": pp.relevance,
-            "reason": pp.reason,
-            "origin": pp.origin,
-        }
-        for pp, p in rows
+        {**{c.name: r._mapping[c] for c in PAPER_FIELDS}, "relevance": r.relevance, "reason": r.reason,
+         "origin": r.origin}
+        for r in rows
     ]
-    return {"run": run, "papers": papers}
+    return {"run": run, "papers": papers, "papers_rev": rev}
 
 
 class GapsRerun(BaseModel):
@@ -202,13 +261,13 @@ class GapSelect(BaseModel):
 
 
 @router.get("/{project_id}/gaps")
-def get_gaps(project_id: str, session: Session = Depends(get_session),
-            user: CurrentUser = Depends(get_current_user)) -> dict:
-    project = _get(session, project_id, user)
+def get_gaps(project_id: str, project_rev: str | None = None, session: Session = Depends(get_session),
+             user: CurrentUser = Depends(get_current_user)) -> dict:
+    project, rev, _ = _poll_project(session, project_id, user, project_rev)
     run = session.exec(
         select(Run).where(Run.project_id == project_id, Run.kind == "gaps").order_by(Run.started_at.desc())
     ).first()
-    return {"run": run, "project": project}
+    return {"run": run, "project": project, "project_rev": rev}
 
 
 @router.post("/{project_id}/gaps/run", dependencies=billable)
@@ -248,16 +307,16 @@ class PlanEdit(BaseModel):
 
 
 @router.get("/{project_id}/plan")
-def get_plan(project_id: str, session: Session = Depends(get_session),
-            user: CurrentUser = Depends(get_current_user)) -> dict:
-    project = _get(session, project_id, user)
+def get_plan(project_id: str, project_rev: str | None = None, session: Session = Depends(get_session),
+             user: CurrentUser = Depends(get_current_user)) -> dict:
+    project, rev, _ = _poll_project(session, project_id, user, project_rev)
     run = session.exec(
         select(Run).where(Run.project_id == project_id, Run.kind == "plan").order_by(Run.started_at.desc())
     ).first()
     revisions = len(session.exec(
         select(Run.id).where(Run.project_id == project_id, Run.kind == "plan", Run.status == "done")
     ).all())
-    return {"run": run, "project": project, "revisions": revisions}
+    return {"run": run, "project": project, "project_rev": rev, "revisions": revisions}
 
 
 @router.post("/{project_id}/plan/run", dependencies=billable)
@@ -328,13 +387,13 @@ class BlueprintRevise(BaseModel):
 
 
 @router.get("/{project_id}/blueprint")
-def get_blueprint(project_id: str, session: Session = Depends(get_session),
+def get_blueprint(project_id: str, project_rev: str | None = None, session: Session = Depends(get_session),
                   user: CurrentUser = Depends(get_current_user)) -> dict:
-    project = _get(session, project_id, user)
+    project, rev, _ = _poll_project(session, project_id, user, project_rev)
     run = session.exec(
         select(Run).where(Run.project_id == project_id, Run.kind == "blueprint").order_by(Run.started_at.desc())
     ).first()
-    return {"run": run, "project": project}
+    return {"run": run, "project": project, "project_rev": rev}
 
 
 @router.post("/{project_id}/blueprint/run", dependencies=billable)
@@ -399,26 +458,61 @@ def _apply_exec_settings(session: Session, project: Project, body: ExecutionStar
     session.commit()
 
 
+# A task's fields in a lite execution poll: everything but its event log.
+LITE_TASK_FIELDS = tuple(c for c in TaskState.__table__.columns if c.name != "events")
+LIVE_TAIL = 4  # events shown per running task (ExecutionRun's live lanes)
+
+
+def _lite_tasks(session: Session, bp_run_id: str) -> list[dict]:
+    """Task states without their event logs. A running task carries its last few events (from
+    the live attempt in memory when it runs here); every task carries event_count and event_seq
+    (which changes whenever its log does), so the UI fetches a full log only for a task it opens."""
+    rows = session.exec(
+        select(*LITE_TASK_FIELDS, json_length(TaskState.events).label("event_count"))
+        .where(TaskState.blueprint_run_id == bp_run_id)
+    ).all()
+    tasks = []
+    for r in rows:
+        t = {c.name: r._mapping[c] for c in LITE_TASK_FIELDS}
+        t["event_count"] = r.event_count or 0
+        t["events"], t["event_seq"] = [], t["event_count"]
+        if t["status"] == "running":
+            live = orchestrator.live_events(t["id"], tail=LIVE_TAIL)
+            if live is None:  # running in another process (or interrupted): read its log
+                events = session.exec(select(TaskState.events).where(TaskState.id == t["id"])).first() or []
+                live = events[-LIVE_TAIL:], len(events)
+            t["events"], t["event_seq"] = live
+        tasks.append(t)
+    return tasks
+
+
 @router.get("/{project_id}/execution")
-def get_execution(project_id: str, session: Session = Depends(get_session),
-                  user: CurrentUser = Depends(get_current_user)) -> dict:
-    project = _get(session, project_id, user)
+def get_execution(project_id: str, lite: bool = False, project_rev: str | None = None,
+                  session: Session = Depends(get_session), user: CurrentUser = Depends(get_current_user)) -> dict:
+    """Execution state for the live view. lite=1 (the polling UI) leaves out task event logs
+    (see _lite_tasks and task_events) and the server-side task order (the UI follows the master
+    plan's order itself); project_rev works as in _poll_project."""
+    project, rev, row = _poll_project(session, project_id, user, project_rev, Project.blueprint, Project.settings)
+    blueprint = project.blueprint if project else row.blueprint
+    cfg = (project.settings if project else row.settings) or {}
     run = session.exec(
         select(Run).where(Run.project_id == project_id, Run.kind == "execute").order_by(Run.started_at.desc())
     ).first()
-    tasks: list[TaskState] = []
-    if project.blueprint:
+    tasks: list[TaskState] | list[dict] = []
+    if blueprint and lite:
+        tasks = _lite_tasks(session, blueprint["run_id"])
+    elif blueprint:
         order = {t["id"]: i for i, t in enumerate(
-            session.get(Run, project.blueprint["run_id"]).result["master_plan"]["tasks"])}
+            session.get(Run, blueprint["run_id"]).result["master_plan"]["tasks"])}
         tasks = sorted(
-            session.exec(select(TaskState).where(TaskState.blueprint_run_id == project.blueprint["run_id"])),
+            session.exec(select(TaskState).where(TaskState.blueprint_run_id == blueprint["run_id"])),
             key=lambda st: order.get(st.task_id, 999),
         )
     ctl = orchestrator.control(project_id)
-    cfg = project.settings or {}
     return {
         "run": run,
         "project": project,
+        "project_rev": rev,
         "tasks": tasks,
         "spent": round(orchestrator.spent(project_id), 4),
         "budget": ((cfg.get("budget") or {}).get("llm_usd", 15.0)),
@@ -426,6 +520,23 @@ def get_execution(project_id: str, session: Session = Depends(get_session),
         "paused": ctl.reason if ctl else None,
         "live": jobs.is_running(project_id, "execute"),
     }
+
+
+@router.get("/{project_id}/execution/tasks/{task_id}/events")
+def task_events(project_id: str, task_id: str, session: Session = Depends(get_session),
+                user: CurrentUser = Depends(get_current_user)) -> dict:
+    """One task's full agent log (for a task row the user opens)."""
+    row = session.exec(select(Project.user_id, Project.blueprint).where(Project.id == project_id)).first()
+    if row is None or row.user_id != user.id:
+        raise HTTPException(404, "Project not found")
+    state_id = session.exec(select(TaskState.id).where(
+        TaskState.blueprint_run_id == (row.blueprint or {}).get("run_id"), TaskState.task_id == task_id)).first()
+    if state_id is None:
+        raise HTTPException(404, f"Unknown task {task_id}")
+    if live := orchestrator.live_events(state_id):
+        return {"events": live[0], "event_seq": live[1]}
+    events = session.exec(select(TaskState.events).where(TaskState.id == state_id)).first() or []
+    return {"events": events, "event_seq": len(events)}
 
 
 @router.post("/{project_id}/execution/start", dependencies=billable)
@@ -444,7 +555,7 @@ async def start_execution(project_id: str, body: ExecutionStart, session: Sessio
 @router.post("/{project_id}/execution/pause")
 def pause_execution(project_id: str, session: Session = Depends(get_session),
                     user: CurrentUser = Depends(get_current_user)) -> dict:
-    _get(session, project_id, user)
+    _owned(session, project_id, user)
     ctl = orchestrator.control(project_id)
     if not ctl:
         raise HTTPException(409, "Execution is not running")
@@ -471,19 +582,18 @@ async def resume_execution(project_id: str, body: ExecutionStart, session: Sessi
 @router.post("/{project_id}/execution/cancel")
 def cancel_execution(project_id: str, session: Session = Depends(get_session),
                      user: CurrentUser = Depends(get_current_user)) -> dict:
-    _get(session, project_id, user)
+    _owned(session, project_id, user)
     ctl = orchestrator.control(project_id)
     if not ctl:
         raise HTTPException(409, "Execution is not running")
-    ctl.cancelled = True
-    ctl.resume()  # wake the scheduler so it can stop
+    ctl.cancel()
     return {"cancelled": True}
 
 
 @router.post("/{project_id}/execution/tasks/{task_id}/{action}")
 def task_action(project_id: str, task_id: str, action: Literal["complete", "skip"], body: TaskAction,
                 session: Session = Depends(get_session), user: CurrentUser = Depends(get_current_user)) -> TaskState:
-    _get(session, project_id, user)
+    _owned(session, project_id, user)
     try:
         return orchestrator.set_task_status(project_id, task_id, "done" if action == "complete" else "skipped",
                                             (body.note or "").strip() or None)
@@ -501,14 +611,14 @@ class SecretIn(BaseModel):
 @router.get("/{project_id}/secrets")
 def list_secrets(project_id: str, session: Session = Depends(get_session),
                  user: CurrentUser = Depends(get_current_user)) -> list[str]:
-    _get(session, project_id, user)
+    _owned(session, project_id, user)
     return [r.name for r in session.exec(select(Secret).where(Secret.project_id == project_id))]
 
 
 @router.post("/{project_id}/secrets")
 def add_secret(project_id: str, body: SecretIn, session: Session = Depends(get_session),
                user: CurrentUser = Depends(get_current_user)) -> dict:
-    _get(session, project_id, user)
+    _owned(session, project_id, user)
     name = body.name.strip().upper()
     if not re.match(r"^[A-Z][A-Z0-9_]{1,63}$", name) or not body.value.strip():
         raise HTTPException(400, "Invalid credential name or empty value")
@@ -517,13 +627,13 @@ def add_secret(project_id: str, body: SecretIn, session: Session = Depends(get_s
 
 
 @router.get("/{project_id}/report")
-def get_report(project_id: str, session: Session = Depends(get_session),
+def get_report(project_id: str, project_rev: str | None = None, session: Session = Depends(get_session),
                user: CurrentUser = Depends(get_current_user)) -> dict:
-    project = _get(session, project_id, user)
+    project, rev, _ = _poll_project(session, project_id, user, project_rev)
     run = session.exec(
         select(Run).where(Run.project_id == project_id, Run.kind == "report").order_by(Run.started_at.desc())
     ).first()
-    return {"run": run, "project": project}
+    return {"run": run, "project": project, "project_rev": rev}
 
 
 @router.post("/{project_id}/report/run", dependencies=billable)
@@ -545,28 +655,30 @@ REVIEW_SUMMARIES = {"HISTORY.md": "text/markdown", "REVIEW.md": "text/markdown"}
 
 
 @router.get("/{project_id}/review")
-def get_review(project_id: str, session: Session = Depends(get_session),
+def get_review(project_id: str, project_rev: str | None = None, session: Session = Depends(get_session),
                user: CurrentUser = Depends(get_current_user)) -> dict:
     """Scientific review state (effective status, iterations, issue tracks), the latest review run,
-    and the loop's log: every review and repair step of the current session, oldest first."""
-    project = _get(session, project_id, user)
-    view = refine.view(project_id)
-    runs = session.exec(
-        select(Run).where(Run.project_id == project_id, Run.kind.in_(("review", "repair")))
-        .order_by(Run.started_at.desc()).limit(40)
-    ).all()
+    and the loop's log: every review and repair step of the current session, oldest first.
+    project_rev works as in _poll_project."""
+    project, rev, row = _poll_project(session, project_id, user, project_rev, Project.review, Project.settings)
+    view = refine.view(project_id, (project or row).review or {})
+    loop_runs = (Run.project_id == project_id) & Run.kind.in_(("review", "repair"))
+    latest = session.exec(select(Run).where(loop_runs).order_by(Run.started_at.desc())).first()
     since = view.get("started_at")
+    lines = select(Run.kind, Run.started_at, Run.log).where(loop_runs)
+    if since:  # this session's steps only (to the second, as the session start is recorded)
+        lines = lines.where(Run.started_at >= datetime.fromisoformat(since[:19]))
+    runs = session.exec(lines.order_by(Run.started_at.desc()).limit(40)).all()
     log = [{"t": line.get("t"), "text": line.get("text", ""), "kind": r.kind}
-           for r in reversed(runs) if not since or r.started_at.isoformat() >= since[:19]
-           for line in (r.log or [])][-400:]
-    return {"review": view, "run": runs[0] if runs else None, "log": log, "project": project,
-            "enabled": refine.config(project)["enabled"]}
+           for r in reversed(runs) for line in (r.log or [])][-400:]
+    return {"review": view, "run": latest, "log": log, "project": project, "project_rev": rev,
+            "enabled": refine.config(project or row)["enabled"]}
 
 
 @router.get("/{project_id}/review/file")
 def get_review_file(project_id: str, name: str, iteration: int | None = None, session: Session = Depends(get_session),
                     user: CurrentUser = Depends(get_current_user)) -> FileResponse:
-    _get(session, project_id, user)
+    _owned(session, project_id, user)
     if iteration is None and name in REVIEW_SUMMARIES:
         path, media = judge.review_dir(project_id) / name, REVIEW_SUMMARIES[name]
     elif iteration is not None and name in REVIEW_FILES:
@@ -582,7 +694,7 @@ def get_review_file(project_id: str, name: str, iteration: int | None = None, se
 async def start_review(project_id: str, session: Session = Depends(get_session),
                        user: CurrentUser = Depends(get_current_user)) -> dict:
     """Opt the project in and review its current paper (a new review session)."""
-    _get(session, project_id, user)
+    _owned(session, project_id, user)
     if any(jobs.is_running(project_id, k) for k in ("execute", "report", "review", "repair")):
         raise HTTPException(409, "A run is in progress")
     try:
@@ -595,7 +707,7 @@ async def start_review(project_id: str, session: Session = Depends(get_session),
 @router.post("/{project_id}/review/resume", dependencies=billable)
 async def resume_review(project_id: str, session: Session = Depends(get_session),
                         user: CurrentUser = Depends(get_current_user)) -> dict:
-    _get(session, project_id, user)
+    _owned(session, project_id, user)
     try:
         step = refine.resume(project_id)
     except ValueError as exc:
@@ -616,7 +728,7 @@ async def stop_review(project_id: str, session: Session = Depends(get_session),
 @router.get("/{project_id}/package")
 def download_package(project_id: str, session: Session = Depends(get_session),
                      user: CurrentUser = Depends(get_current_user)) -> FileResponse:
-    _get(session, project_id, user)
+    _owned(session, project_id, user)
     from_thread.run(sandbox_for(project_id).pull)
     path = report_agent.package(project_id)
     return FileResponse(path, media_type="application/zip", filename=path.name)
@@ -626,7 +738,7 @@ def download_package(project_id: str, session: Session = Depends(get_session),
 def cancel_stage(project_id: str, kind: Literal["literature", "gaps", "plan", "blueprint", "report", "review", "repair"],
                  session: Session = Depends(get_session), user: CurrentUser = Depends(get_current_user)) -> dict:
     """Stop a running planning or report stage (execution has its own pause/cancel)."""
-    _get(session, project_id, user)
+    _owned(session, project_id, user)
     if not jobs.cancel(project_id, kind):
         raise HTTPException(409, f"No {kind} run in progress")
     return {"cancelled": kind}
@@ -641,7 +753,7 @@ async def request_task_changes(project_id: str, task_id: str, body: ChangeReques
                                session: Session = Depends(get_session),
                                user: CurrentUser = Depends(get_current_user)) -> dict:
     """Reviewer feedback on a finished task: re-run it (and its dependents) with the change."""
-    _get(session, project_id, user)
+    _owned(session, project_id, user)
     if not body.feedback.strip():
         raise HTTPException(400, "Describe the change")
     _review_idle(project_id)
@@ -659,7 +771,7 @@ async def request_task_changes(project_id: str, task_id: str, body: ChangeReques
 @router.get("/{project_id}/workspace/files")
 def workspace_files(project_id: str, session: Session = Depends(get_session),
                     user: CurrentUser = Depends(get_current_user)) -> list[dict]:
-    _get(session, project_id, user)
+    _owned(session, project_id, user)
     from_thread.run(sandbox_for(project_id).pull)  # files still being written by remote processes
     root = sandbox_for(project_id).root
     if not root.exists():
@@ -677,7 +789,7 @@ def workspace_files(project_id: str, session: Session = Depends(get_session),
 @router.get("/{project_id}/workspace/file")
 def workspace_file(project_id: str, path: str, session: Session = Depends(get_session),
                    user: CurrentUser = Depends(get_current_user)) -> FileResponse:
-    _get(session, project_id, user)
+    _owned(session, project_id, user)
     sb = sandbox_for(project_id)
     from_thread.run(sb.pull)
     try:
@@ -693,7 +805,7 @@ def workspace_file(project_id: str, path: str, session: Session = Depends(get_se
 @router.get("/{project_id}/files/{name}")
 def download_file(project_id: str, name: str, session: Session = Depends(get_session),
                   user: CurrentUser = Depends(get_current_user)) -> FileResponse:
-    _get(session, project_id, user)
+    _owned(session, project_id, user)
     path = plan_agent.export_path(project_id, name)
     if not path:
         raise HTTPException(404, "File not exported yet")
@@ -703,23 +815,26 @@ def download_file(project_id: str, name: str, session: Session = Depends(get_ses
 @router.get("/{project_id}/usage")
 def get_usage(project_id: str, session: Session = Depends(get_session),
               user: CurrentUser = Depends(get_current_user)) -> dict:
-    _get(session, project_id, user)
-    rows = session.exec(select(Usage).where(Usage.project_id == project_id)).all()
+    _owned(session, project_id, user)
+    rows = session.exec(
+        select(Usage.model, func.coalesce(func.sum(Usage.cost), 0.0), func.count())
+        .where(Usage.project_id == project_id).group_by(Usage.model)
+    ).all()
     # Grouped by tier, not by model id: spend is the user's business, the model behind a tier is not.
     by_tier: dict[str, float] = {}
-    for u in rows:
-        tier = tier_of(u.model)
-        by_tier[tier] = by_tier.get(tier, 0.0) + u.cost
+    for model, cost, _ in rows:
+        tier = tier_of(model)
+        by_tier[tier] = by_tier.get(tier, 0.0) + float(cost)
     from ..execution import colab_runner
 
-    return {"total": round(sum(by_tier.values()), 4), "by_tier": by_tier, "calls": len(rows),
+    return {"total": round(sum(by_tier.values()), 4), "by_tier": by_tier, "calls": sum(n for *_, n in rows),
             "gpu": {"spent": round(colab_runner.gpu_spent(project_id), 4), "budget": colab_runner.gpu_budget(project_id)}}
 
 
 @router.get("/{project_id}/graph")
 def get_graph(project_id: str, session: Session = Depends(get_session),
               user: CurrentUser = Depends(get_current_user)) -> dict:
-    _get(session, project_id, user)
+    _owned(session, project_id, user)
     return project_graph(project_id)
 
 

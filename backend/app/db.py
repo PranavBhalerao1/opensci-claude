@@ -1,11 +1,15 @@
+import os
 from collections.abc import Iterator
 from datetime import datetime, timezone
 from pathlib import Path
 from uuid import uuid4
 
-from sqlalchemy import JSON, Column, DateTime, Uuid, inspect, text
+from sqlalchemy import JSON, Column, DateTime, Integer, Uuid, inspect, text
+from sqlalchemy.ext.compiler import compiles
+from sqlalchemy.sql.functions import FunctionElement
 from sqlmodel import Field, Session, SQLModel, create_engine
 
+from . import dbstats
 from .config import settings
 
 
@@ -52,7 +56,9 @@ class Project(SQLModel, table=True):
     # Scientific review and refinement state (see refine.py); None = never reviewed
     review: dict | None = Field(default=None, sa_column=Column(NullableJSON))
     created_at: datetime = Field(default_factory=_now)
-    updated_at: datetime = Field(default_factory=_now)
+    # Bumped by every write to the row (onupdate), so polls can tell an unchanged project from
+    # its timestamp alone instead of re-reading its JSON (routes/projects.py project_rev).
+    updated_at: datetime = Field(default_factory=_now, sa_column_kwargs={"onupdate": _now})
 
 
 class Message(SQLModel, table=True):
@@ -243,6 +249,24 @@ class Subscription(SQLModel, table=True):
     updated_at: datetime = Field(default_factory=_now)
 
 
+class json_length(FunctionElement):
+    """Length of a JSON array column, computed in the database so the array itself is not fetched.
+    Postgres' json_array_length takes json (the production columns are jsonb); SQLite's takes text."""
+
+    type = Integer()
+    inherit_cache = True
+
+
+@compiles(json_length)
+def _json_length(element, compiler, **kw) -> str:
+    return f"json_array_length({compiler.process(element.clauses, **kw)})"
+
+
+@compiles(json_length, "postgresql")
+def _json_length_pg(element, compiler, **kw) -> str:
+    return f"json_array_length(CAST({compiler.process(element.clauses, **kw)} AS json))"
+
+
 def _engine_url(url: str) -> str:
     """Normalise a raw Postgres connection string (as copied from the Supabase dashboard)
     to the psycopg3 driver SQLAlchemy needs; sqlite URLs pass through unchanged."""
@@ -259,7 +283,20 @@ _is_sqlite = DATABASE_URL.startswith("sqlite:///")
 if _is_sqlite:
     Path(DATABASE_URL.removeprefix("sqlite:///")).parent.mkdir(parents=True, exist_ok=True)
 
-engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False} if _is_sqlite else {})
+if _is_sqlite:
+    engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+else:
+    # Supabase's session pooler (port 5432) gives each client connection its own server slot and
+    # authenticates every new one. SQLAlchemy's default pool (5 + 10 overflow) closes overflow
+    # connections as soon as they are returned, so request bursts on top of background work
+    # opened and authenticated fresh connections over and over. Keep enough connections pooled
+    # for those bursts; the cap stays under the free pooler's per-project client limit.
+    engine = create_engine(
+        DATABASE_URL,
+        pool_size=int(os.environ.get("DB_POOL_SIZE") or 8),
+        max_overflow=int(os.environ.get("DB_MAX_OVERFLOW") or 4),
+    )
+dbstats.install(engine)
 
 
 def init_db() -> None:

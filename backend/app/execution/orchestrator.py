@@ -13,11 +13,14 @@ import contextlib
 import inspect
 import json
 import re
+import threading
 from datetime import datetime, timezone
 
 import httpx
 from pydantic import BaseModel, Field
 from sqlalchemy import func
+from sqlalchemy import update as sa_update
+from sqlalchemy.orm import load_only
 from sqlmodel import Session, select
 
 from .. import beta
@@ -38,6 +41,8 @@ NETWORK_PAUSE = "network: "
 NETWORK_RETRY = (30, 60, 120, 240, 480, 600)
 FENCE_RETRY = (15, 45)  # seconds before asking the sandbox again whether an earlier attempt's processes stopped
 MAX_PARALLEL = 4
+# The scheduler wakes when a task finishes or Control.changed fires; this is only a safety net.
+SAFETY_TICK = 30.0
 MAX_AGENT_STEPS = 80
 MAX_EVENTS = 150
 PREVIEW_CHARS = 12_000  # whole document up to this size; longer ones show head and tail
@@ -126,22 +131,79 @@ suggest fabricating, hard-coding or copying results."""
 # ── Control ────────────────────────────────────────────────────────────────
 
 
+class _Flag:
+    """An event that any thread may set or clear. `is_set()` changes at once; coroutines waiting
+    on the owning loop wake promptly even when the setter is a worker thread (a sync route), which
+    a plain asyncio.Event does not guarantee."""
+
+    def __init__(self, value: bool = False) -> None:
+        self._value = value
+        self._loop: asyncio.AbstractEventLoop | None = None
+        self._event: asyncio.Event | None = None
+
+    def is_set(self) -> bool:
+        return self._value
+
+    def set(self) -> None:
+        self._value = True
+        loop, event = self._loop, self._event
+        if loop is None or event is None:
+            return
+        try:
+            on_loop = asyncio.get_running_loop() is loop
+        except RuntimeError:
+            on_loop = False
+        if on_loop:
+            event.set()
+        else:
+            with contextlib.suppress(RuntimeError):  # the loop has closed: nobody is waiting
+                loop.call_soon_threadsafe(event.set)
+
+    def clear(self) -> None:
+        self._value = False
+
+    async def wait(self) -> bool:
+        loop = asyncio.get_running_loop()
+        if self._loop is not loop or self._event is None:
+            self._loop, self._event = loop, asyncio.Event()
+        while not self._value:
+            self._event.clear()
+            if self._value:
+                break
+            await self._event.wait()
+        return True
+
+
 class Control:
-    """In-memory handle for pausing, resuming and cancelling a live execution."""
+    """In-memory handle for pausing, resuming and cancelling a live execution.
+
+    Every pause, resume or cancel also sets `changed`, which wakes the scheduler: it waits for a
+    task to finish or for one of these, never on a timer, so a live run does not re-read its
+    state from the database every few seconds."""
 
     def __init__(self) -> None:
-        self.go = asyncio.Event()
-        self.go.set()
+        self.go = _Flag(True)
+        self.changed = _Flag()
         self.cancelled = False
         self.reason: str | None = None
 
     def pause(self, reason: str) -> None:
         self.reason = reason
         self.go.clear()
+        self.changed.set()
 
     def resume(self) -> None:
         self.reason = None
         self.go.set()
+        self.changed.set()
+
+    def cancel(self) -> None:
+        self.cancelled = True
+        self.resume()  # wake the scheduler (and a paused one) so it can stop
+
+    def poke(self) -> None:
+        """Task states changed outside the scheduler: look again."""
+        self.changed.set()
 
 
 _controls: dict[str, Control] = {}
@@ -149,6 +211,13 @@ _controls: dict[str, Control] = {}
 
 def control(project_id: str) -> Control | None:
     return _controls.get(project_id)
+
+
+def notify(project_id: str) -> None:
+    """Wake a live execution of the project after its task states changed elsewhere."""
+    ctl = _controls.get(project_id)
+    if ctl:
+        ctl.poke()
 
 
 def model_for(tier: str, policy: str) -> str:
@@ -190,17 +259,15 @@ def escalated_model(tier: str, policy: str, attempt: int) -> tuple[str, bool]:
 def current_budget(project_id: str) -> float:
     """Read the budget fresh each time, so raising it during a live run takes effect."""
     with Session(engine) as s:
-        cfg = s.get(Project, project_id).settings or {}
+        cfg = s.exec(select(Project.settings).where(Project.id == project_id)).first() or {}
     return float((cfg.get("budget") or {}).get("llm_usd", 15.0))
 
 
 def spent(project_id: str) -> float:
-    """LLM spend across every execution run of the project."""
+    """LLM spend across every execution run of the project (one aggregate query)."""
+    runs = select(Run.id).where(Run.project_id == project_id, Run.kind == "execute")
     with Session(engine) as s:
-        run_ids = s.exec(select(Run.id).where(Run.project_id == project_id, Run.kind == "execute")).all()
-        if not run_ids:
-            return 0.0
-        return float(s.exec(select(func.coalesce(func.sum(Usage.cost), 0.0)).where(Usage.run_id.in_(run_ids))).one())
+        return float(s.exec(select(func.coalesce(func.sum(Usage.cost), 0.0)).where(Usage.run_id.in_(runs))).one())
 
 
 def _now() -> datetime:
@@ -208,20 +275,60 @@ def _now() -> datetime:
 
 
 def _update(state_id: str, **fields) -> None:
+    """Write fields of one TaskState without reading the row (its events JSON) first."""
     with Session(engine) as s:
-        st = s.get(TaskState, state_id)
-        for k, v in fields.items():
-            setattr(st, k, v)
-        s.add(st)
+        s.exec(sa_update(TaskState).where(TaskState.id == state_id).values(**fields))
         s.commit()
+
+
+class _LiveLog:
+    def __init__(self, events: list[dict]) -> None:
+        self.events = events
+        self.seq = len(events)  # only ever grows, unlike the stored list (capped at MAX_EVENTS)
+
+
+# The event log of every task attempt in progress in this process. The attempt is the only writer
+# of its task's `events`, so appending an event writes the list through without reading it back.
+_live: dict[str, _LiveLog] = {}
+_live_lock = threading.Lock()
+
+
+@contextlib.contextmanager
+def _attempt(state_id: str):
+    """Keep the task's event log in memory for one attempt. Seeded from the database once, since
+    the log carries on across attempts."""
+    with Session(engine) as s:
+        events = s.exec(select(TaskState.events).where(TaskState.id == state_id)).first()
+    with _live_lock:
+        _live[state_id] = _LiveLog(list(events or []))
+    try:
+        yield
+    finally:
+        with _live_lock:
+            _live.pop(state_id, None)
+
+
+def live_events(state_id: str, tail: int | None = None) -> tuple[list[dict], int] | None:
+    """(events, sequence number) of a task attempt running in this process, else None."""
+    with _live_lock:
+        live = _live.get(state_id)
+        if live is None:
+            return None
+        return (live.events[-tail:] if tail else list(live.events)), live.seq
 
 
 def _append_event(state_id: str, event: dict) -> None:
-    with Session(engine) as s:
-        st = s.get(TaskState, state_id)
-        st.events = [*st.events, {**event, "t": _now().isoformat()}][-MAX_EVENTS:]
-        s.add(st)
-        s.commit()
+    entry = {**event, "t": _now().isoformat()}
+    with _live_lock:
+        live = _live.get(state_id)
+        if live is not None:
+            live.events = [*live.events, entry][-MAX_EVENTS:]
+            live.seq += 1
+            _update(state_id, events=live.events)  # under the lock, so writes land in order
+            return
+    with Session(engine) as s:  # outside an attempt: read just this row's log
+        current = s.exec(select(TaskState.events).where(TaskState.id == state_id)).first() or []
+    _update(state_id, events=[*current, entry][-MAX_EVENTS:])
 
 
 # ── Task execution ─────────────────────────────────────────────────────────
@@ -523,9 +630,22 @@ def _requeue_on_infrastructure(state_id: str, me: TaskState, exc: Exception, cos
     _update(state_id, status="pending", attempts=me.attempts, cost=me.cost + cost, finished_at=_now())
 
 
+# What an attempt reads of its own and its upstream tasks' states: not the events, checks or issues.
+_ATTEMPT_FIELDS = (TaskState.id, TaskState.task_id, TaskState.status, TaskState.attempts, TaskState.cost,
+                   TaskState.summary, TaskState.artifacts, TaskState.note, TaskState.feedback, TaskState.started_at)
+
+
 async def _execute(project_id: str, mp: dict, task: dict, state_id: str, policy: str, http: httpx.AsyncClient) -> None:
+    with _attempt(state_id):  # dropped on every way out of the attempt
+        await _run_attempt(project_id, mp, task, state_id, policy, http)
+
+
+async def _run_attempt(project_id: str, mp: dict, task: dict, state_id: str, policy: str,
+                       http: httpx.AsyncClient) -> None:
+    bp_run = select(TaskState.blueprint_run_id).where(TaskState.id == state_id).scalar_subquery()
     with Session(engine) as s:
-        states = {st.task_id: st for st in s.exec(select(TaskState).where(TaskState.blueprint_run_id == s.get(TaskState, state_id).blueprint_run_id))}
+        states = {st.task_id: st for st in s.exec(
+            select(TaskState).options(load_only(*_ATTEMPT_FIELDS)).where(TaskState.blueprint_run_id == bp_run))}
     me = next(st for st in states.values() if st.id == state_id)
     feedback = me.note if me.attempts else None
     amendments = project_amendments(project_id)
@@ -716,7 +836,9 @@ def _write_context(project_id: str, sandbox) -> None:
 def prepare_states(project_id: str, bp_run_id: str, mp: dict) -> None:
     """Create task states on first run; on resume, retry what did not finish."""
     with Session(engine) as s:
-        existing = {st.task_id: st for st in s.exec(select(TaskState).where(TaskState.blueprint_run_id == bp_run_id))}
+        existing = {st.task_id: st for st in s.exec(
+            select(TaskState).options(load_only(TaskState.id, TaskState.task_id, TaskState.status, TaskState.attempts))
+            .where(TaskState.blueprint_run_id == bp_run_id))}
         for t in mp["tasks"]:
             st = existing.get(t["id"])
             if st is None:
@@ -757,6 +879,7 @@ async def run(project_id: str, h: RunHandle) -> dict:
     _controls[project_id] = ctl
     running: dict[str, asyncio.Task] = {}
     network_waits = 0  # automatic resumes since the last task that finished normally
+    last_counts: dict | None = None
 
     h.phase("preparing", "Setting up the workspace environment")
     sandbox = sandbox_for(project_id)
@@ -776,8 +899,13 @@ async def run(project_id: str, h: RunHandle) -> dict:
                     await asyncio.gather(*running.values(), return_exceptions=True)
                     break
 
+                # Cleared before the states are read, so a change made after this point wakes the
+                # wait below instead of being lost.
+                ctl.changed.clear()
                 with Session(engine) as s:
-                    states = {st.task_id: st for st in s.exec(select(TaskState).where(TaskState.blueprint_run_id == bp_run_id))}
+                    states = {st.task_id: st for st in s.exec(
+                        select(TaskState).options(load_only(TaskState.id, TaskState.task_id, TaskState.status))
+                        .where(TaskState.blueprint_run_id == bp_run_id))}
 
                 # Settle tasks that cannot run on their own; repeat so blocks propagate down chains.
                 changed = True
@@ -808,9 +936,12 @@ async def run(project_id: str, h: RunHandle) -> dict:
                 total = spent(project_id)
                 budget = current_budget(project_id)
                 allowance = beta.project_allowance(project_id)  # owner's remaining beta allowance
-                h.counts(**{k: sum(1 for st in states.values() if st.status == k)
-                            for k in ("done", "running", "pending", "failed", "blocked", "human", "skipped")},
-                         spent_cents=round(total * 100))
+                counts = {k: sum(1 for st in states.values() if st.status == k)
+                          for k in ("done", "running", "pending", "failed", "blocked", "human", "skipped")}
+                counts["spent_cents"] = round(total * 100)
+                if counts != last_counts:
+                    h.counts(**counts)
+                    last_counts = counts
                 # Autonomous runs are limited by the owner's credits, not paused at the project budget;
                 # review repairs still are (refine caps their execution through that budget).
                 if total >= budget and ctl.go.is_set() and (repairing or not autonomous):
@@ -846,7 +977,15 @@ async def run(project_id: str, h: RunHandle) -> dict:
                         continue
                     break  # nothing runnable remains
 
-                done, _ = await asyncio.wait(running.values(), timeout=5, return_when=asyncio.FIRST_COMPLETED)
+                # Sleep until a task finishes or something changes (pause, resume, cancel, a task
+                # marked done or re-queued: Control.changed). The timeout is only a safety net for
+                # a change made where nothing calls notify(); nothing here needs a clock.
+                changed = asyncio.ensure_future(ctl.changed.wait())
+                try:
+                    done, _ = await asyncio.wait([*running.values(), changed], timeout=SAFETY_TICK,
+                                                 return_when=asyncio.FIRST_COMPLETED)
+                finally:
+                    changed.cancel()
                 for tid in [t for t, fut in running.items() if fut in done]:
                     fut = running.pop(tid)
                     if isinstance(fut.exception(), INFRASTRUCTURE):
@@ -864,7 +1003,7 @@ async def run(project_id: str, h: RunHandle) -> dict:
                     network_waits = 0
                     if tid in checkpoints:
                         with Session(engine) as s:
-                            if s.get(TaskState, states[tid].id).status == "done":
+                            if s.exec(select(TaskState.status).where(TaskState.id == states[tid].id)).first() == "done":
                                 ctl.pause(f"checkpoint:{tid}: {checkpoints[tid]}")
     finally:
         _controls.pop(project_id, None)
@@ -878,8 +1017,8 @@ async def run(project_id: str, h: RunHandle) -> dict:
             s.commit()
 
     with Session(engine) as s:
-        final = list(s.exec(select(TaskState).where(TaskState.blueprint_run_id == bp_run_id)))
-        counts = {k: sum(1 for st in final if st.status == k)
+        final = list(s.exec(select(TaskState.status).where(TaskState.blueprint_run_id == bp_run_id)))
+        counts = {k: sum(1 for status in final if status == k)
                   for k in ("done", "failed", "blocked", "skipped", "cancelled", "human")}
         total_tasks = len(final)
         project = s.get(Project, project_id)
@@ -896,7 +1035,7 @@ async def run(project_id: str, h: RunHandle) -> dict:
 def project_amendments(project_id: str) -> str:
     """All reviewer-approved amendments, oldest first, as text for prompts and verifiers."""
     with Session(engine) as s:
-        items = (s.get(Project, project_id).settings or {}).get("amendments", [])
+        items = (s.exec(select(Project.settings).where(Project.id == project_id)).first() or {}).get("amendments", [])
     return "\n\n".join(f"[{i + 1}] (via {a['task']}, {a['at'][:16]}) {a['text']}" for i, a in enumerate(items))
 
 
@@ -952,6 +1091,7 @@ def request_changes(project_id: str, task_id: str, feedback: str) -> list[str]:
     ctl = control(project_id)
     if ctl and ctl.reason and ctl.reason.startswith("checkpoint"):
         ctl.resume()
+    notify(project_id)
     return sorted(reset)
 
 
@@ -979,6 +1119,7 @@ def provide_secret(project_id: str, name: str, value: str) -> int:
     ctl = control(project_id)
     if ctl and ctl.reason and ctl.reason.startswith("human"):
         ctl.resume()
+    notify(project_id)
     return requeued
 
 
@@ -1007,4 +1148,5 @@ def set_task_status(project_id: str, task_id: str, status: str, note: str | None
     ctl = control(project_id)
     if ctl and ctl.reason and ctl.reason.startswith("human"):
         ctl.resume()
+    notify(project_id)
     return st

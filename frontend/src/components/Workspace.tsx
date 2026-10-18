@@ -24,14 +24,17 @@ import {
   type Literature,
   type Message,
   type PlanRun as PlanRunT,
+  type Polled,
   type Project,
+  type ProjectSummary,
   type ReportRun as ReportRunT,
   type ReviewLogLine,
   type ReviewView,
   type Run,
   type Turn,
 } from "@/lib/api";
-import { useBeta } from "./BetaGate";
+import { pollWhileVisible } from "@/lib/poll";
+import { useBeta, useBetaRefresh } from "./BetaGate";
 import BlueprintRun from "./BlueprintRun";
 import BriefCard from "./BriefCard";
 import { CreditsChip } from "./Credits";
@@ -59,8 +62,26 @@ type AnswersMessage = Extract<Message, { kind: "answers" }>;
 export default function Workspace({ projectId: initialId }: { projectId?: string }) {
   const beta = useBeta();
   const [projectId, setProjectId] = useState<string | null>(initialId ?? null);
-  const [project, setProject] = useState<Project | null>(null);
-  const [projects, setProjects] = useState<Project[]>([]);
+  const [project, setProjectState] = useState<Project | null>(null);
+  // The revision of the project as last received from a poll. Polls send it back and get the
+  // project only when it changed. Any other update (an action's response, an optimistic edit, a
+  // project switch) clears it, so the next poll fetches the whole project again and nothing set
+  // locally can hide the server's state.
+  const projectRev = useRef<string | null>(null);
+  const projectGen = useRef(0);
+  const setProject = useCallback((value: React.SetStateAction<Project | null>) => {
+    projectRev.current = null;
+    projectGen.current += 1;
+    setProjectState(value);
+  }, []);
+  /** Apply a poll's project; `gen` is projectGen when the poll was sent. */
+  const applyPolled = useCallback((d: Polled, gen: number) => {
+    if (d.project) setProjectState(d.project);
+    // A local update while the poll was in flight: do not trust this revision; fetch in full next time.
+    if (gen === projectGen.current && d.project) projectRev.current = d.project_rev ?? null;
+  }, []);
+  const papersRev = useRef<string | null>(null);
+  const [projects, setProjects] = useState<ProjectSummary[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
@@ -100,7 +121,7 @@ export default function Workspace({ projectId: initialId }: { projectId?: string
         setMessages(messages);
       })
       .catch((e) => setError(String(e)));
-  }, [projectId]);
+  }, [projectId, setProject]);
 
   // Poll the literature run while it is in progress (or about to start).
   const litStage = project && project.stage !== "clarify" ? project.id : null;
@@ -110,15 +131,20 @@ export default function Workspace({ projectId: initialId }: { projectId?: string
     let cancelled = false;
     const load = () =>
       literatureApi
-        .get(litStage)
-        .then((d) => !cancelled && setLit(d))
+        .get(litStage, papersRev.current)
+        .then((d) => {
+          if (cancelled) return;
+          // papers is null when unchanged since papersRev: keep the ones already shown.
+          setLit((prev) => ({ ...d, papers: d.papers ?? prev?.papers ?? [] }));
+          papersRev.current = d.papers_rev ?? null;
+        })
         .catch((e) => !cancelled && setError(String(e)));
     void load();
     if (litStatus === "done" || litStatus === "error") return () => void (cancelled = true);
-    const timer = setInterval(load, 2000);
+    const stop = pollWhileVisible(load, 2000);
     return () => {
       cancelled = true;
-      clearInterval(timer);
+      stop();
     };
   }, [litStage, litStatus]);
 
@@ -131,23 +157,25 @@ export default function Workspace({ projectId: initialId }: { projectId?: string
   useEffect(() => {
     if (!gapsFor) return;
     let cancelled = false;
-    const load = () =>
-      gapsApi
-        .get(gapsFor)
+    const load = () => {
+      const gen = projectGen.current;
+      return gapsApi
+        .get(gapsFor, projectRev.current)
         .then((d) => {
           if (cancelled) return;
           setGapsRun(d.run);
-          setProject(d.project);
+          applyPolled(d, gen);
         })
         .catch((e) => !cancelled && setError(String(e)));
+    };
     void load();
     if ((gapsStatus === "done" && !awaitingAutoChoice) || gapsStatus === "error") return () => void (cancelled = true);
-    const timer = setInterval(load, 2500);
+    const stop = pollWhileVisible(load, 2500);
     return () => {
       cancelled = true;
-      clearInterval(timer);
+      stop();
     };
-  }, [gapsFor, gapsStatus, awaitingAutoChoice]);
+  }, [gapsFor, gapsStatus, awaitingAutoChoice, applyPolled]);
 
   // The plan is drafted as soon as a gap is chosen.
   const planFor = project?.chosen_gap ? project.id : null;
@@ -158,23 +186,25 @@ export default function Workspace({ projectId: initialId }: { projectId?: string
   useEffect(() => {
     if (!planFor) return;
     let cancelled = false;
-    const load = () =>
-      planApi
-        .get(planFor)
+    const load = () => {
+      const gen = projectGen.current;
+      return planApi
+        .get(planFor, projectRev.current)
         .then((d) => {
           if (cancelled) return;
           setPlanRun({ run: d.run, revisions: d.revisions });
-          setProject(d.project);
+          applyPolled(d, gen);
         })
         .catch((e) => !cancelled && setError(String(e)));
+    };
     void load();
     if ((planStatus === "done" && !awaitingAutoApproval) || planStatus === "error") return () => void (cancelled = true);
-    const timer = setInterval(load, 2500);
+    const stop = pollWhileVisible(load, 2500);
     return () => {
       cancelled = true;
-      clearInterval(timer);
+      stop();
     };
-  }, [planFor, planStatus, planRunId, approvedPlanId, awaitingAutoApproval]);
+  }, [planFor, planStatus, planRunId, approvedPlanId, awaitingAutoApproval, applyPolled]);
 
   // The blueprint compiles once the plan is approved.
   const bpFor = project?.plan ? project.id : null;
@@ -185,25 +215,27 @@ export default function Workspace({ projectId: initialId }: { projectId?: string
   useEffect(() => {
     if (!bpFor) return;
     let cancelled = false;
-    const load = () =>
-      blueprintApi
-        .get(bpFor)
+    const load = () => {
+      const gen = projectGen.current;
+      return blueprintApi
+        .get(bpFor, projectRev.current)
         .then((d) => {
           if (cancelled) return;
           setBpRun(d.run);
-          setProject(d.project);
+          applyPolled(d, gen);
         })
         .catch((e) => !cancelled && setError(String(e)));
+    };
     void load();
     const settled = !bpStatus ? project?.stage === "done" : bpStatus !== "running" && !awaitingBpApproval;
     if (settled) return () => void (cancelled = true);
-    const timer = setInterval(load, 3000);
+    const stop = pollWhileVisible(load, 3000);
     return () => {
       cancelled = true;
-      clearInterval(timer);
+      stop();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- stage only matters for the no-run case
-  }, [bpFor, bpStatus, bpRunId, approvedBpId, awaitingBpApproval]);
+  }, [bpFor, bpStatus, bpRunId, approvedBpId, awaitingBpApproval, applyPolled]);
 
   const startBlueprint = async () => {
     if (!projectId) return;
@@ -231,23 +263,28 @@ export default function Workspace({ projectId: initialId }: { projectId?: string
   useEffect(() => {
     if (!execFor) return;
     let cancelled = false;
-    const load = () =>
-      executionApi
-        .get(execFor)
+    const load = () => {
+      const gen = projectGen.current;
+      return executionApi
+        .get(execFor, projectRev.current)
         .then((d) => {
           if (cancelled) return;
           setExec(d);
-          setProject(d.project);
+          applyPolled(d, gen);
+          // An action's kick polls until the run is no longer live, then stops (the action's job
+          // starts before its request returns, so a run that will start already reports live).
+          if (!d.live) setExecKick(0);
         })
         .catch((e) => !cancelled && setError(String(e)));
+    };
     void load();
     if (!execLive && execKick === 0) return () => void (cancelled = true);
-    const timer = setInterval(load, 2000);
+    const stop = pollWhileVisible(load, 2000);
     return () => {
       cancelled = true;
-      clearInterval(timer);
+      stop();
     };
-  }, [execFor, execLive, execKick]);
+  }, [execFor, execLive, execKick, applyPolled]);
 
   // Report: available once execution has finished (and throughout a scientific review).
   const reportFor =
@@ -258,24 +295,26 @@ export default function Workspace({ projectId: initialId }: { projectId?: string
   useEffect(() => {
     if (!reportFor) return;
     let cancelled = false;
-    const load = () =>
-      reportApi
-        .get(reportFor)
+    const load = () => {
+      const gen = projectGen.current;
+      return reportApi
+        .get(reportFor, projectRev.current)
         .then((d) => {
           if (cancelled) return;
           setReportRun(d.run);
-          setProject(d.project);
+          applyPolled(d, gen);
           if (d.run?.status !== "running") refreshProjects();
         })
         .catch((e) => !cancelled && setError(String(e)));
+    };
     void load();
     if (reportStatus !== "running") return () => void (cancelled = true);
-    const timer = setInterval(load, 3000);
+    const stop = pollWhileVisible(load, 3000);
     return () => {
       cancelled = true;
-      clearInterval(timer);
+      stop();
     };
-  }, [reportFor, reportStatus, refreshProjects]);
+  }, [reportFor, reportStatus, refreshProjects, applyPolled]);
 
   const startReport = async () => {
     if (!projectId) return;
@@ -296,13 +335,15 @@ export default function Workspace({ projectId: initialId }: { projectId?: string
       review?.view.status !== "review_failed") ||
     Object.values(review?.view.live ?? {}).some(Boolean);
   const loadReview = useCallback(
-    (id: string) =>
-      reviewApi.get(id).then((d) => {
+    (id: string) => {
+      const gen = projectGen.current;
+      return reviewApi.get(id, projectRev.current).then((d) => {
         setReview({ view: d.review, enabled: d.enabled, run: d.run, log: d.log ?? [] });
-        setProject(d.project);
+        applyPolled(d, gen);
         return d;
-      }),
-    [],
+      });
+    },
+    [applyPolled],
   );
   useEffect(() => {
     if (!reviewFor) return;
@@ -313,10 +354,10 @@ export default function Workspace({ projectId: initialId }: { projectId?: string
         .catch((e) => !cancelled && setError(String(e)));
     load();
     if (!reviewBusy) return () => void (cancelled = true);
-    const timer = setInterval(load, 3000);
+    const stop = pollWhileVisible(load, 3000);
     return () => {
       cancelled = true;
-      clearInterval(timer);
+      stop();
     };
   }, [reviewFor, reviewBusy, loadReview, refreshProjects]);
 
@@ -410,6 +451,7 @@ export default function Workspace({ projectId: initialId }: { projectId?: string
       setMessages([]);
     }
     setLit(null);
+    papersRev.current = null;
     setGapsRun(null);
     setPlanRun(null);
     setBpRun(null);
@@ -528,6 +570,16 @@ export default function Workspace({ projectId: initialId }: { projectId?: string
       ["repair", review?.view.live?.repair ? "running" : undefined],
     ] as const
   ).find(([, status]) => status === "running")?.[0];
+
+  // Something that spends credits is running. The credits line refreshes when that changes; the
+  // project's spend polls while it is true.
+  const spending = busy || Boolean(runningStage) || execLive || Object.values(review?.view.live ?? {}).some(Boolean);
+  const refreshBeta = useBetaRefresh();
+  const wasSpending = useRef(spending);
+  useEffect(() => {
+    if (wasSpending.current !== spending) refreshBeta();
+    wasSpending.current = spending;
+  }, [spending, refreshBeta]);
 
   const stopStage = async () => {
     if (!projectId || !runningStage) return;
@@ -688,6 +740,7 @@ export default function Workspace({ projectId: initialId }: { projectId?: string
 
       <Notebook
         project={project}
+        live={spending}
         lit={lit}
         gapsRun={gapsRun}
         planRun={planRun?.run ?? null}

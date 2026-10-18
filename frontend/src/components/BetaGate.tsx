@@ -3,20 +3,32 @@
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
 
 import { meApi, type Me } from "@/lib/api";
+import { pollWhileVisible } from "@/lib/poll";
 import { useAuth } from "@/lib/supabase/AuthProvider";
 import AuthShell, { ErrorNote } from "./auth/AuthShell";
 
 const BetaContext = createContext<Me | null>(null);
+const RefreshContext = createContext<() => void>(() => {});
 
 /** The signed-in user's verified beta status (always approved inside the gate). */
 export function useBeta(): Me | null {
   return useContext(BetaContext);
 }
 
+/** Re-read the beta status now (e.g. when work that spends credits starts or stops). */
+export function useBetaRefresh(): () => void {
+  return useContext(RefreshContext);
+}
+
 /**
  * Private-beta gate. Fails closed: the app renders only once /api/me has confirmed
- * the account is approved. Polls so approval (and the usage line) update live.
+ * the account is approved. Polls so approval (and the usage line) update live: every 30 s
+ * while awaiting approval, every 5 minutes once approved, never while the tab is hidden,
+ * and once whenever the tab comes back into view.
  */
+const PENDING_POLL_MS = 30_000;
+const APPROVED_POLL_MS = 300_000;
+
 export default function BetaGate({ children }: { children: React.ReactNode }) {
   const { user, signOut } = useAuth();
   const [me, setMe] = useState<Me | null>(null);
@@ -36,13 +48,19 @@ export default function BetaGate({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     void load();
-    const t = setInterval(load, 30000);
-    return () => clearInterval(t);
   }, [load]);
+
+  const approved = Boolean(me?.beta_approved);
+  useEffect(() => pollWhileVisible(load, approved ? APPROVED_POLL_MS : PENDING_POLL_MS), [load, approved]);
 
   // A failed recheck takes precedence over the last saved status, so a stale
   // pending or approved screen is never shown when access can't be verified.
-  if (me?.beta_approved && !failed) return <BetaContext.Provider value={me}>{children}</BetaContext.Provider>;
+  if (me?.beta_approved && !failed)
+    return (
+      <RefreshContext.Provider value={load}>
+        <BetaContext.Provider value={me}>{children}</BetaContext.Provider>
+      </RefreshContext.Provider>
+    );
 
   const footer = (
     <span className="flex items-center justify-between gap-2">

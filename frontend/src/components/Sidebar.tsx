@@ -1,10 +1,10 @@
-import { reviewBadge, type Project } from "@/lib/api";
+import { reviewBadge, type ProjectSummary } from "@/lib/api";
 import { useAuth } from "@/lib/supabase/AuthProvider";
 import { useBeta } from "./BetaGate";
 import { CreditsPanel } from "./Credits";
 
 interface Props {
-  projects: Project[];
+  projects: ProjectSummary[];
   activeId: string | null;
   onSelect: (id: string) => void;
   onNew: () => void;

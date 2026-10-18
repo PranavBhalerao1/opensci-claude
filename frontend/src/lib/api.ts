@@ -174,8 +174,24 @@ export const meApi = {
   get: () => apiFetch(`${API_URL}/api/me`).then(json<Me>),
 };
 
+/** A project as the sidebar lists it: no plan, brief, gap or review details. */
+export type ProjectSummary = Pick<Project, "id" | "title" | "stage" | "autonomous" | "created_at" | "updated_at"> & {
+  review: Pick<ReviewState, "status" | "stale" | "iteration"> | null;
+};
+
+/**
+ * A polled response's project: null when it has not changed since the revision the poll sent
+ * (`projectRev`), so an unchanged project is not sent (or read from the database) again.
+ */
+export interface Polled {
+  project: Project | null;
+  project_rev?: string;
+}
+
+const revQuery = (projectRev?: string | null) => (projectRev ? `?project_rev=${encodeURIComponent(projectRev)}` : "");
+
 export const api = {
-  listProjects: () => apiFetch(`${API_URL}/api/projects`).then(json<Project[]>),
+  listProjects: () => apiFetch(`${API_URL}/api/projects?summary=1`).then(json<ProjectSummary[]>),
   getProject: (id: string) =>
     apiFetch(`${API_URL}/api/projects/${id}`).then(json<{ project: Project; messages: Message[] }>),
   createProject: (body: { autonomous?: boolean } = {}) =>
@@ -300,6 +316,7 @@ export interface Run {
 export interface Literature {
   run: Run | null;
   papers: LitPaper[];
+  papers_rev?: string;
 }
 
 export interface GraphNode {
@@ -319,7 +336,11 @@ export interface GraphLink {
 }
 
 export const literatureApi = {
-  get: (id: string) => apiFetch(`${API_URL}/api/projects/${id}/literature`).then(json<Literature>),
+  /** papers is null when unchanged since `papersRev` (keep the ones you have). */
+  get: (id: string, papersRev?: string | null) =>
+    apiFetch(
+      `${API_URL}/api/projects/${id}/literature${papersRev ? `?papers_rev=${encodeURIComponent(papersRev)}` : ""}`,
+    ).then(json<Omit<Literature, "papers"> & { papers: LitPaper[] | null }>),
   rerun: (id: string) => post(`${API_URL}/api/projects/${id}/literature/run`).then(json<Run>),
   graph: (id: string) =>
     apiFetch(`${API_URL}/api/projects/${id}/graph`).then(json<{ nodes: GraphNode[]; links: GraphLink[] }>),
@@ -367,8 +388,8 @@ export interface GapsRun extends Omit<Run, "result"> {
 }
 
 export const gapsApi = {
-  get: (id: string) =>
-    apiFetch(`${API_URL}/api/projects/${id}/gaps`).then(json<{ run: GapsRun | null; project: Project }>),
+  get: (id: string, projectRev?: string | null) =>
+    apiFetch(`${API_URL}/api/projects/${id}/gaps${revQuery(projectRev)}`).then(json<{ run: GapsRun | null } & Polled>),
   rerun: (id: string, feedback?: string) =>
     post(`${API_URL}/api/projects/${id}/gaps/run`, { feedback: feedback ?? null }).then(json<GapsRun>),
   select: (id: string, gapId: string) =>
@@ -436,8 +457,10 @@ export class PlanEditError extends Error {
 }
 
 export const planApi = {
-  get: (id: string) =>
-    apiFetch(`${API_URL}/api/projects/${id}/plan`).then(json<{ run: PlanRun | null; project: Project; revisions: number }>),
+  get: (id: string, projectRev?: string | null) =>
+    apiFetch(`${API_URL}/api/projects/${id}/plan${revQuery(projectRev)}`).then(
+      json<{ run: PlanRun | null; revisions: number } & Polled>,
+    ),
   rerun: (id: string) => post(`${API_URL}/api/projects/${id}/plan/run`).then(json<PlanRun>),
   revise: (id: string, instruction: string) =>
     post(`${API_URL}/api/projects/${id}/plan/revise`, { instruction }).then(json<{ message: Message; run: PlanRun }>),
@@ -521,8 +544,10 @@ export interface BlueprintRun extends Omit<Run, "result"> {
 }
 
 export const blueprintApi = {
-  get: (id: string) =>
-    apiFetch(`${API_URL}/api/projects/${id}/blueprint`).then(json<{ run: BlueprintRun | null; project: Project }>),
+  get: (id: string, projectRev?: string | null) =>
+    apiFetch(`${API_URL}/api/projects/${id}/blueprint${revQuery(projectRev)}`).then(
+      json<{ run: BlueprintRun | null } & Polled>,
+    ),
   run: (id: string) => post(`${API_URL}/api/projects/${id}/blueprint/run`).then(json<BlueprintRun>),
   revise: (id: string, instruction: string) =>
     post(`${API_URL}/api/projects/${id}/blueprint/revise`, { instruction }).then(
@@ -568,15 +593,18 @@ export interface TaskState {
   artifacts: string[];
   checks: { check: string; passed: boolean; reason: string }[];
   issues: string[];
+  /** In execution polls: the last few events of a running task, else empty (fetch the full log
+   * with executionApi.events). */
   events: AgentEvent[];
+  event_count?: number; // events in the stored log
+  event_seq?: number; // changes whenever the task's log does
   note: string | null;
   started_at: string | null;
   finished_at: string | null;
 }
 
-export interface Execution {
+export interface Execution extends Polled {
   run: Run | null;
-  project: Project;
   tasks: TaskState[];
   spent: number;
   budget: number;
@@ -586,7 +614,15 @@ export interface Execution {
 }
 
 export const executionApi = {
-  get: (id: string) => apiFetch(`${API_URL}/api/projects/${id}/execution`).then(json<Execution>),
+  get: (id: string, projectRev?: string | null) =>
+    apiFetch(
+      `${API_URL}/api/projects/${id}/execution?lite=1${projectRev ? `&project_rev=${encodeURIComponent(projectRev)}` : ""}`,
+    ).then(json<Execution>),
+  /** One task's full agent log. */
+  events: (id: string, taskId: string) =>
+    apiFetch(`${API_URL}/api/projects/${id}/execution/tasks/${encodeURIComponent(taskId)}/events`).then(
+      json<{ events: AgentEvent[]; event_seq: number }>,
+    ),
   start: (id: string, body: { budget_usd?: number; model_policy?: ModelPolicy }) =>
     post(`${API_URL}/api/projects/${id}/execution/start`, body).then(json<Run>),
   pause: (id: string) => post(`${API_URL}/api/projects/${id}/execution/pause`).then(json<unknown>),
@@ -733,9 +769,9 @@ export interface ReviewView extends ReviewState {
 }
 
 export const reviewApi = {
-  get: (id: string) =>
-    apiFetch(`${API_URL}/api/projects/${id}/review`).then(
-      json<{ review: ReviewView; run: Run | null; log?: ReviewLogLine[]; project: Project; enabled: boolean }>,
+  get: (id: string, projectRev?: string | null) =>
+    apiFetch(`${API_URL}/api/projects/${id}/review${revQuery(projectRev)}`).then(
+      json<{ review: ReviewView; run: Run | null; log?: ReviewLogLine[]; enabled: boolean } & Polled>,
     ),
   start: (id: string) => post(`${API_URL}/api/projects/${id}/review/start`).then(json<{ review: ReviewView }>),
   resume: (id: string) => post(`${API_URL}/api/projects/${id}/review/resume`).then(json<{ review: ReviewView }>),
@@ -748,7 +784,7 @@ export const reviewApi = {
 };
 
 /** The paper's scientific-review standing, for badges. */
-export function reviewBadge(project: Project): { label: string; tone: "ok" | "warn" | "busy" | "none" } {
+export function reviewBadge(project: Pick<Project | ProjectSummary, "review">): { label: string; tone: "ok" | "warn" | "busy" | "none" } {
   const r = project.review;
   if (!r?.status) return { label: "Unreviewed", tone: "none" };
   if (r.stale) return { label: "Changed since review", tone: "warn" };
@@ -773,7 +809,8 @@ export function reviewBadge(project: Project): { label: string; tone: "ok" | "wa
 }
 
 export const reportApi = {
-  get: (id: string) => apiFetch(`${API_URL}/api/projects/${id}/report`).then(json<{ run: ReportRun | null; project: Project }>),
+  get: (id: string, projectRev?: string | null) =>
+    apiFetch(`${API_URL}/api/projects/${id}/report${revQuery(projectRev)}`).then(json<{ run: ReportRun | null } & Polled>),
   run: (id: string) => post(`${API_URL}/api/projects/${id}/report/run`).then(json<ReportRun>),
   /** Signed for direct <a>/<iframe> use, which can't carry an Authorization header. */
   packageUrl: (id: string, token: string | null) =>

@@ -6,6 +6,7 @@ import logging
 from collections.abc import Awaitable, Callable
 from datetime import datetime, timezone
 
+from sqlalchemy import update as sa_update
 from sqlmodel import Session, select
 
 from .beta import check_project_allowance
@@ -21,31 +22,56 @@ def _now() -> datetime:
 
 
 class RunHandle:
-    """Write-through progress reporting for one Run row."""
+    """Write-through progress reporting for one Run row.
+
+    The handle is the only writer of its run's `log` and `counts` while the job runs, so it keeps
+    its own copy of both (read once) and progress updates are plain UPDATEs: reporting progress
+    never re-reads the row (its `log` and `result` JSON) from the database."""
 
     def __init__(self, run_id: str):
         self.run_id = run_id
+        self._log: list | None = None
+        self._counts: dict | None = None
+
+    def _load(self) -> None:
+        if self._log is None:
+            with Session(engine) as s:
+                log, counts = s.exec(select(Run.log, Run.counts).where(Run.id == self.run_id)).one()
+            self._log, self._counts = list(log or []), dict(counts or {})
+
+    def _write(self, **values) -> None:
+        with Session(engine) as s:
+            s.exec(sa_update(Run).where(Run.id == self.run_id).values(**values))
+            s.commit()
 
     def _update(self, fn: Callable[[Run], None]) -> None:
+        """Read-modify-write of the whole row, for the once-per-run transitions (finish, fail)."""
         with Session(engine) as s:
             run = s.get(Run, self.run_id)
             fn(run)
             s.add(run)
             s.commit()
+            self._log, self._counts = list(run.log or []), dict(run.counts or {})
 
     def phase(self, phase: str, text: str | None = None) -> None:
-        def f(run: Run) -> None:
-            run.phase = phase
-            if text:
-                run.log = [*run.log, {"t": _now().isoformat(), "text": text}]
-
-        self._update(f)
+        if text:
+            self._load()
+            self._log = [*self._log, {"t": _now().isoformat(), "text": text}]
+            self._write(phase=phase, log=self._log)
+        else:
+            self._write(phase=phase)
 
     def note(self, text: str) -> None:
-        self._update(lambda run: setattr(run, "log", [*run.log, {"t": _now().isoformat(), "text": text}]))
+        self._load()
+        self._log = [*self._log, {"t": _now().isoformat(), "text": text}]
+        self._write(log=self._log)
 
     def counts(self, **counts: int) -> None:
-        self._update(lambda run: setattr(run, "counts", {**run.counts, **counts}))
+        self._load()
+        merged = {**self._counts, **counts}
+        if merged != self._counts:
+            self._counts = merged
+            self._write(counts=merged)
 
 
 def is_running(project_id: str, kind: str) -> bool:

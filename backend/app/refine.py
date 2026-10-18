@@ -26,6 +26,7 @@ from datetime import datetime, timezone
 import anthropic
 from pydantic import ValidationError
 from sqlalchemy import func
+from sqlalchemy.orm import load_only
 from sqlmodel import Session, select
 
 from . import beta, jobs, pipeline
@@ -84,9 +85,9 @@ def default_settings() -> dict:
 
 
 def state(project_id: str) -> dict:
-    with Session(engine) as s:
-        project = s.get(Project, project_id)
-        return copy.deepcopy(project.review or {}) if project else {}
+    with Session(engine) as s:  # the review column only, not the plan, brief and gap beside it
+        review = s.exec(select(Project.review).where(Project.id == project_id)).first()
+    return copy.deepcopy(review or {})
 
 
 def update(project_id: str, **fields) -> dict:
@@ -121,10 +122,11 @@ def repairing(project_id: str) -> bool:
     return state(project_id).get("status") in ("repairing", "attention")
 
 
-def view(project_id: str) -> dict:
+def view(project_id: str, review: dict | None = None) -> dict:
     """The review state with an effective status: a step whose Run failed, was cancelled or
-    was interrupted by a restart shows as review_failed / attention, ready to resume."""
-    st = state(project_id)
+    was interrupted by a restart shows as review_failed / attention, ready to resume.
+    `review` is the project's review column when the caller has already read it."""
+    st = copy.deepcopy(review or {}) if review is not None else state(project_id)
     status, step = st.get("status"), st.get("step")
     if status in ("reviewing", "repairing") and step:
         kind = {"review": "review", "repair": "repair", "execute": "execute", "report": "report"}[step]
@@ -889,11 +891,18 @@ def _commit(project_id: str, n: int, rp: plan_agent.RepairPlan, mistakes: dict, 
 
 def _current_bp_id(project_id: str) -> str | None:
     with Session(engine) as s:
-        return (s.get(Project, project_id).blueprint or {}).get("run_id")
+        return (s.exec(select(Project.blueprint).where(Project.id == project_id)).first() or {}).get("run_id")
 
 
 def _states(project_id: str) -> dict[str, TaskState]:
-    return _bp(project_id)[2]
+    """The current blueprint's task states, without their logs and results (callers need status,
+    feedback and attempts)."""
+    bp = _current_bp_id(project_id)
+    with Session(engine) as s:
+        return {st.task_id: st for st in s.exec(
+            select(TaskState).options(load_only(TaskState.id, TaskState.task_id, TaskState.status,
+                                                TaskState.attempts, TaskState.feedback))
+            .where(TaskState.blueprint_run_id == bp))}
 
 
 def _pending(project_id: str) -> bool:
@@ -1148,6 +1157,17 @@ def ensure_watcher(project_id: str) -> None:
         _watchers[project_id] = asyncio.get_running_loop().create_task(_watch_execution(project_id))
 
 
+def _watch_state(project_id: str) -> dict:
+    """The review fields the execution watcher checks, extracted in the database: it runs every
+    WATCH_INTERVAL, and the whole review (iterations, issue tracks) is tens of KB."""
+    r = Project.review
+    with Session(engine) as s:
+        row = s.exec(select(r["status"].as_string(), r["step"].as_string(), r["started_at"].as_string(),
+                            r["max_usd"].as_float(), r["attention"].as_string())
+                     .where(Project.id == project_id)).first()
+    return dict(zip(("status", "step", "started_at", "max_usd", "attention"), row)) if row else {}
+
+
 async def _watch_execution(project_id: str) -> None:
     """Budget, beta-limit and human pauses never return from the orchestrator by themselves:
     stop at the refinement budget, and flag pauses that need a person."""
@@ -1156,7 +1176,7 @@ async def _watch_execution(project_id: str) -> None:
             await asyncio.sleep(WATCH_INTERVAL)
             if not jobs.is_running(project_id, "execute"):
                 return
-            st = state(project_id)
+            st = _watch_state(project_id)
             if st.get("status") not in ("repairing", "attention") or st.get("step") != "execute":
                 return
             ctl = orchestrator.control(project_id)
@@ -1167,8 +1187,7 @@ async def _watch_execution(project_id: str) -> None:
                          f"Stopped during repair execution: {reason or 'the refinement budget is used up'}. The paper "
                          "shown is the last reviewed one; the workspace may hold partial repairs.")
                 if ctl:
-                    ctl.cancelled = True
-                    ctl.resume()
+                    ctl.cancel()
                 return
             if reason.startswith(("human", "checkpoint")) and st["status"] != "attention":
                 update(project_id, status="attention", attention=f"Execution paused: {reason}")
@@ -1278,8 +1297,7 @@ def stop(project_id: str) -> dict:
         jobs.cancel(project_id, kind)
     rewriting = st.get("step") == "report" and jobs.cancel(project_id, "report")
     if st.get("step") == "execute" and (ctl := orchestrator.control(project_id)):
-        ctl.cancelled = True
-        ctl.resume()
+        ctl.cancel()
     outcome = finalize(project_id, "stopped", "Stopped by you.")
     if rewriting:  # the paper may be half rewritten: it is no longer the reviewed version
         update(project_id, stale=True)

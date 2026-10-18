@@ -135,7 +135,7 @@ def configured() -> bool:
 
 def gpu_budget(project_id: str) -> float:
     with Session(engine) as s:
-        cfg = s.get(Project, project_id).settings or {}
+        cfg = s.exec(select(Project.settings).where(Project.id == project_id)).first() or {}
     budget = float(cfg.get("gpu_budget_usd", DEFAULT_GPU_BUDGET))
     # Private beta: GPU jobs may not plan to spend past the owner's remaining allowance.
     return min(budget, gpu_spent(project_id) + project_allowance(project_id))

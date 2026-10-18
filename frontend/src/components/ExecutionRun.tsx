@@ -1,8 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
-import type { Execution, MasterPlan, ModelPolicy, Project, TaskState } from "@/lib/api";
+import {
+  executionApi,
+  type AgentEvent,
+  type Execution,
+  type MasterPlan,
+  type ModelPolicy,
+  type Project,
+  type TaskState,
+} from "@/lib/api";
 
 interface Props {
   project: Project;
@@ -83,6 +91,7 @@ export default function ExecutionRun(props: Props) {
                 return st ? (
                   <TaskRow
                     key={t.id}
+                    projectId={project.id}
                     title={t.title}
                     agentName={mp.agents.find((a) => a.id === t.agent)?.name ?? t.agent}
                     st={st}
@@ -368,7 +377,27 @@ function Lanes({ mp, byTask, onOpen }: { mp: MasterPlan; byTask: Map<string, Tas
   );
 }
 
+/** A task's full agent log, fetched while its row is open (execution polls carry only a live
+ * task's last few events) and again whenever the log changes. */
+function useTaskLog(projectId: string, st: TaskState, open: boolean): AgentEvent[] {
+  const [log, setLog] = useState<AgentEvent[] | null>(null);
+  const seq = st.event_seq ?? st.events.length;
+  // Polls from an older API carry the whole log already.
+  const complete = st.event_seq === undefined;
+  useEffect(() => {
+    if (!open || complete) return;
+    let cancelled = false;
+    executionApi
+      .events(projectId, st.task_id)
+      .then((d) => !cancelled && setLog(d.events))
+      .catch(() => {});
+    return () => void (cancelled = true);
+  }, [projectId, st.task_id, open, seq, complete]);
+  return complete ? st.events : (log ?? st.events);
+}
+
 function TaskRow({
+  projectId,
   title,
   agentName,
   st,
@@ -379,6 +408,7 @@ function TaskRow({
   onRequestChanges,
   onOpenFiles,
 }: {
+  projectId: string;
   title: string;
   agentName: string;
   st: TaskState;
@@ -392,6 +422,8 @@ function TaskRow({
   const [change, setChange] = useState("");
   const [note, setNote] = useState("");
   const [secret, setSecret] = useState("");
+  const events = useTaskLog(projectId, st, open);
+  const steps = Math.max(st.event_count ?? 0, events.length);
   const credential = st.status === "human" ? /^Needs credential ([A-Z0-9_]+)/.exec(st.note ?? "")?.[1] : undefined;
   const duration =
     st.started_at && st.finished_at
@@ -442,13 +474,13 @@ function TaskRow({
               ))}
             </div>
           )}
-          {st.events.length > 0 && (
+          {steps > 0 && (
             <details>
               <summary className="cursor-pointer font-mono text-[10px] uppercase tracking-[0.14em] text-faint">
-                Agent log · {st.events.length} steps
+                Agent log · {steps} steps
               </summary>
               <div className="mt-2 max-h-72 overflow-y-auto border border-rule bg-paper p-3 font-mono text-[11px] leading-relaxed">
-                {st.events.map((e, i) => (
+                {events.map((e, i) => (
                   <div key={i} className="border-b border-dashed border-rule py-1 last:border-b-0">
                     <span className="text-faint">
                       {e.sub ? `${e.sub} · ` : ""}step {e.step} · ${e.cost.toFixed(4)}

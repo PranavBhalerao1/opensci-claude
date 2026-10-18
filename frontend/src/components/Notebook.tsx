@@ -10,6 +10,7 @@ import {
   type PlanRun,
   type Project,
 } from "@/lib/api";
+import { pollWhileVisible } from "@/lib/poll";
 import { useAuth } from "@/lib/supabase/AuthProvider";
 
 interface Props {
@@ -19,12 +20,14 @@ interface Props {
   planRun: PlanRun | null;
   bpRun: BlueprintRun | null;
   exec: Execution | null;
+  /** Something that spends is running (a stage, the execution, the review, a chat reply). */
+  live?: boolean;
   onOpenFiles: () => void;
   onOpenLibrary: () => void;
 }
 
 /** Right-hand lab notebook: a compact, always-visible record of each stage. */
-export default function Notebook({ project, lit, gapsRun, planRun, bpRun, exec, onOpenFiles, onOpenLibrary }: Props) {
+export default function Notebook({ project, lit, gapsRun, planRun, bpRun, exec, live, onOpenFiles, onOpenLibrary }: Props) {
   return (
     <aside className="flex w-80 shrink-0 flex-col border-l border-rule bg-paper max-xl:hidden">
       <div className="border-b border-rule px-5 py-4">
@@ -39,6 +42,7 @@ export default function Notebook({ project, lit, gapsRun, planRun, bpRun, exec, 
           planRun={planRun}
           bpRun={bpRun}
           exec={exec}
+          live={live}
           onOpenFiles={onOpenFiles}
           onOpenLibrary={onOpenLibrary}
         />
@@ -49,20 +53,22 @@ export default function Notebook({ project, lit, gapsRun, planRun, bpRun, exec, 
   );
 }
 
-function Spend({ projectId }: { projectId: string }) {
+function Spend({ projectId, live }: { projectId: string; live: boolean }) {
   const [usage, setUsage] = useState<{ total: number; calls: number; gpu: { spent: number; budget: number } } | null>(
     null,
   );
+  // Spend only changes while something runs: poll then, and read it once otherwise (including
+  // once more when the work stops, for the final figure).
   useEffect(() => {
     let cancelled = false;
     const load = () => usageApi.get(projectId).then((u) => !cancelled && setUsage(u)).catch(() => {});
     void load();
-    const t = setInterval(load, 15000);
+    const stop = live ? pollWhileVisible(load, 15000) : () => {};
     return () => {
       cancelled = true;
-      clearInterval(t);
+      stop();
     };
-  }, [projectId]);
+  }, [projectId, live]);
   if (!usage) return null;
   return (
     <>
@@ -84,7 +90,7 @@ function Spend({ projectId }: { projectId: string }) {
   );
 }
 
-function Entries({ project, lit, gapsRun, planRun, bpRun, exec, onOpenFiles, onOpenLibrary }: Props & { project: Project }) {
+function Entries({ project, lit, gapsRun, planRun, bpRun, exec, live, onOpenFiles, onOpenLibrary }: Props & { project: Project }) {
   const { session } = useAuth();
   const token = session?.access_token ?? null;
   const { brief, settings } = project;
@@ -279,7 +285,7 @@ function Entries({ project, lit, gapsRun, planRun, bpRun, exec, onOpenFiles, onO
               <dd className="capitalize text-ink">{v}</dd>
             </div>
           ))}
-          <Spend projectId={project.id} />
+          <Spend projectId={project.id} live={Boolean(live)} />
         </dl>
       </div>
     </div>

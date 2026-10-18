@@ -21,13 +21,15 @@ def _norm(name: str) -> str:
 
 def project_graph(project_id: str) -> dict:
     with Session(engine) as s:
+        # Only what the graph draws: not the abstracts, summaries and author lists.
         rows = s.exec(
-            select(ProjectPaper, Paper)
+            select(ProjectPaper.relevance, Paper.id, Paper.title, Paper.year, Paper.citation_count, Paper.s2_id,
+                   Paper.notes, Paper.references)
             .join(Paper, Paper.id == ProjectPaper.paper_id)
             .where(ProjectPaper.project_id == project_id, ProjectPaper.included)
         ).all()
 
-    papers = {p.id: (pp, p) for pp, p in rows}
+    papers = {r.id: (r, r) for r in rows}  # (link, paper): one row carries the fields of both
     by_s2 = {p.s2_id: p.id for _, p in papers.values() if p.s2_id}
 
     # Entities shared by at least two papers carry the structure; singletons are noise.

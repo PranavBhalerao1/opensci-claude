@@ -1,0 +1,714 @@
+{
+"id": "a2794d1959b5",
+"user_id": "00000000-0000-4000-8000-000000000001",
+"title": "Data Augmentation Effect on CNN Fashion-MNIST Accuracy",
+"stage": "executed",
+"autonomous": true,
+"settings": {
+"depth": "standard",
+"budget": {
+"llm_usd": 15.0,
+"gpu_hours": 5.0
+},
+"max_papers": 100,
+"refinement": {
+"enabled": true
+},
+"citation_hops": 0
+},
+"brief": {
+"title": "Data Augmentation Effect on CNN Fashion-MNIST Accuracy",
+"domain": "Computer Science",
+"summary": "This study trains a small convolutional neural network on Fashion-MNIST under two conditions — standard training and training with basic image augmentations — keeping all hyperparameters, architecture, and random seeds identical between conditions. Each condition is run with seeds 42 and 123 for approximately 5 epochs on a CUDA GPU via Google Colab, and test accuracy, training curves, and validation performance are recorded and compared. The goal is to assess whether simple augmentation meaningfully improves generalisation without overstating statistical conclusions given the limited number of seeds.",
+"scope_in": [
+"Fashion-MNIST dataset (60 000 train, 10 000 test images)",
+"Two experimental conditions: no augmentation vs. augmentation (random horizontal flip, random crop/translation up to 10%, rotation up to 10°)",
+"One small CNN architecture shared across both conditions",
+"PyTorch implementation with identical optimizer (Adam or SGD), learning rate, batch size, and train/validation split",
+"Training for ~5 epochs per condition per seed",
+"Seeds 42 and 123 for both conditions (4 total runs)",
+"GPU execution on CUDA device (T4 or L4) via Google Colab GPU job tool",
+"Recording of CUDA device detection evidence and per-run metrics",
+"Test accuracy, per-epoch training loss, validation accuracy curves",
+"Summary table and figures comparing conditions across seeds"
+],
+"scope_out": [
+"Hyperparameter search or tuning across architectures",
+"Advanced augmentation strategies (CutMix, Mixup, AutoAugment, etc.)",
+"Datasets other than Fashion-MNIST",
+"Frameworks other than PyTorch",
+"CPU-only fallback training (GPU unavailability is treated as a blocker)",
+"Statistical significance testing beyond descriptive comparison of two seeds",
+"Deployment or inference optimisation"
+],
+"subfields": [
+"Deep Learning",
+"Computer Vision",
+"Empirical ML Methodology"
+],
+"assumptions": [
+"Augmentation set chosen as random horizontal flip, random crop (padding 4px), and random rotation (±10°) — common, simple transforms appropriate for clothing images",
+"Adam optimiser assumed unless user specifies otherwise, as it is a standard default for small CNNs",
+"Batch size of 64 assumed as a reasonable default balancing speed and stability",
+"90/10 train/validation split of the 60 000 training images assumed",
+"Small CNN architecture assumed to be 2–3 conv layers with max-pooling followed by 1–2 fully connected layers, keeping training time under 10 minutes per run on a T4",
+"Learning rate of 1e-3 assumed as a standard Adam default"
+],
+"constraints": [
+"Must use PyTorch",
+"Must run training on CUDA GPU via Colab; CPU substitution is not permitted",
+"Exactly 5 epochs per run (approximately)",
+"Seeds fixed to 42 and 123",
+"Architecture, optimizer, learning rate, batch size, and split identical between conditions",
+"Must record verifiable GPU evidence (torch.cuda.get_device_name output, device tensors on CUDA)",
+"Do not overstate statistical significance given only two seeds",
+"Use only real computed metrics — no fabricated numbers"
+],
+"result_type": "empirical",
+"key_concepts": [
+{
+"term": "Data augmentation",
+"definition": "Artificially expanding the training set by applying label-preserving transformations (e.g., flips, small rotations, translations) to input images so the model sees more variation during training."
+},
+{
+"term": "Convolutional Neural Network (CNN)",
+"definition": "A neural network architecture that uses learnable filters to detect spatial patterns in images, making it well-suited for image classification tasks."
+},
+{
+"term": "Fashion-MNIST",
+"definition": "A publicly available benchmark dataset of 70,000 28×28 grayscale images across 10 clothing categories, used as a drop-in replacement for MNIST."
+},
+{
+"term": "Generalisation",
+"definition": "A model's ability to perform well on unseen test data rather than just the data it was trained on."
+},
+{
+"term": "Random seed",
+"definition": "A fixed starting value for the random number generator that makes training runs reproducible; using two seeds allows limited assessment of result stability."
+},
+{
+"term": "Test accuracy",
+"definition": "The fraction of held-out test images the model classifies correctly, used as the primary performance metric."
+}
+],
+"core_question": "Does applying simple image augmentation (random horizontal flips, small translations, and rotations) during training improve the test accuracy of a small CNN on Fashion-MNIST compared with identical training without augmentation?",
+"data_resources": "Fashion-MNIST loaded via torchvision.datasets.FashionMNIST (public, auto-downloaded); no external data required.",
+"user_expertise": "Specified by user; assumed comfortable with Python and ML concepts at a practical level.",
+"search_keywords": [
+"data augmentation convolutional neural network image classification",
+"random flip rotation translation augmentation training generalisation",
+"Fashion-MNIST benchmark CNN accuracy",
+"PyTorch image augmentation torchvision transforms",
+"effect of data augmentation on test accuracy",
+"small CNN Fashion-MNIST training",
+"overfitting regularisation data augmentation",
+"empirical evaluation augmentation strategies",
+"training set augmentation image recognition",
+"CNN generalisation gap train test accuracy",
+"torchvision FashionMNIST classification baseline",
+"random crop horizontal flip CNN performance"
+],
+"compute_resources": "CUDA GPU (T4 or L4) via Google Colab GPU job tool for all neural network training runs; standard CPU sandbox for data preprocessing and plotting. Estimated total GPU time: ~20–40 minutes for 4 runs of 5 epochs each."
+},
+"chosen_gap": {
+"id": "g1",
+"risks": [
+"Two seeds may be insufficient to observe a reliable crossover point in the accuracy-gap curves",
+"The non-augmented model may not overfit within 30 epochs on Fashion-MNISTs 60K training set requiring even longer runs",
+"Effect sizes may be below 0.5% throughout making any conclusions highly uncertain"
+],
+"title": "Augmentation benefit direction in 5-epoch underfitting regime",
+"run_id": "c08f6b2578e0",
+"scores": {
+"impact": {
+"why": "Answers a practically important question about when augmentation is worth applying under compute-constrained training.",
+"score": 4
+},
+"novelty": {
+"why": "None of the prior work specifically investigates whether geometric augmentation is neutral or harmful at very short training runs (~5 epochs) versus beneficial at longer runs on Fashion-MNIST with a small CNN; the closest works (e.g., 'State-of-the-Art Results with the Fashion-MNIST Dataset' and 'Multi-Class Image Classification on Fashion-MNIST') use augmentation with longer training schedules (20–100 epochs) without studying the epoch-regime dependency of augmentation benefit.",
+"score": 4
+},
+"feasibility": {
+"why": "Directly extends the core study protocol with only additional epoch-count variants on the same infrastructure.",
+"score": 5
+},
+"testability": {
+"why": "Accuracy at each epoch count is a fully determinate numerical outcome with a clear comparison criterion.",
+"score": 5
+}
+},
+"overall": 4.45,
+"approach": "Run the core 5-epoch protocol for both conditions with seeds 42 and 123, then extend training to 10, 20, and 30 epochs using the same seeds and architecture. Record test accuracy and training/validation loss at each endpoint. Plot the accuracy gap (augmented minus non-augmented) as a function of epoch count to determine whether 5 epochs falls in a regime where augmentation is neutral or harmful and identify the epoch at which consistent benefits first appear.",
+"gap_type": "missing_evaluation",
+"question": "Does basic geometric augmentation improve or degrade test accuracy of a small CNN trained for only approximately 5 epochs on Fashion-MNIST, where underfitting rather than overfitting is likely to dominate?",
+"why_open": "Studies demonstrating augmentation benefits such as (Çetiner et al. 2023) and (Imam et al. 2026) train models for 50–200 epochs on CIFAR-10 where overfitting dominates, making their results inapplicable to the 5-epoch underfitting regime. (Lin et al. 2023) explicitly shows augmentation can degrade performance when underfitting occurs but does not quantify this effect for Fashion-MNIST or short training budgets. (Guo 2024) shows that even LeNet-5 achieves only 90% validation accuracy on Fashion-MNIST at similar training lengths, suggesting small CNNs operate in a capacity-limited regime where augmentation may introduce harmful noise rather than beneficial regularisation.",
+"hypothesis": "At 5 epochs of training a small CNN on Fashion-MNIST has insufficient capacity utilisation for augmentation to provide a regularisation benefit, resulting in equal or lower test accuracy for the augmented condition, with the benefit emerging only after 15–25 epochs when the non-augmented model begins overfitting.",
+"data_needed": "Fashion-MNIST via torchvision (60K train, 10K test); no additional data required",
+"novelty_check": {
+"status": "novel",
+"closest": [
+{
+"url": "https://www.semanticscholar.org/paper/ef0545e59c2c6aa37039f7cc5fab385dfe0cb97d",
+"year": 2024,
+"title": "State-of-the-Art Results with the Fashion-MNIST Dataset",
+"overlap": "Studies CNN with augmentation on Fashion-MNIST but trains to full convergence without examining underfitting regimes at short epoch counts.",
+"in_review": true
+},
+{
+"url": "https://www.semanticscholar.org/paper/22b86b724eb3ab4cfc19a741fe0905ae398b6fb2",
+"year": 2026,
+"title": "Convolutional Neural Networks for Image Classification",
+"overlap": "Uses data augmentation on Fashion-MNIST CNN up to 20 epochs but does not isolate the epoch range where augmentation transitions from neutral/harmful to beneficial.",
+"in_review": false
+},
+{
+"url": "https://www.semanticscholar.org/paper/6ab1a8dac9024def667ae0a957deda89567aa6a7",
+"year": 2026,
+"title": "Multi-Class Image Classification on Fashion-MNIST Using a Custom CNN",
+"overlap": "Trains a small custom CNN on Fashion-MNIST with augmentation for 100 epochs but does not analyze augmentation impact at early underfitting epochs.",
+"in_review": true
+}
+],
+"explanation": "None of the prior work specifically investigates whether geometric augmentation is neutral or harmful at very short training runs (~5 epochs) versus beneficial at longer runs on Fashion-MNIST with a small CNN; the closest works (e.g., 'State-of-the-Art Results with the Fashion-MNIST Dataset' and 'Multi-Class Image Classification on Fashion-MNIST') use augmentation with longer training schedules (20–100 epochs) without studying the epoch-regime dependency of augmentation benefit."
+},
+"compute_needed": "Approximately 2–4 additional GPU hours on Colab T4/L4 for extended-epoch runs beyond the core 5-epoch protocol",
+"novelty_queries": [
+"augmentation underfitting short training epochs CNN",
+"data augmentation few epochs accuracy Fashion-MNIST",
+"augmentation benefit epoch budget small model"
+],
+"supporting_paper_ids": [
+"22e5fa326667",
+"0dbeb31f9075",
+"30dbb26f0428",
+"7bf8d9723b33",
+"2a92dd9e1956"
+]
+},
+"plan": {
+"risks": [
+{
+"risk": "The 60K Fashion-MNIST training set is large enough that the non-augmented small CNN does not overfit within 30 epochs, so no crossover occurs and the hypothesis cannot be verified",
+"likelihood": "medium",
+"mitigation": "Choose an architecture with no batch normalization and minimal dropout to maximise overfitting tendency; if no crossover at 30 epochs, extend the no-augmentation run to 50 epochs as a supplementary run and report the 30-epoch trajectory honestly with appropriate caveats"
+},
+{
+"risk": "Two seeds are insufficient to draw reliable conclusions about the direction or location of the crossover epoch",
+"likelihood": "high",
+"mitigation": "Explicitly frame all conclusions as descriptive pilot findings from two seeds; focus on direction-consistency across seeds as the reliability criterion; frame the study as providing the first quantification of this phenomenon and motivating future confirmatory work with 5+ seeds"
+},
+{
+"risk": "The accuracy gap magnitude remains below 0.3% throughout all 30 epochs, making the crossover ambiguous and of negligible practical significance",
+"likelihood": "medium",
+"mitigation": "Report the full trajectory regardless of magnitude; discuss that near-zero gap at epoch 5 implies augmentation is at least not harmful in the underfitting regime, which itself contradicts strong versions of the underfitting-penalty hypothesis; treat this as a scientifically informative null result"
+},
+{
+"risk": "CUDA GPU unavailability on Colab blocking all training",
+"likelihood": "low",
+"mitigation": "Per study constraints, GPU unavailability is treated as a blocker; retry on a new Colab session or provision a cloud VM with T4 GPU as fallback; CPU substitution is not permitted per the study scope"
+}
+],
+"title": "Augmentation Benefit Direction in the 5-Epoch Underfitting Regime: A Crossover Analysis for Small CNNs on Fashion-MNIST",
+"phases": [
+{
+"id": "P1",
+"goal": "Select a CNN architecture appropriate for observing underfitting at epoch 5 and emerging overfitting by epoch 30, implement a reproducible PyTorch training script with configurable augmentation, and verify CUDA availability with logged evidence.",
+"name": "Infrastructure Setup and Code Implementation",
+"tasks": [
+{
+"id": "T1.1",
+"kind": "literature",
+"title": "Literature-informed CNN architecture selection",
+"effort": "S",
+"inputs": [],
+"outputs": [
+"architecture_spec.md"
+],
+"depends_on": [],
+"tools_hint": [
+"markdown"
+],
+"description": "Review CNN designs from papers (Guo 2024) (Mukhamediev 2024) (Manghwani et al. 2025) (Salam 2026) for Fashion-MNIST to select a small architecture expected to underfit at epoch 5 (training accuracy below ~85%) yet improve meaningfully through epoch 30. Concretely specify all layer dimensions (two Conv-ReLU-MaxPool blocks plus two FC layers, dropout=0.25 only in FC, no batch normalization) and record the parameter count in architecture_spec.md. Avoid batch normalization to prevent it masking the underfitting signal. Document the rationale for the chosen capacity."
+},
+{
+"id": "T1.2",
+"kind": "modeling",
+"title": "Implement CNN training script with configurable augmentation",
+"effort": "M",
+"inputs": [
+"architecture_spec.md"
+],
+"outputs": [
+"train.py"
+],
+"depends_on": [
+"T1.1"
+],
+"tools_hint": [
+"PyTorch",
+"torchvision",
+"numpy",
+"pandas",
+"argparse"
+],
+"description": "Write train.py implementing the CNN from architecture_spec.md in PyTorch with an Adam optimizer (lr=0.001, weight_decay=1e-4), batch size 64, and a 55K/5K train/validation split from the 60K training set (indices fixed by seed before any transform). Accept command-line arguments --seed, --augment (bool), and --epochs. When --augment is true apply RandomHorizontalFlip(p=0.5), RandomCrop(28, padding=3), and RandomRotation(degrees=10) to training data only; validation and test use only ToTensor and Normalize. Log per-epoch train_loss, val_acc, and test_acc to a CSV with columns epoch, train_loss, val_acc, test_acc. Fix torch, numpy, random, and CUDA seeds from the argument."
+},
+{
+"id": "T1.3",
+"kind": "data_acquisition",
+"title": "Verify CUDA device and data pipeline",
+"effort": "S",
+"inputs": [
+"train.py"
+],
+"outputs": [
+"gpu_and_data_validation.txt",
+"fashion_mnist_data/"
+],
+"depends_on": [
+"T1.2"
+],
+"tools_hint": [
+"PyTorch",
+"torchvision",
+"CUDA"
+],
+"description": "Run a validation script that calls torch.cuda.get_device_name(0) and logs the result, downloads Fashion-MNIST via torchvision.datasets.FashionMNIST, runs one forward pass of the CNN on a random batch placed on CUDA, and confirms both augmented and non-augmented DataLoaders yield tensors of correct shape. Record GPU name, CUDA version, PyTorch version, and dataset sizes (train 60000, test 10000) to gpu_and_data_validation.txt as verifiable GPU evidence."
+}
+]
+},
+{
+"id": "P2",
+"goal": "Execute all four training runs (2 conditions × 2 seeds) for 30 epochs each on CUDA GPU, recording per-epoch metrics and saving checkpoints at epochs 5, 10, 20, and 30.",
+"name": "Training Experiments",
+"tasks": [
+{
+"id": "T2.1",
+"kind": "experiment",
+"title": "Training run: seed 42, no augmentation, 30 epochs",
+"effort": "M",
+"inputs": [
+"train.py",
+"fashion_mnist_data/",
+"gpu_and_data_validation.txt"
+],
+"outputs": [
+"metrics_seed42_noaug.csv",
+"checkpoint_seed42_noaug_ep5.pt",
+"checkpoint_seed42_noaug_ep10.pt",
+"checkpoint_seed42_noaug_ep20.pt",
+"checkpoint_seed42_noaug_ep30.pt"
+],
+"depends_on": [
+"T1.3"
+],
+"tools_hint": [
+"PyTorch",
+"CUDA",
+"torchvision"
+],
+"description": "Execute train.py with --seed 42 --augment false --epochs 30. Record per-epoch train_loss, val_acc, and test_acc to metrics_seed42_noaug.csv. Log the CUDA device name at the start of the run as part of the CSV header comment. Save model state_dict checkpoints at epochs 5, 10, 20, and 30 as checkpoint_seed42_noaug_ep5.pt through ep30.pt."
+},
+{
+"id": "T2.2",
+"kind": "experiment",
+"title": "Training run: seed 42, augmentation, 30 epochs",
+"effort": "M",
+"inputs": [
+"train.py",
+"fashion_mnist_data/",
+"gpu_and_data_validation.txt"
+],
+"outputs": [
+"metrics_seed42_aug.csv",
+"checkpoint_seed42_aug_ep5.pt",
+"checkpoint_seed42_aug_ep10.pt",
+"checkpoint_seed42_aug_ep20.pt",
+"checkpoint_seed42_aug_ep30.pt"
+],
+"depends_on": [
+"T2.1"
+],
+"tools_hint": [
+"PyTorch",
+"CUDA",
+"torchvision"
+],
+"description": "Execute train.py with --seed 42 --augment true --epochs 30. Record per-epoch train_loss, val_acc, and test_acc to metrics_seed42_aug.csv. Save model checkpoints at epochs 5, 10, 20, and 30 as checkpoint_seed42_aug_ep5.pt through ep30.pt. Run sequentially after T2.1 to avoid GPU memory conflicts on a single Colab instance."
+},
+{
+"id": "T2.3",
+"kind": "experiment",
+"title": "Training run: seed 123, no augmentation, 30 epochs",
+"effort": "M",
+"inputs": [
+"train.py",
+"fashion_mnist_data/",
+"gpu_and_data_validation.txt"
+],
+"outputs": [
+"metrics_seed123_noaug.csv",
+"checkpoint_seed123_noaug_ep5.pt",
+"checkpoint_seed123_noaug_ep10.pt",
+"checkpoint_seed123_noaug_ep20.pt",
+"checkpoint_seed123_noaug_ep30.pt"
+],
+"depends_on": [
+"T1.3"
+],
+"tools_hint": [
+"PyTorch",
+"CUDA",
+"torchvision"
+],
+"description": "Execute train.py with --seed 123 --augment false --epochs 30. Record per-epoch train_loss, val_acc, and test_acc to metrics_seed123_noaug.csv. Save model checkpoints at epochs 5, 10, 20, and 30 as checkpoint_seed123_noaug_ep5.pt through ep30.pt. This run is independent of T2.1 and T2.2 and may execute in parallel on a second GPU instance if available."
+},
+{
+"id": "T2.4",
+"kind": "experiment",
+"title": "Training run: seed 123, augmentation, 30 epochs",
+"effort": "M",
+"inputs": [
+"train.py",
+"fashion_mnist_data/",
+"gpu_and_data_validation.txt"
+],
+"outputs": [
+"metrics_seed123_aug.csv",
+"checkpoint_seed123_aug_ep5.pt",
+"checkpoint_seed123_aug_ep10.pt",
+"checkpoint_seed123_aug_ep20.pt",
+"checkpoint_seed123_aug_ep30.pt"
+],
+"depends_on": [
+"T2.3"
+],
+"tools_hint": [
+"PyTorch",
+"CUDA",
+"torchvision"
+],
+"description": "Execute train.py with --seed 123 --augment true --epochs 30. Record per-epoch train_loss, val_acc, and test_acc to metrics_seed123_aug.csv. Save model checkpoints at epochs 5, 10, 20, and 30 as checkpoint_seed123_aug_ep5.pt through ep30.pt. Run sequentially after T2.3 on the same GPU instance."
+}
+]
+},
+{
+"id": "P3",
+"goal": "Combine all per-epoch metrics into a unified dataframe, compute the accuracy gap trajectory, and identify the crossover epoch with regime classification at epoch 5.",
+"name": "Metric Aggregation and Crossover Analysis",
+"tasks": [
+{
+"id": "T3.1",
+"kind": "data_processing",
+"title": "Aggregate per-epoch metrics from all four runs",
+"effort": "S",
+"inputs": [
+"metrics_seed42_noaug.csv",
+"metrics_seed42_aug.csv",
+"metrics_seed123_noaug.csv",
+"metrics_seed123_aug.csv"
+],
+"outputs": [
+"combined_metrics.csv"
+],
+"depends_on": [
+"T2.2",
+"T2.4"
+],
+"tools_hint": [
+"pandas",
+"Python"
+],
+"description": "Load the four CSV files, add columns for seed and augmented flag, concatenate into a single dataframe, and validate that all four runs have exactly 30 rows with no missing values and that the recorded test accuracies are in the plausible range 50–99%. Save to combined_metrics.csv with columns: seed, augmented, epoch, train_loss, val_acc, test_acc."
+},
+{
+"id": "T3.2",
+"kind": "analysis",
+"title": "Compute accuracy gap trajectory and checkpoint statistics",
+"effort": "S",
+"inputs": [
+"combined_metrics.csv"
+],
+"outputs": [
+"gap_trajectory.csv",
+"checkpoint_stats.csv"
+],
+"depends_on": [
+"T3.1"
+],
+"tools_hint": [
+"pandas",
+"numpy",
+"Python"
+],
+"description": "For each seed and each epoch 1–30 compute accuracy_gap = test_acc_aug − test_acc_noaug by merging augmented and non-augmented rows on (seed, epoch). Compute mean_gap across seeds at each epoch. At the pre-specified checkpoints (epochs 5, 10, 20, 30) tabulate: per-seed test accuracy for each condition, per-seed accuracy gap, mean test accuracy per condition, and train_loss minus val_acc proxy for underfitting versus overfitting diagnosis. Save the full trajectory to gap_trajectory.csv and checkpoint summaries to checkpoint_stats.csv."
+},
+{
+"id": "T3.3",
+"kind": "analysis",
+"title": "Identify crossover epoch and classify epoch-5 regime",
+"effort": "S",
+"inputs": [
+"gap_trajectory.csv",
+"checkpoint_stats.csv"
+],
+"outputs": [
+"crossover_report.txt"
+],
+"depends_on": [
+"T3.2"
+],
+"tools_hint": [
+"pandas",
+"Python",
+"markdown"
+],
+"description": "From gap_trajectory.csv, identify the first epoch at which mean_gap becomes and remains positive for at least 3 consecutive epochs (or report no crossover within 30 epochs). Classify the epoch-5 regime as: 'underfitting-penalty confirmed' if both seeds show gap ≤ 0, 'mixed' if one seed is positive and one negative, or 'early-benefit' if both positive. Report the train-val loss gap at epochs 5 and 30 per condition as supporting evidence. Record all findings and numeric values to crossover_report.txt."
+}
+]
+},
+{
+"id": "P4",
+"goal": "Produce all publication-quality figures and a LaTeX-formatted summary table for the paper.",
+"name": "Figures and Tables",
+"tasks": [
+{
+"id": "T4.1",
+"kind": "analysis",
+"title": "Plot per-epoch test accuracy curves for all four runs",
+"effort": "S",
+"inputs": [
+"combined_metrics.csv"
+],
+"outputs": [
+"fig1_test_accuracy_curves.png",
+"fig1_test_accuracy_curves.pdf"
+],
+"depends_on": [
+"T3.1"
+],
+"tools_hint": [
+"matplotlib",
+"pandas"
+],
+"description": "Using combined_metrics.csv, plot test accuracy versus epoch (1–30) as four lines: two conditions (blue for no-aug, orange for aug) with two line styles (solid for seed 42, dashed for seed 123). Add a vertical dashed line at epoch 5 labelled 'target budget'. Include axis labels, legend, and title. Save as fig1_test_accuracy_curves.png and fig1_test_accuracy_curves.pdf at 300 dpi."
+},
+{
+"id": "T4.2",
+"kind": "analysis",
+"title": "Plot accuracy gap trajectory as primary result figure",
+"effort": "S",
+"inputs": [
+"gap_trajectory.csv",
+"crossover_report.txt"
+],
+"outputs": [
+"fig2_accuracy_gap.png",
+"fig2_accuracy_gap.pdf"
+],
+"depends_on": [
+"T3.3"
+],
+"tools_hint": [
+"matplotlib",
+"pandas"
+],
+"description": "From gap_trajectory.csv, plot accuracy_gap versus epoch (1–30) as two lines (one per seed) plus a bold mean_gap line. Add a horizontal grey reference line at gap=0. Annotate the crossover epoch from crossover_report.txt with a vertical marker and text label. Mark the epoch-5 gap values with filled circles. This is the primary result figure. Save as fig2_accuracy_gap.png and fig2_accuracy_gap.pdf at 300 dpi."
+},
+{
+"id": "T4.3",
+"kind": "analysis",
+"title": "Plot training loss and validation accuracy curves for underfitting diagnosis",
+"effort": "S",
+"inputs": [
+"combined_metrics.csv"
+],
+"outputs": [
+"fig3_loss_curves.png",
+"fig3_loss_curves.pdf"
+],
+"depends_on": [
+"T3.1"
+],
+"tools_hint": [
+"matplotlib",
+"pandas"
+],
+"description": "From combined_metrics.csv, produce a 2×2 subplot grid with rows indexing seeds (42, 123) and columns indexing conditions (no-aug, aug). Each subplot shows train_loss on the left y-axis and val_acc on the right y-axis versus epoch 1–30 with epoch-5 vertical marker. This supports the underfitting-at-epoch-5 and overfitting-by-epoch-30 narrative. Save as fig3_loss_curves.png and fig3_loss_curves.pdf at 300 dpi."
+},
+{
+"id": "T4.4",
+"kind": "analysis",
+"title": "Compile checkpoint summary statistics table",
+"effort": "S",
+"inputs": [
+"checkpoint_stats.csv"
+],
+"outputs": [
+"table1_checkpoint_summary.csv",
+"table1_checkpoint_summary.tex"
+],
+"depends_on": [
+"T3.2"
+],
+"tools_hint": [
+"pandas",
+"Python"
+],
+"description": "From checkpoint_stats.csv, create a table with rows corresponding to epoch checkpoints {5, 10, 20, 30} and columns {noaug_s42_test, aug_s42_test, gap_s42, noaug_s123_test, aug_s123_test, gap_s123, mean_gap}, all formatted to two decimal places as percentages. Export as table1_checkpoint_summary.csv and as a LaTeX tabular environment in table1_checkpoint_summary.tex."
+}
+]
+},
+{
+"id": "P5",
+"goal": "Write a complete conference-style paper incorporating all figures, tables, and an honest treatment of uncertainty given the two-seed design.",
+"name": "Paper Draft",
+"tasks": [
+{
+"id": "T5.1",
+"kind": "writing",
+"title": "Write conference-style paper draft",
+"effort": "L",
+"inputs": [
+"crossover_report.txt",
+"checkpoint_stats.csv",
+"fig1_test_accuracy_curves.pdf",
+"fig2_accuracy_gap.pdf",
+"fig3_loss_curves.pdf",
+"table1_checkpoint_summary.tex",
+"architecture_spec.md",
+"gpu_and_data_validation.txt"
+],
+"outputs": [
+"paper_draft.md",
+"paper_draft.pdf"
+],
+"depends_on": [
+"T3.3",
+"T4.1",
+"T4.2",
+"T4.3",
+"T4.4"
+],
+"tools_hint": [
+"markdown",
+"pandoc",
+"LaTeX"
+],
+"description": "Write a complete 4–6 page NeurIPS-style paper with sections: Abstract, Introduction (framing the underfitting-regime augmentation crossover as an open and practically relevant question), Methods (CNN architecture with parameter count, optimizer settings, augmentation transforms, train/val/test split, epoch range, seed protocol), Results (primary: epoch-5 accuracy gap and regime classification; secondary: crossover epoch; supporting: loss curves and checkpoint table), Discussion (honest caveat that two seeds limits generalizability, practical implications for short-budget training, comparison to prior work (Çetiner et al. 2023) (Mukhamediev 2024) (Sapitri et al. 2023)), and Conclusion. Embed fig1–fig3 and table1. Explicitly state that 2 seeds permits descriptive conclusions only. Produce paper_draft.md and compile to paper_draft.pdf via pandoc or LaTeX."
+}
+]
+}
+],
+"run_id": "67eeee3bea24",
+"schema": "openscientist.vague_research_plan/v1",
+"methods": [
+{
+"name": "Small CNN",
+"purpose": "Primary model: two Conv-ReLU-MaxPool blocks (32 and 64 filters, 3×3 kernels) followed by two FC layers with 256 hidden units and dropout=0.25, totaling approximately 200K–400K parameters — selected to underfit at epoch 5 and approach overfitting by epoch 30"
+},
+{
+"name": "Basic geometric augmentation pipeline",
+"purpose": "Treatment condition applied only at train time: RandomHorizontalFlip(p=0.5), RandomCrop(28, padding=3) providing ~10% translation, and RandomRotation(degrees=10)"
+},
+{
+"name": "Adam optimizer",
+"purpose": "Identical optimizer for both conditions across all runs: lr=0.001, weight_decay=1e-4, all other defaults"
+},
+{
+"name": "Per-epoch metric logging",
+"purpose": "Record train_loss, val_acc, and test_acc every epoch to enable full trajectory analysis and precise identification of the crossover epoch"
+},
+{
+"name": "Accuracy gap trajectory analysis",
+"purpose": "Compute and plot augmented minus non-augmented test accuracy at every epoch from 1 to 30 to identify the sign of the gap at epoch 5 and the first epoch at which the gap transitions to consistently positive"
+}
+],
+"metrics": [
+{
+"name": "Test accuracy at epoch 5 (per condition, per seed)",
+"definition": "Percentage of the 10,000 official test images correctly classified after exactly 5 training epochs, reported for each of the four runs and as the per-condition mean across seeds",
+"success_threshold": "Both seeds showing accuracy_gap ≤ 0 at epoch 5 confirms the underfitting-penalty hypothesis; either seed showing gap > +0.5% refutes it; gap in (−0.5%, +0.5%) is treated as inconclusive near-zero"
+},
+{
+"name": "Accuracy gap trajectory (augmented minus non-augmented test accuracy vs epoch)",
+"definition": "For each seed s and epoch e: gap(s,e) = test_acc_aug(s,e) − test_acc_noaug(s,e); mean_gap(e) is the average across seeds 42 and 123",
+"success_threshold": "Mean gap ≤ 0 at epoch 5 and mean gap > 0 by epoch 30 with both seeds agreeing on sign supports the crossover hypothesis; absence of crossover within 30 epochs falsifies it"
+},
+{
+"name": "Crossover epoch",
+"definition": "The smallest epoch e* such that mean_gap(e) > 0 for all epochs e ≥ e* (requiring at least 3 consecutive positive epochs to avoid noise)",
+"success_threshold": "Crossover in range (Zhang 2019; Fonseka et al. 2020) is consistent with the hypothesis; crossover ≤ 5 would mean augmentation helps even in the underfitting regime; no crossover within 30 epochs would suggest neither model overfits in this regime"
+},
+{
+"name": "Train-validation loss gap at epoch checkpoints",
+"definition": "Difference between training loss and (1 − val_acc) used as a proxy to diagnose underfitting (both high at early epochs) versus overfitting (training loss low while val_acc stops improving) for each condition",
+"success_threshold": "Visible divergence between training loss and validation accuracy in the no-augmentation condition by epoch 25–30, absent at epoch 5, supports the overfitting-emergence narrative that motivates the crossover"
+}
+],
+"datasets": [
+{
+"name": "Fashion-MNIST",
+"role": "Sole training and evaluation dataset for all four experimental runs",
+"access": "public",
+"source": "https://github.com/zalandoresearch/fashion-mnist",
+"description": "60,000 training and 10,000 test grayscale images of 10 clothing categories at 28×28 pixels; auto-downloaded via torchvision; split into 55K train, 5K validation (fixed by seed), and 10K official test"
+}
+],
+"baselines": [
+"No-augmentation training: identical CNN architecture, Adam optimizer, lr=0.001, weight_decay=1e-4, batch size 64, 55K/5K train/val split, and CUDA GPU execution — differing from the treatment only by the absence of the augmentation pipeline"
+],
+"background": "Data augmentation is widely demonstrated to improve CNN generalization in long-training regimes on CIFAR-10 (Çetiner et al. 2023) (Imam et al. 2026), where overfitting is the dominant failure mode after 50–200 epochs, but almost no work examines its effect in very short underfitting regimes. LeNet-5 achieves roughly 90% validation accuracy on Fashion-MNIST (Guo 2024), suggesting small CNNs operate near capacity limits on this benchmark and may not yet overfit after only 5 epochs. Lin et al. (Lin et al. 2023) show empirically that augmentation hyperparameter effects interact with training length and dataset size, while studies on Komering script (Sapitri et al. 2023) and drone detection (Alin et al. 2023) confirm that augmentation benefits are regime-sensitive. State-of-the-art Fashion-MNIST results (Mukhamediev 2024) (Hassan et al. 2025) are all obtained after extensive training to convergence, leaving the short-budget underfitting regime uncharted. Custom lightweight CNN designs for Fashion-MNIST (Manghwani et al. 2025) (Salam 2026) demonstrate that even compact architectures require many epochs to approach saturation, further motivating systematic study of whether augmentation is neutral or harmful in the first few epochs and at what training length it becomes beneficial.",
+"hypothesis": "Training a small CNN for 5 epochs on Fashion-MNIST places the model in an underfitting regime where basic geometric augmentation degrades or leaves test accuracy unchanged relative to the no-augmentation condition; the accuracy gap (augmented minus non-augmented) becomes consistently positive only after approximately 15–25 epochs once the non-augmented model begins overfitting, producing a measurable crossover point in the gap trajectory.",
+"objectives": [
+"Implement a reproducible PyTorch training pipeline for a small CNN on Fashion-MNIST with a configurable augmentation flag, fixed seeds, and per-epoch metric logging on a CUDA GPU",
+"Train both augmented and non-augmented conditions for 30 epochs under seeds 42 and 123, recording per-epoch test accuracy, validation accuracy, and training loss for all four runs",
+"Compute the accuracy gap trajectory (augmented minus non-augmented test accuracy) across all 30 epochs for each seed and their mean, with highlighted values at epochs 5, 10, 20, and 30",
+"Determine whether the epoch-5 accuracy gap is negative or near-zero for both seeds, directly testing the underfitting-penalty hypothesis",
+"Identify the epoch at which the mean accuracy gap first becomes and remains positive, quantifying effect sizes as absolute accuracy differences with direction consistency across seeds as the reliability criterion"
+],
+"study_type": "empirical",
+"approved_at": "2026-10-10T04:12:53.939983+00:00",
+"deliverables": [
+"architecture_spec.md — documented CNN architecture with layer dimensions and total parameter count",
+"train.py — complete PyTorch training script with augmentation toggle, seed fixing, checkpoint saving, and CSV metric logging",
+"gpu_and_data_validation.txt — logged CUDA device name, PyTorch/CUDA versions, and Fashion-MNIST dataset size confirmation",
+"metrics_seed42_noaug.csv, metrics_seed42_aug.csv, metrics_seed123_noaug.csv, metrics_seed123_aug.csv — raw per-epoch metrics for all four runs",
+"combined_metrics.csv — unified four-run metrics dataframe",
+"gap_trajectory.csv — per-epoch accuracy gap for each seed and their mean across epochs 1–30",
+"checkpoint_stats.csv — per-condition per-seed accuracy and loss at epochs 5, 10, 20, 30",
+"crossover_report.txt — identified crossover epoch, epoch-5 regime classification, and supporting evidence",
+"fig1_test_accuracy_curves.pdf — per-epoch test accuracy curves for all four runs with epoch-5 marker",
+"fig2_accuracy_gap.pdf — primary result figure: accuracy gap trajectory with crossover annotation and zero reference line",
+"fig3_loss_curves.pdf — 2×2 subplot training loss and validation accuracy curves for underfitting/overfitting diagnosis",
+"table1_checkpoint_summary.csv and table1_checkpoint_summary.tex — formatted summary statistics table",
+"paper_draft.pdf — conference-style paper draft with all results, honest two-seed uncertainty caveats, and embedded figures and table"
+],
+"open_questions": [
+"Will the chosen small CNN (~200K–400K parameters, no batch normalization) actually be in the underfitting regime at epoch 5, i.e. training accuracy below approximately 85%? This must be confirmed by T2.1 results before strong claims are made.",
+"Does the non-augmented model exhibit measurable train-validation divergence within 30 epochs on Fashion-MNIST's 60K training set? If not, the crossover hypothesis cannot be tested and extending to 50 epochs is needed.",
+"Is Adam with lr=0.001 too fast-converging, collapsing the underfitting window to fewer than 5 epochs? A lower learning rate (0.0003) might preserve underfitting at epoch 5 but would require revisiting the architecture spec.",
+"Does RandomHorizontalFlip preserve semantic class identity for all 10 Fashion-MNIST categories? Asymmetric items like shoes are assumed to be valid to flip horizontally for this study, but this assumption should be verified against the class labels.",
+"Will the accuracy gap magnitude at any epoch exceed 0.5% for a dataset as large as Fashion-MNIST? Very small effect sizes throughout would make the crossover analysis inconclusive even if directionally consistent."
+],
+"null_hypothesis": "The test accuracy of the augmented and non-augmented conditions is equal at all epoch counts from 5 to 30; the accuracy gap remains near zero throughout and no systematic crossover occurs.",
+"compute_estimate": "CUDA GPU T4 or L4 via Google Colab for 4 training runs × 30 epochs each; estimated 10–15 minutes per run on a T4 (55K samples, batch 64, small CNN) giving approximately 40–60 minutes total GPU time; analysis and plotting tasks run on CPU in under 5 minutes",
+"success_criteria": [
+"All four training runs complete on CUDA GPU with logged device name evidence and 30 rows of per-epoch metrics in each CSV file",
+"The epoch-5 accuracy gap is ≤ 0 for at least one seed, providing support for the underfitting-penalty hypothesis",
+"A crossover from non-positive to positive mean accuracy gap occurs within the 30-epoch window, with the crossover epoch identified",
+"Loss curves show visual evidence of underfitting at epoch 5 (high training loss, modest val accuracy) and emerging overfitting in the no-augmentation condition by epoch 25–30",
+"All reported numbers are computed directly from the CSV files with no manual editing; the paper draft explicitly states the two-seed limitation on statistical conclusions"
+],
+"duration_estimate": "Approximately 3–5 hours wall-clock for full autonomous execution: ~30 minutes for P1 setup and code, ~1–2 hours for sequential training in P2, ~20 minutes for P3 analysis, ~20 minutes for P4 figures and tables, ~1 hour for P5 paper draft",
+"research_question": "Does basic geometric augmentation (horizontal flip, random crop, random rotation) improve or degrade test accuracy of a small CNN trained for only 5 epochs on Fashion-MNIST, and at what epoch count between 5 and 30 does the augmentation benefit first become consistently positive as the non-augmented model transitions toward overfitting?",
+"validation_strategy": "All seeds (42, 123) are fixed identically for both conditions within each seed using torch.manual_seed, torch.cuda.manual_seed_all, numpy.random.seed, and random.seed before any data splitting or model initialization. The train/validation index split is computed before applying any transform so augmentation does not affect which samples are held out. No hyperparameters are tuned; all are fixed prior to any run. The primary pre-stated comparison is the sign and magnitude of the accuracy gap at epoch 5 across both seeds; this comparison is registered before results are examined. Supporting comparisons are the gap at epochs 10, 20, 30 and the crossover epoch. Effect sizes are reported as absolute accuracy differences in percentage points. Given exactly two seeds, formal hypothesis testing is not performed; instead, direction consistency across both seeds is used as the reliability criterion, and all conclusions are explicitly qualified by this limitation. The train-validation loss gap is used as a secondary diagnostic to verify regime classification."
+},
+"blueprint": {
+"run_id": "42581927e395",
+"approved_at": "2026-10-10T04:20:28.160139+00:00"
+},
+"created_at": "2026-10-10 03:47:30.157609+00:00",
+"updated_at": "2026-10-10 03:59:19.635980+00:00",
+"review": null
+}

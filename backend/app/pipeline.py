@@ -167,8 +167,9 @@ async def _after_execution(project_id: str) -> None:
     with Session(engine) as s:
         project = s.get(Project, project_id)
         autonomous, stage = project.autonomous, project.stage
-        states = s.exec(select(TaskState).where(TaskState.blueprint_run_id == (project.blueprint or {}).get("run_id"))).all()
-    finished = bool(states) and all(st.status in ("done", "skipped") for st in states)
+        states = s.exec(select(TaskState.status).where(
+            TaskState.blueprint_run_id == (project.blueprint or {}).get("run_id"))).all()
+    finished = bool(states) and all(status in ("done", "skipped") for status in states)
     if autonomous and stage == "executed" and finished:
         start_report(project_id)
 
