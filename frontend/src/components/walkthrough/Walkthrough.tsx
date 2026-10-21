@@ -19,7 +19,7 @@ const CHAPTERS = [
 const NOTES = [
   {
     head: "Why this isn't a live run",
-    body: "We're a small team and low on compute credits, so instead of spending them on a live run we built this interactive walkthrough of a complete OpenScientist research run.",
+    body: "Honest answer: we're a small team running low on funds and compute credits. So instead of spending them on a live run, we built this interactive walkthrough of a complete OpenScientist research run for you.",
   },
   {
     head: "What you're watching",
@@ -56,9 +56,15 @@ export default function Walkthrough({ email }: { email: string }) {
       <div className="fixed inset-0 overflow-y-auto bg-paper">
         <div className="mx-auto max-w-2xl px-4 py-14 sm:px-6 sm:py-20">
           <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-muted">OpenScientist · guided walkthrough</p>
-          <h1 className="mt-4 font-serif text-[40px] leading-[1.1] text-ink sm:text-[48px]">Before you start</h1>
+          <h1 className="mt-4 font-serif text-[64px] leading-[1] text-ink sm:text-[96px]">
+            Hey <span className="italic">YC</span> 👋
+          </h1>
+          <p className="mt-6 font-serif text-[24px] leading-snug text-ink sm:text-[30px]">
+            Thanks for taking a look at OpenScientist.
+          </p>
           <p className="mt-4 text-[16px] leading-relaxed text-muted">
-            A two-minute, self-playing tour of one full research run, from a question to a reviewed paper.
+            What follows is a two-minute, self-playing tour of one full research run, from a plain-language question
+            to a reviewed paper. A few quick notes before you start:
           </p>
 
           <div className="mt-10 divide-y divide-rule border-y border-rule">

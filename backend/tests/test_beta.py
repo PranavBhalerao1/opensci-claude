@@ -641,3 +641,22 @@ def test_a_plan_out_of_credits_hits_the_limit():
     with _client(uid) as client:
         r = client.post(f"/api/projects/{pid}/messages", json={"content": "hi"})
     assert r.status_code == 403 and _code(r) == "beta_limit_reached"
+
+
+def test_walkthrough_accounts_are_refused_by_the_api(monkeypatch):
+    from fastapi import HTTPException
+
+    from app import auth
+
+    monkeypatch.setattr(auth, "verify_token", lambda t: {"sub": "u1", "email": "YC@theopenscientist.com"})
+    with pytest.raises(HTTPException) as exc:
+        asyncio.run(auth.get_current_user(authorization="Bearer x", token=None))
+    assert exc.value.status_code == 403
+
+    monkeypatch.setattr(auth.settings, "walkthrough_emails", "partner@example.com")
+    monkeypatch.setattr(auth, "verify_token", lambda t: {"sub": "u2", "email": "partner@example.com"})
+    with pytest.raises(HTTPException):
+        asyncio.run(auth.get_current_user(authorization="Bearer x", token=None))
+
+    monkeypatch.setattr(auth, "verify_token", lambda t: {"sub": "u3", "email": "someone@example.com"})
+    assert asyncio.run(auth.get_current_user(authorization="Bearer x", token=None)).id == "u3"

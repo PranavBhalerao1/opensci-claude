@@ -16,6 +16,18 @@ from jwt import PyJWKClient
 from .config import settings
 
 
+# Demo accounts that only ever see the frontend's scripted walkthrough (/walkthrough).
+# They must never use the real product, so the API refuses them outright.
+WALKTHROUGH_EMAILS = {"yc@theopenscientist.com"}
+
+
+def is_walkthrough_account(email: str | None) -> bool:
+    if not email:
+        return False
+    extra = {e.strip().lower() for e in settings.walkthrough_emails.split(",") if e.strip()}
+    return email.strip().lower() in WALKTHROUGH_EMAILS | extra
+
+
 @dataclass(frozen=True)
 class CurrentUser:
     id: str
@@ -74,4 +86,6 @@ async def get_current_user(
     sub = claims.get("sub")
     if not sub:
         raise HTTPException(401, "Token has no subject")
+    if is_walkthrough_account(claims.get("email")):
+        raise HTTPException(403, {"code": "walkthrough_only", "message": "This account can only view the walkthrough."})
     return CurrentUser(id=sub, email=claims.get("email"))

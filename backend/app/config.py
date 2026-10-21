@@ -32,6 +32,9 @@ class Settings(BaseSettings):
     # for projects still on the legacy shared-secret (HS256) signing key.
     supabase_url: str | None = None
     supabase_jwt_secret: str | None = None
+    # Accounts that may only watch the frontend's scripted walkthrough (comma-separated,
+    # added to the built-in list in app/auth.py). The API rejects them on every route.
+    walkthrough_emails: str = ""
 
     # Model tiers. The flagship is reserved for heavy reasoning / agentic work (gap
     # finding, planning, blueprint). Everything else uses the fast, cheap tiers:
