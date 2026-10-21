@@ -44,6 +44,10 @@ export default function Walkthrough({ email }: { email: string }) {
             Hey <span className="italic">YC</span> 👋
           </h1>
           <p className="mt-8 font-serif text-[24px] leading-snug text-ink sm:text-[30px]">{MESSAGE}</p>
+          <p className="mt-5 text-[15px] leading-relaxed text-muted">
+            Click <span className="text-ink">Notes</span> on the right side any time to skip to a stage, slow it down or
+            replay.
+          </p>
 
           <div className="mt-10 flex flex-wrap items-center gap-4">
             <button
