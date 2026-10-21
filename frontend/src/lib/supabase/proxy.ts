@@ -1,6 +1,8 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
+import { isWalkthroughAccount, WALKTHROUGH_PATH } from "@/lib/walkthrough";
+
 // Pages reachable without a session. Everything else redirects to /login.
 // robots.txt, the sitemap and the share image must stay public for search engines.
 const PUBLIC_PATHS = [
@@ -58,6 +60,23 @@ export async function updateSession(request: NextRequest) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     url.search = `?next=${encodeURIComponent(path + request.nextUrl.search)}`;
+    return NextResponse.redirect(url);
+  }
+
+  // Walkthrough accounts see only the walkthrough (auth links still work, so they can
+  // sign in and out); nobody else can open it.
+  const inWalkthrough = path === WALKTHROUGH_PATH || path.startsWith(`${WALKTHROUGH_PATH}/`);
+  if (user && isWalkthroughAccount(user.email)) {
+    if (!inWalkthrough && !path.startsWith("/auth")) {
+      const url = request.nextUrl.clone();
+      url.pathname = WALKTHROUGH_PATH;
+      url.search = "";
+      return NextResponse.redirect(url);
+    }
+  } else if (inWalkthrough) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/";
+    url.search = "";
     return NextResponse.redirect(url);
   }
 

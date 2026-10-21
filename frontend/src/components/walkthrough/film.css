@@ -1,0 +1,40 @@
+/* Animations for the scripted walkthrough (components/walkthrough/Film.tsx). */
+
+/* Keep Next's dev badge out of the recording. */
+nextjs-portal { display: none !important; }
+
+.film-nocursor, .film-nocursor * { cursor: none !important; }
+.film ::-webkit-scrollbar { width: 0; height: 0; }
+.film { scrollbar-width: none; }
+
+@keyframes film-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes film-out { from { opacity: 1; transform: scale(1); } to { opacity: 0; transform: scale(0.985); } }
+@keyframes film-wipe { from { clip-path: inset(0 0 0 100%); } to { clip-path: inset(0 0 0 0); } }
+@keyframes film-rise { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
+@keyframes film-pop { from { opacity: 0; transform: scale(0.96); } to { opacity: 1; transform: none; } }
+@keyframes film-slide { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: none; } }
+@keyframes film-zoom-in { from { opacity: 0; transform: scale(1.035); } to { opacity: 1; transform: none; } }
+@keyframes film-click { from { opacity: 0.9; transform: scale(0.3); } to { opacity: 0; transform: scale(1.5); } }
+@keyframes film-ring { from { opacity: 0; transform: scale(1.06); } to { opacity: 1; transform: none; } }
+@keyframes film-shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-5px); }
+  40% { transform: translateX(5px); }
+  60% { transform: translateX(-3px); }
+  80% { transform: translateX(3px); }
+}
+@keyframes film-flash { 0% { background: #0a0a0a; color: #fff; } 100% { background: transparent; } }
+
+.film-fade { animation: film-fade 0.5s ease both; }
+.film-out { animation: film-out 0.45s ease both; }
+.film-wipe { animation: film-wipe 0.55s cubic-bezier(0.7, 0, 0.2, 1) both; }
+.film-rise { animation: film-rise 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+.film-pop { animation: film-pop 0.35s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+.film-slide { animation: film-slide 0.35s ease both; }
+.film-zoom-in { animation: film-zoom-in 0.55s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+.film-click { animation: film-click 0.55s ease-out both; }
+.film-ring { animation: film-ring 0.35s ease both; }
+.film-shake { animation: film-shake 0.45s ease both; }
+.film-caption { animation: film-rise 0.45s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+.film-node { animation: film-fade 0.6s ease both; }
+.film-new > * { animation: film-rise 0.6s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
