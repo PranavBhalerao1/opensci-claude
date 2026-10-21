@@ -16,24 +16,8 @@ const CHAPTERS = [
   { n: 8, title: "Scientific review", note: "A fresh reviewer panel scores the paper; it repairs the issues and re-runs what changed." },
 ];
 
-const NOTES = [
-  {
-    head: "Why this isn't a live run",
-    body: "Honest answer: we're a small team running low on funds and compute credits. So instead of spending them on a live run, we built this interactive walkthrough of a complete OpenScientist research run for you.",
-  },
-  {
-    head: "What you're watching",
-    body: "Every screen is the real OpenScientist interface, played back from a hardcoded script. Nothing here calls our backend or runs real compute, and it costs nothing to watch.",
-  },
-  {
-    head: "About the results",
-    body: "The question, numbers, figures and paper are an illustrative example of what a run produces. They are not a published or peer-reviewed finding.",
-  },
-  {
-    head: "An early version",
-    body: "This reflects an early iteration of OpenScientist. The system has improved a lot since, and we're glad to walk you through a live run.",
-  },
-];
+const MESSAGE =
+  "We're currently onboarding scientists, researchers and labs and giving them free trials, so we're very low on funds right now. Please bear with us! For now, here's a demo of a full OpenScientist research run.";
 
 /** The only screen a walkthrough account sees: notes first, then the scripted run with a notes panel. */
 export default function Walkthrough({ email }: { email: string }) {
@@ -55,34 +39,11 @@ export default function Walkthrough({ email }: { email: string }) {
     return (
       <div className="fixed inset-0 overflow-y-auto bg-paper">
         <div className="mx-auto max-w-2xl px-4 py-14 sm:px-6 sm:py-20">
-          <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-muted">OpenScientist · guided walkthrough</p>
+          <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-muted">OpenScientist</p>
           <h1 className="mt-4 font-serif text-[64px] leading-[1] text-ink sm:text-[96px]">
             Hey <span className="italic">YC</span> 👋
           </h1>
-          <p className="mt-6 font-serif text-[24px] leading-snug text-ink sm:text-[30px]">
-            Thanks for taking a look at OpenScientist.
-          </p>
-          <p className="mt-4 text-[16px] leading-relaxed text-muted">
-            What follows is a two-minute, self-playing tour of one full research run, from a plain-language question
-            to a reviewed paper. A few quick notes before you start:
-          </p>
-
-          <div className="mt-10 divide-y divide-rule border-y border-rule">
-            {NOTES.map((n) => (
-              <div key={n.head} className="grid gap-1 py-5 sm:grid-cols-[180px_1fr] sm:gap-6">
-                <p className="font-mono text-[11px] uppercase tracking-wider text-ink">{n.head}</p>
-                <p className="text-[15px] leading-relaxed text-muted">{n.body}</p>
-              </div>
-            ))}
-            <div className="grid gap-1 py-5 sm:grid-cols-[180px_1fr] sm:gap-6">
-              <p className="font-mono text-[11px] uppercase tracking-wider text-ink">How it works</p>
-              <p className="text-[15px] leading-relaxed text-muted">
-                It plays by itself through eight stages, with captions explaining each one. Open{" "}
-                <span className="text-ink">Notes</span> on the right edge at any time to re-read this, jump to a stage,
-                slow it down or replay.
-              </p>
-            </div>
-          </div>
+          <p className="mt-8 font-serif text-[24px] leading-snug text-ink sm:text-[30px]">{MESSAGE}</p>
 
           <div className="mt-10 flex flex-wrap items-center gap-4">
             <button
@@ -92,7 +53,7 @@ export default function Walkthrough({ email }: { email: string }) {
               }}
               className="bg-ink px-6 py-3 text-[14px] text-paper hover:opacity-90"
             >
-              Start the walkthrough →
+              Start the demo →
             </button>
             <span className="text-[13px] text-faint">Best viewed full screen on a laptop or desktop.</span>
           </div>
@@ -121,12 +82,6 @@ export default function Walkthrough({ email }: { email: string }) {
         onDone={() => setDone(true)}
       />
 
-      <div className="pointer-events-none fixed left-1/2 top-0 z-[200] -translate-x-1/2">
-        <p className="mt-0 bg-ink/90 px-3 py-1 font-mono text-[10px] uppercase tracking-[0.18em] text-paper/80">
-          Scripted walkthrough · illustrative results
-        </p>
-      </div>
-
       {!panelOpen && (
         <button
           onClick={() => setOpen(true)}
@@ -140,7 +95,7 @@ export default function Walkthrough({ email }: { email: string }) {
         <aside className="film-slide fixed bottom-0 right-0 top-0 z-[200] flex w-[min(380px,100vw)] flex-col border-l border-ink bg-paper shadow-[-12px_0_40px_rgba(0,0,0,0.12)]">
           <div className="flex items-center justify-between border-b border-rule px-5 py-4">
             <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-ink">
-              {done ? "Walkthrough complete" : "Notes"}
+              {done ? "Demo complete" : "Notes"}
             </p>
             <button
               onClick={() => {
@@ -154,14 +109,8 @@ export default function Walkthrough({ email }: { email: string }) {
           </div>
 
           <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5">
-            <div className="space-y-4">
-              {NOTES.map((n) => (
-                <div key={n.head}>
-                  <p className="font-mono text-[10px] uppercase tracking-wider text-ink">{n.head}</p>
-                  <p className="mt-1 text-[13px] leading-relaxed text-muted">{n.body}</p>
-                </div>
-              ))}
-            </div>
+            <p className="font-serif text-[18px] leading-snug text-ink">Hey YC 👋</p>
+            <p className="mt-2 text-[13px] leading-relaxed text-muted">{MESSAGE}</p>
 
             <p className="mt-7 font-mono text-[10px] uppercase tracking-wider text-faint">Stages · click to jump</p>
             <ol className="mt-2 border-t border-rule">
