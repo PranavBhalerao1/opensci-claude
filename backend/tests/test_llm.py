@@ -1232,4 +1232,3 @@ def test_a_failed_chat_stream_does_not_stream_the_providers_error_text(provider)
     # A dropped connection instead raises past this handler as a transport error, which the chat
     # route sanitizes the same way (safe_error) before it reaches the browser.
     assert str(failure.value) == llm.MODEL_FAILED
-
