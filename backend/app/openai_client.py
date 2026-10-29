@@ -228,8 +228,17 @@ def _status_error(status: int, text: str) -> anthropic.APIStatusError:
         body = {"error": {"message": text}}
     message = ((body.get("error") or {}).get("message") if isinstance(body, dict) else None) or text
     response = httpx2.Response(status, request=httpx2.Request("POST", URL), text=text)
+    if _out_of_credits(status, text):
+        # Not a rate limit: retrying cannot help until the OpenAI account is topped up, so this must
+        # not be one of the transient errors that callers keep retrying.
+        log.error("OpenAI account has no credits left: %s", message)
+        return anthropic.PermissionDeniedError(f"{status}: {message}", response=response, body=body)
     cls = _STATUS.get(status) or (anthropic.InternalServerError if status >= 500 else anthropic.APIStatusError)
     return cls(f"{status}: {message}", response=response, body=body)
+
+
+def _out_of_credits(status: int, text: str) -> bool:
+    return status == 429 and ("insufficient_quota" in text or "no credits remaining" in text)
 
 
 def _connection_error(exc: Exception) -> anthropic.APIConnectionError:
@@ -314,7 +323,7 @@ class _Messages:
                 raise _connection_error(exc) from exc
             if resp.status_code == 200:
                 return _message(resp.json(), kw.get("model", ""))
-            if _retryable(resp.status_code) and attempt < RETRIES:
+            if _retryable(resp.status_code) and attempt < RETRIES and not _out_of_credits(resp.status_code, resp.text):
                 log.warning("openai %s (attempt %d/%d); retrying", resp.status_code, attempt + 1, RETRIES + 1)
                 await asyncio.sleep(_backoff(attempt, resp.headers.get("retry-after")))
                 continue

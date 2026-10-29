@@ -49,3 +49,10 @@ def test_errors_are_the_anthropic_sdk_types_callers_handle():
     assert isinstance(oc._status_error(429, "{}"), anthropic.RateLimitError)
     assert isinstance(oc._status_error(400, '{"error": {"message": "bad"}}'), anthropic.BadRequestError)
     assert isinstance(oc._status_error(502, "x"), anthropic.InternalServerError)
+
+
+def test_an_account_out_of_credits_is_not_a_retryable_rate_limit():
+    body = '{"error": {"message": "You have no credits remaining.", "type": "insufficient_quota", "code": "insufficient_quota"}}'
+    err = oc._status_error(429, body)
+    assert isinstance(err, anthropic.PermissionDeniedError) and not isinstance(err, anthropic.RateLimitError)
+    assert oc._out_of_credits(429, body) and not oc._out_of_credits(429, '{"error": {"code": "rate_limit_exceeded"}}')
