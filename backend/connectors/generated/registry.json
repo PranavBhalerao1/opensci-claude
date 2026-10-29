@@ -1,0 +1,26 @@
+{
+  "ebi_proteins": {
+    "description": "Proteins REST API \u2014 The Proteins REST API provides access to key biological data from UniProt and data from Large Scale Studies data mapped to UniProt. The services provide sequence feature annotations from UniProtKB, variation data from UniProtKB and mapped from Large Scale data sources (1000 Genomes, ExAC and COSMIC)",
+    "base_url": "https://www.ebi.ac.uk/proteins/api",
+    "source": "openapi:https://www.ebi.ac.uk/proteins/api/openapi.json",
+    "tools": 40,
+    "credential": null,
+    "forged_at": "2026-10-29T08:12:37+00:00"
+  },
+  "ols": {
+    "description": "OLS Service \u2014 REST API for OLS. Please see  this page for defined response field in OLS.",
+    "base_url": "https://www.ebi.ac.uk/ols4",
+    "source": "openapi:https://www.ebi.ac.uk/ols4/v3/api-docs",
+    "tools": 30,
+    "credential": null,
+    "forged_at": "2026-10-29T08:12:39+00:00"
+  },
+  "pubchem": {
+    "description": "PubChem compounds: properties, synonyms and bioassay summaries (PUG REST)",
+    "base_url": "https://pubchem.ncbi.nlm.nih.gov/rest/pug",
+    "source": "endpoints",
+    "tools": 3,
+    "credential": null,
+    "forged_at": "2026-10-29T08:12:39+00:00"
+  }
+}

@@ -18,6 +18,9 @@ dependencies = [
 ]
 
 [dependency-groups]
+connectors = [
+    "mcp>=1.10",
+]
 dev = [
     "pytest>=9.1.1",
     "pytest-asyncio>=1.4.0",
