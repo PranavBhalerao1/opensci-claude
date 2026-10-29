@@ -7,6 +7,10 @@ ROOT_DIR = Path(__file__).resolve().parents[2]
 BACKEND_DIR = ROOT_DIR / "backend"
 
 SONNET_4_6 = "us.anthropic.claude-sonnet-4-6"  # Bedrock US cross-region inference profile
+# OpenAI models (LLM_PROVIDER=openai): the flagship for reasoning, standard and judging; the mini
+# model for high-volume screening.
+GPT_FLAGSHIP = "gpt-5.5"
+GPT_MINI = "gpt-5.4-mini"
 
 
 class Settings(BaseSettings):
@@ -20,6 +24,14 @@ class Settings(BaseSettings):
     aws_secret_access_key: str | None = None
     aws_session_token: str | None = None
     bedrock_model_id: str = SONNET_4_6
+    # "bedrock" (Claude on Amazon Bedrock) or "openai" (app/openai_client.py). Unset, it is
+    # "openai" when OPENAI_API_KEY is set and "bedrock" otherwise.
+    llm_provider: str = ""
+    openai_api_key: str | None = None
+    # With OpenAI, no call reasons below this effort ("low" < "medium" < "high"), and every call
+    # may write at least this many output tokens (reasoning included; only used tokens are billed).
+    openai_min_effort: str = "medium"
+    openai_min_output_tokens: int = 32_000
     # Backs the agents' web_search tool.
     tavily_api_key: str | None = None
 
@@ -71,6 +83,9 @@ class Settings(BaseSettings):
     # inference profiles cost 10% more than Anthropic's list price ($3 / $0.30 / $15).
     model_prices: dict[str, tuple[float, float, float]] = {
         SONNET_4_6: (3.30, 0.33, 16.50),
+        # Estimates, set on the high side so credit checks never undercount.
+        GPT_FLAGSHIP: (5.00, 0.50, 30.00),
+        GPT_MINI: (0.75, 0.075, 4.50),
     }
     web_search_price: float = 0.01
 
@@ -89,9 +104,13 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def _default_tiers(self) -> "Settings":
+        if not self.llm_provider:
+            self.llm_provider = "openai" if self.openai_api_key else "bedrock"
+        openai = self.llm_provider == "openai"
         for tier in ("model_reasoning", "model_standard", "model_bulk", "model_judge"):
             if not getattr(self, tier):
-                setattr(self, tier, self.bedrock_model_id)
+                default = (GPT_MINI if tier == "model_bulk" else GPT_FLAGSHIP) if openai else self.bedrock_model_id
+                setattr(self, tier, default)
         return self
 
 

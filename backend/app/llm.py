@@ -14,18 +14,24 @@ from sqlmodel import Session
 from .beta import check_project_allowance, owner_of
 from .config import SONNET_4_6, settings
 from .db import Usage, engine
+from .openai_client import OpenAIMessagesClient
 from .sources import tavily
 
 log = logging.getLogger("openscientist.llm")
 
-# Claude on Amazon Bedrock (InvokeModel). An explicit timeout lets long non-streaming
-# calls run; without one the SDK refuses large max_tokens unless the call streams.
-client = AsyncAnthropicBedrock(
-    aws_region=settings.aws_region,
-    aws_access_key=settings.aws_access_key_id,
-    aws_secret_key=settings.aws_secret_access_key,
-    aws_session_token=settings.aws_session_token,
-    timeout=900.0,
+# Claude on Amazon Bedrock (InvokeModel), or OpenAI behind the same Messages-API surface
+# (LLM_PROVIDER=openai). An explicit timeout lets long non-streaming calls run; without one the
+# SDK refuses large max_tokens unless the call streams.
+client = (
+    OpenAIMessagesClient(settings.openai_api_key, timeout=900.0)
+    if settings.llm_provider == "openai"
+    else AsyncAnthropicBedrock(
+        aws_region=settings.aws_region,
+        aws_access_key=settings.aws_access_key_id,
+        aws_secret_key=settings.aws_secret_access_key,
+        aws_session_token=settings.aws_session_token,
+        timeout=900.0,
+    )
 )
 
 # Network and provider failures: raised only once the SDK's own HTTP retries are spent, and
