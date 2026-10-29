@@ -199,11 +199,17 @@ class E2BSandbox(Sandbox):
             # project's sandbox still has every file: reattach to it rather than start an empty one.
             if await self._reattach():
                 return
+            create = dict(template=settings.e2b_template, api_key=settings.e2b_api_key,
+                          timeout=SANDBOX_TIMEOUT, metadata={"project_id": self.project_id})
             try:
-                # Idle past the timeout, the sandbox is paused, not killed, so its files survive.
-                sbx = await AsyncSandbox.create(template=settings.e2b_template, api_key=settings.e2b_api_key,
-                                                timeout=SANDBOX_TIMEOUT, metadata={"project_id": self.project_id},
-                                                lifecycle={"on_timeout": "pause"})
+                try:
+                    # Idle past the timeout, the sandbox is paused, not killed, so its files survive.
+                    sbx = await AsyncSandbox.create(**create, lifecycle={"on_timeout": "pause"})
+                except Exception as exc:
+                    # An account without pausing still gets a sandbox, killed when idle as before.
+                    log.warning("E2B refused a pausing sandbox for %s (%s: %s); creating one without",
+                                self.project_id, type(exc).__name__, exc)
+                    sbx = await AsyncSandbox.create(**create)
             except Exception as exc:
                 raise RuntimeError(f"E2B sandbox (template {settings.e2b_template}) could not be started: "
                                    f"{type(exc).__name__}: {exc}") from exc

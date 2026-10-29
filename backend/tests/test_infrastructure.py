@@ -587,6 +587,7 @@ def test_ensure_reattaches_before_creating_and_new_sandboxes_pause_instead_of_dy
     with pytest.raises(RuntimeError, match="stop here"):
         asyncio.run(fresh.ensure())
     assert calls["create"][0]["lifecycle"] == {"on_timeout": "pause"}
+    assert "lifecycle" not in calls["create"][1]  # refused: an ordinary sandbox instead
 
 
 def test_deleting_a_project_kills_its_paused_sandboxes(tmp_path, monkeypatch):
