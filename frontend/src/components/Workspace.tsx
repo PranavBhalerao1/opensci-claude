@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -47,6 +48,7 @@ import ReportRun from "./ReportRun";
 import ReviewRun from "./ReviewRun";
 import Notebook from "./Notebook";
 import QuestionCards from "./QuestionCards";
+import { REPLAYS, replayFor } from "./replay";
 import Sidebar from "./Sidebar";
 import WorkspaceFiles from "./WorkspaceFiles";
 import StageBar from "./StageBar";
@@ -61,6 +63,7 @@ type AnswersMessage = Extract<Message, { kind: "answers" }>;
 
 export default function Workspace({ projectId: initialId }: { projectId?: string }) {
   const beta = useBeta();
+  const router = useRouter();
   const [projectId, setProjectId] = useState<string | null>(initialId ?? null);
   const [project, setProjectState] = useState<Project | null>(null);
   // The revision of the project as last received from a poll. Polls send it back and get the
@@ -466,6 +469,12 @@ export default function Workspace({ projectId: initialId }: { projectId?: string
 
   const runTurn = async (turn: Turn) => {
     if (busy) return;
+    // A question from "Fascinate me" opens its pre-made run.
+    const replay = !projectId && turn.kind === "text" ? replayFor(turn.content) : undefined;
+    if (replay) {
+      router.push(`/replay/${replay.slug}`);
+      return;
+    }
     // While reviewing a plan, a reply is a revision request.
     // While reviewing a blueprint, a reply revises it.
     if (turn.kind === "text" && projectId && (project?.stage === "blueprint" || project?.stage === "ready") && bpRun?.status === "done") {
@@ -780,6 +789,11 @@ function EmptyState({
   onSubmit: (text: string) => void;
   busy: boolean;
 }) {
+  const [seed, setSeed] = useState({ text: "", n: 0 });
+  const fascinate = () => {
+    const pool = REPLAYS.map((r) => r.question).filter((q) => q !== seed.text);
+    setSeed((s) => ({ text: pool[Math.floor(Math.random() * pool.length)], n: s.n + 1 }));
+  };
   return (
     <div className="flex flex-1 items-center justify-center overflow-y-auto px-6">
       <div className="w-full max-w-2xl py-16">
@@ -793,11 +807,27 @@ function EmptyState({
         </p>
 
         <div className="mt-8">
-          <Composer onSubmit={onSubmit} busy={busy} placeholder="e.g. I wonder whether…" autoFocus />
+          <Composer
+            key={seed.n}
+            initial={seed.text}
+            onSubmit={onSubmit}
+            busy={busy}
+            placeholder="e.g. I wonder whether…"
+            autoFocus
+          />
         </div>
 
         <div className="mt-3 flex items-center justify-between">
-          <ModeToggle autonomous={autonomous} setAutonomous={setAutonomous} />
+          <div className="flex items-center gap-3">
+            <ModeToggle autonomous={autonomous} setAutonomous={setAutonomous} />
+            <button
+              onClick={fascinate}
+              disabled={busy}
+              className="border border-rule px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.1em] text-muted transition-colors hover:border-ink hover:text-ink"
+            >
+              ✦ Fascinate me
+            </button>
+          </div>
           <span className="font-mono text-[11px] text-faint">↵ to begin · ⇧↵ new line</span>
         </div>
 
@@ -966,13 +996,15 @@ function Composer({
   busy,
   placeholder,
   autoFocus,
+  initial = "",
 }: {
   onSubmit: (text: string) => void;
   busy: boolean;
   placeholder: string;
   autoFocus?: boolean;
+  initial?: string;
 }) {
-  const [text, setText] = useState("");
+  const [text, setText] = useState(initial);
   const ref = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {

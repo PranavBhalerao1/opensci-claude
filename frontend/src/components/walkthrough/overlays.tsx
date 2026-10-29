@@ -1588,9 +1588,14 @@ const PAGES_3_TO_8 = [
   </Page>,
 ];
 
+/** The heatwave paper's eight pages, full size. */
+export function heatwavePages() {
+  return [<PaperPage1 key={1} />, <PaperPage2 key={2} />, ...PAGES_3_TO_8];
+}
+
 /** All eight pages as thumbnails, for the report card. */
 export function PaperPreview() {
-  const pages = [<PaperPage1 key={1} />, <PaperPage2 key={2} />, ...PAGES_3_TO_8];
+  const pages = heatwavePages();
   return (
     <div className="grid w-full grid-cols-4 gap-3 px-4">
       {pages.map((pg, i) => (

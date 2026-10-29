@@ -1,0 +1,50 @@
+import * as D from "@/components/walkthrough/data";
+import type { ReplayData } from "./types";
+
+export const heatwave: ReplayData = {
+  slug: "heatwaves",
+  question: D.QUESTION,
+  shortTitle: "AI weather models vs. record heat",
+  brief: D.BRIEF,
+  questions: D.QUESTIONS_MSG.payload,
+  answers: D.AUTO_ANSWERS,
+  papers: D.PAPERS,
+  lit: { queries: 8, found: 2106, screened: 486, included: 118, citations: 302, links: 1862 },
+  overview: D.OVERVIEW,
+  gaps: D.GAPS,
+  plan: D.PLAN,
+  planAudit: D.PLAN_AUDIT,
+  planLog: [
+    "Drafting hypotheses, data, methods and metrics",
+    "Expert audit: checking training-period leakage",
+    "FATAL: 2016–2017 events are inside the training period",
+    "MAJOR: HRES scored against its own analysis",
+    "Revising: post-cutoff events only, every model scored on ERA5",
+    "Validating task graph: 12 tasks, 5 phases, no cycles",
+  ],
+  master: D.MASTER,
+  bpLog: [
+    "Locating ARCO-ERA5, WeatherBench 2 and model checkpoints",
+    "Verified 4/4 data sources",
+    "Compiling 6 agents · 12 tasks",
+    "Validating data flow, tools and budget",
+  ],
+  taskCost: D.TASK_COST,
+  toolScript: D.TOOL_SCRIPT,
+  budget: 100,
+  report: D.REPORT_RESULT,
+  iterations: D.ITERATIONS,
+  round1Issues: D.ROUND1_ISSUES,
+  reviewLog: {
+    round1: [
+      "Reviewer panel assembled: lead, methods, theory",
+      "Recomputed Table 1 from results/metrics.csv",
+      "Pangu peak bias: table −3.0 K, data −2.8 K — mismatch",
+    ],
+    repair: ["Round 1 · score 6.1 · 2 major issues", "Re-evaluating T10, T11 on held-out heatwave clusters; reusing 10 finished tasks", "Fix holds on held-out clusters (−42%). Rewriting §3 and Table 1"],
+    round2: ["Round 2 · score 8.2 · adding ERA5 caveat"],
+    round3: ["Round 3 · score 9.2 · accept"],
+  },
+  spend: { literature: 1.12, gaps: 3.4, plan: 5.1, blueprint: 7.2, execution: 79.6, report: 81.52, review: 84.62 },
+  paper: "heatwave",
+};

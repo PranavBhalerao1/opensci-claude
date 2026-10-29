@@ -12,6 +12,8 @@ interface Props {
   run: ReportRunT | null;
   onStart: () => Promise<void>;
   onOpenFiles: (path?: string) => void;
+  /** The paper's pages; the heatwave film's paper when omitted. */
+  paper?: React.ReactNode;
 }
 
 const VERDICT: Record<string, string> = {
@@ -21,7 +23,7 @@ const VERDICT: Record<string, string> = {
   mixed: "Mixed evidence",
 };
 
-export default function ReportRun({ project, run, onStart, onOpenFiles }: Props) {
+export default function ReportRun({ project, run, onStart, onOpenFiles, paper }: Props) {
   const r = run?.status === "done" ? run.result : null;
   const file = (p: string) => `#${p}`;
   const reviewed = reviewBadge(project);
@@ -156,9 +158,7 @@ export default function ReportRun({ project, run, onStart, onOpenFiles }: Props)
 
             {r.files.pdf && (
               <Section title="Paper">
-                <div className="flex justify-center border border-ink bg-wash py-8">
-                  <PaperPreview />
-                </div>
+                <div className="flex justify-center border border-ink bg-wash py-8">{paper ?? <PaperPreview />}</div>
               </Section>
             )}
 
