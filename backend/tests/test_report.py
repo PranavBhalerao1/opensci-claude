@@ -98,3 +98,22 @@ def test_a_freshly_enabled_review_about_to_start_skips_the_duplicate_audit(study
     out = asyncio.run(report_agent.run(study.pid, Handle()))
     assert "Audit" not in calls
     assert out["audit"] == []
+
+
+def test_a_consolidation_that_was_all_reasoning_is_retried_once_at_medium_effort(study, monkeypatch):
+    """The galaxy report: the whole output budget spent reasoning, no scaffold written."""
+    _fake_agent(monkeypatch, study)
+    efforts: list[str] = []
+
+    async def parse(*, schema, reasoning_effort, instructions, **kw):
+        if schema is Scaffold:
+            efforts.append(reasoning_effort)
+            if len(efforts) == 1:
+                raise report_agent.llm.OutputLimitReached("all reasoning", thinking_only=True)
+            assert instructions.endswith(report_agent.llm.BRIEF_REASONING)
+            return SCAFFOLD
+        return Audit(issues=[])
+
+    monkeypatch.setattr(report_agent, "parse", parse)
+    asyncio.run(report_agent.run(study.pid, Handle()))
+    assert efforts == ["high", "medium"]

@@ -28,10 +28,13 @@ class Settings(BaseSettings):
     # "openai" when OPENAI_API_KEY is set and "bedrock" otherwise.
     llm_provider: str = ""
     openai_api_key: str | None = None
-    # With OpenAI, no call reasons below this effort ("low" < "medium" < "high"), and every call
-    # may write at least this many output tokens (reasoning included; only used tokens are billed).
+    # With OpenAI, no call reasons below this effort ("low" < "medium" < "high"). Its reasoning
+    # counts against the output limit and runs longer than Claude's, so every call may write twice
+    # the tokens it asks for, at least openai_min_output_tokens and at most openai_max_output_tokens
+    # (only used tokens are billed).
     openai_min_effort: str = "medium"
-    openai_min_output_tokens: int = 32_000
+    openai_min_output_tokens: int = 64_000
+    openai_max_output_tokens: int = 128_000
     # Backs the agents' web_search tool.
     tavily_api_key: str | None = None
 

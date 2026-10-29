@@ -18,7 +18,7 @@ import httpx
 from pydantic import BaseModel, Field
 from sqlmodel import Session, select
 
-from .. import beta, integrity
+from .. import beta, integrity, llm
 from ..db import Paper, Project, ProjectPaper, Run, TaskState, engine
 from ..execution.agent import AgentSpec, run_agent
 from ..execution.orchestrator import TEXT_SUFFIXES, model_for, project_amendments
@@ -275,16 +275,25 @@ async def run(project_id: str, h: RunHandle) -> dict:
     )
     if g["directives"]:
         context = DIRECTIVES_HEADER + g["directives"] + "\n\n" + context
-    scaffold = await parse(
-        model=model_for("reasoning", g["policy"]),
-        instructions=CONSOLIDATE_INSTRUCTIONS,
-        messages=[{"role": "user", "content": context}],
-        schema=Scaffold,
+    async def consolidate(effort: str, note: str = ""):
+        return await parse(
+            model=model_for("reasoning", g["policy"]),
+            instructions=CONSOLIDATE_INSTRUCTIONS + note,
+            messages=[{"role": "user", "content": context}],
+            schema=Scaffold,
+            reasoning_effort=effort,
+        )
+
+    try:
         # High: consolidation decides what the study actually found and how honestly to
         # state it (hypothesis verdict, findings, deviations) — the synthesis step research
         # quality depends on most.
-        reasoning_effort="high",
-    )
+        scaffold = await consolidate("high")
+    except llm.OutputLimitReached as exc:
+        # Cut off, or all reasoning and no answer: discarded, and tried once more at medium effort
+        # with a note to reason economically (as the scientific judge does).
+        h.note(f"Consolidation hit the output limit and was discarded ({str(exc)[:160]}); retrying once with less reasoning")
+        scaffold = await consolidate("medium", "\n\n" + llm.BRIEF_REASONING)
     existing = {f["path"] for f in files}
     scaffold.figures = [f for f in scaffold.figures if f.path in existing]
     for sec in scaffold.outline:

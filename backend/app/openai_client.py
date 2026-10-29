@@ -157,7 +157,7 @@ def _body(model: str, max_tokens: int, system: str | None = None, messages: list
     body: dict = {
         "model": model,
         "input": _input(messages or []),
-        "max_output_tokens": max(max_tokens, settings.openai_min_output_tokens),
+        "max_output_tokens": min(max(max_tokens * 2, settings.openai_min_output_tokens), settings.openai_max_output_tokens),
         "reasoning": {"effort": effort},
         "store": False,
         "include": ["reasoning.encrypted_content"],

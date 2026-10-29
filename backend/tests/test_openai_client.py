@@ -23,7 +23,8 @@ def test_tool_loop_transcript_translates_to_responses_input():
     assert body["input"][3] == {"type": "function_call_output", "call_id": "call_1", "output": "1"}
     assert body["tools"][0]["name"] == "run_python" and body["tool_choice"] == "required"
     assert body["reasoning"]["effort"] == "medium"  # raised to the configured floor
-    assert body["max_output_tokens"] >= 32_000
+    assert body["max_output_tokens"] == 64_000  # the floor
+    assert oc._body(model="m", max_tokens=64_000, messages=[])["max_output_tokens"] == 128_000  # 2×, capped
 
 
 def test_json_schema_and_response_translation():
