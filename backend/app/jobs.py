@@ -132,6 +132,11 @@ def start(
             done_ok = True
         finally:
             _tasks.pop(key, None)
+        # What the job wrote on the server (e.g. the review record) goes to the cloud sandbox,
+        # whose copy survives restarts.
+        from .execution.sandbox import sandbox_for  # execution imports this module
+
+        await sandbox_for(project_id).save()
         # Chain the next stage only after this run is marked done and released.
         if done_ok and then:
             try:

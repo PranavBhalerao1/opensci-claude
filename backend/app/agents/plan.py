@@ -676,5 +676,35 @@ def approve(project_id: str) -> Project:
 
 
 def export_path(project_id: str, name: str) -> Path | None:
+    """An exported plan file. The export directory is on the server's disk, which a restart can wipe;
+    the files are rebuilt from the database then, so an approved plan's exports are never lost."""
     path = EXPORT_DIR / project_id / name
-    return path if name in EXPORT_FILES and path.is_file() else None
+    if name not in EXPORT_FILES:
+        return None
+    if not path.is_file():
+        _rebuild_export(project_id, name, path)
+    return path if path.is_file() else None
+
+
+def _rebuild_export(project_id: str, name: str, path: Path) -> None:
+    from .blueprint import latest_run as latest_blueprint  # blueprint imports this module
+
+    with Session(engine) as s:
+        project = s.get(Project, project_id)
+    if project is None:
+        return
+    if name == "vague_research_plan.json" and project.plan:
+        doc = {"schema": "openscientist.vague_research_plan/v1",
+               **{k: v for k, v in project.plan.items() if k not in ("run_id", "approved_at")}}
+    elif name == "context.json" and project.plan:
+        doc = build_context(project_id)
+    elif name == "master_plan.json" and project.blueprint:
+        run = latest_blueprint(project_id)
+        if not run or not run.result:
+            return
+        doc = {"schema": "openscientist.master_plan/v1", **run.result["master_plan"],
+               "warnings": run.result.get("warnings", []), "budget": run.result.get("budget")}
+    else:
+        return
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(doc, indent=2, ensure_ascii=False, default=str), encoding="utf-8")

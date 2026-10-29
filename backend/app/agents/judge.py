@@ -1142,8 +1142,13 @@ async def review(project_id: str, h: RunHandle, iteration: int, previous: dict |
 # ── Files ──────────────────────────────────────────────────────────────────
 
 
+REVIEW_RECORD = ".openscientist/review"
+
+
 def review_dir(project_id: str, iteration: int | None = None) -> Path:
-    base = plan_agent.EXPORT_DIR / project_id / "review"
+    """The review record. Kept in the project workspace (hidden from its file listings), which
+    syncs to the cloud sandbox, so it survives restarts of the server, whose own disk is wiped."""
+    base = sandbox_for(project_id).root / REVIEW_RECORD
     return base / f"iter-{iteration}" if iteration is not None else base
 
 

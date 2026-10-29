@@ -195,9 +195,15 @@ class E2BSandbox(Sandbox):
                 raise RuntimeError("E2B is not configured: set E2B_API_KEY (code never runs locally)")
             for d in (self.root, self.root / ".scratch", self.root / ".logs"):
                 d.mkdir(parents=True, exist_ok=True)
+            # After a backend restart the host copy may be gone (Heroku's disk is ephemeral) while the
+            # project's sandbox still has every file: reattach to it rather than start an empty one.
+            if await self._reattach():
+                return
             try:
+                # Idle past the timeout, the sandbox is paused, not killed, so its files survive.
                 sbx = await AsyncSandbox.create(template=settings.e2b_template, api_key=settings.e2b_api_key,
-                                                timeout=SANDBOX_TIMEOUT, metadata={"project_id": self.project_id})
+                                                timeout=SANDBOX_TIMEOUT, metadata={"project_id": self.project_id},
+                                                lifecycle={"on_timeout": "pause"})
             except Exception as exc:
                 raise RuntimeError(f"E2B sandbox (template {settings.e2b_template}) could not be started: "
                                    f"{type(exc).__name__}: {exc}") from exc
@@ -221,6 +227,85 @@ class E2BSandbox(Sandbox):
                 self._sbx = None
                 await sbx.kill()
                 raise
+
+    async def _find(self):
+        """Connect to this project's newest existing sandbox, running or paused (a paused one is
+        resumed); None if it has none or E2B cannot be asked."""
+        from e2b import AsyncSandbox, SandboxQuery, SandboxState
+
+        if not settings.e2b_api_key:
+            return None
+        try:
+            pager = AsyncSandbox.list(query=SandboxQuery(metadata={"project_id": self.project_id},
+                                                         state=[SandboxState.RUNNING, SandboxState.PAUSED]),
+                                      api_key=settings.e2b_api_key)
+            found = await pager.next_items()
+            if not found:
+                return None
+            newest = max(found, key=lambda info: info.started_at)
+            return await AsyncSandbox.connect(newest.sandbox_id, timeout=SANDBOX_TIMEOUT, api_key=settings.e2b_api_key)
+        except Exception as exc:
+            log.warning("Could not reattach to an E2B sandbox for %s: %s: %s", self.project_id, type(exc).__name__, exc)
+            return None
+
+    async def _reattach(self) -> bool:
+        """Adopt the project's existing sandbox, if any, and restore every file from it into the host
+        copy. Called with self._lock held and no sandbox attached."""
+        sbx = await self._find()
+        if sbx is None:
+            return False
+        self._sbx, self._host_seen, self._remote_seen = sbx, {}, {}
+        self._touched = time.monotonic()
+        try:
+            res = await self._sh(f"mkdir -p {REMOTE_ROOT} {SYNC} && test -x {VENV}/bin/python", 60, cwd=HOME)
+            if res.exit_code:  # never finished setting up: start over with a fresh one
+                raise RuntimeError("sandbox environment missing")
+            async with self._sync:
+                await self._pull()  # nothing seen yet: brings back every file
+                await self._push()  # then anything only the host has
+        except Exception as exc:
+            log.warning("Reattached E2B sandbox for %s is unusable (%s); starting a new one", self.project_id, exc)
+            self._sbx = None
+            return False
+        log.info("Reattached E2B sandbox %s for %s and restored its workspace", sbx.sandbox_id, self.project_id)
+        return True
+
+    async def save(self) -> None:
+        """Push host-side writes (review records, downloads) to the attached sandbox, never creating one."""
+        if self._sbx is None:
+            return
+        try:
+            async with self._sync:
+                await self._push()
+        except Exception as exc:
+            log.warning("Saving the workspace of %s to E2B failed: %s", self.project_id, exc)
+
+    async def recover(self) -> bool:
+        """Restore the workspace from the project's existing sandbox after a restart, without ever
+        creating one (readers call this). True if a sandbox is attached afterwards."""
+        async with self._lock:
+            if self._sbx is None:
+                await self._reattach()
+            return self._sbx is not None
+
+    async def forget(self) -> None:
+        """Kill every sandbox this project has, running or paused (the project was deleted)."""
+        from e2b import AsyncSandbox, SandboxQuery, SandboxState
+
+        self._sbx = None
+        if not settings.e2b_api_key:
+            return
+        try:
+            pager = AsyncSandbox.list(query=SandboxQuery(metadata={"project_id": self.project_id},
+                                                         state=[SandboxState.RUNNING, SandboxState.PAUSED]),
+                                      api_key=settings.e2b_api_key)
+            while True:
+                for info in await pager.next_items():
+                    await AsyncSandbox.kill(info.sandbox_id, api_key=settings.e2b_api_key)
+                if not pager.has_next:
+                    break
+        except Exception as exc:
+            log.warning("Could not delete E2B sandboxes for %s: %s: %s", self.project_id, type(exc).__name__, exc)
 
     async def _alive(self) -> bool | None:
         """False only when E2B reports the sandbox gone (killed, expired); None when E2B could not
@@ -381,8 +466,12 @@ class E2BSandbox(Sandbox):
 
     async def pull(self) -> None:
         """Sync before reading the host copy. Every command already syncs when it ends, so
-        only background processes can leave changes behind; without them this is free."""
-        if self._sbx is None or "running" not in self.procs.values():
+        only background processes can leave changes behind; without them this is free. With no
+        sandbox attached (e.g. after a restart), the files are restored from the project's sandbox."""
+        if self._sbx is None:
+            await self.recover()
+            return
+        if "running" not in self.procs.values():
             return
         try:
             async with self._sync:

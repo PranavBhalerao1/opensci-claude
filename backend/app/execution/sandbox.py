@@ -90,6 +90,16 @@ class Sandbox:
     async def pull(self) -> None:
         """Bring files changed by remote execution back into `root`."""
 
+    async def save(self) -> None:
+        """Send host-side writes to the remote copy now (so they survive a restart)."""
+
+    async def recover(self) -> bool:
+        """Restore `root` from the remote copy after a restart, if one exists. True if attached."""
+        return False
+
+    async def forget(self) -> None:
+        """Delete every remote copy of the workspace (the project was deleted)."""
+
     async def reap(self, task_id: str | None) -> bool:
         """Stop every process the task's attempts started (every task's if None) and bring back what
         they wrote. True only if none is left running. Raises SandboxUnreachable if the sandbox

@@ -180,6 +180,7 @@ def delete_project(
             session.delete(row)
     session.delete(project)
     session.commit()
+    from_thread.run(sandbox_for(project_id).forget)  # paused sandboxes persist until deleted
     shutil.rmtree(sandbox_for(project_id).root, ignore_errors=True)
     shutil.rmtree(plan_agent.EXPORT_DIR / project_id, ignore_errors=True)
     (sandbox_for(project_id).root.parent / f"{project_id}-research-package.zip").unlink(missing_ok=True)
@@ -681,6 +682,8 @@ def get_review_file(project_id: str, name: str, iteration: int | None = None, se
     _owned(session, project_id, user)
     if iteration is None and name in REVIEW_SUMMARIES:
         path, media = judge.review_dir(project_id) / name, REVIEW_SUMMARIES[name]
+        if not path.is_file() and (refine.state(project_id).get("iterations")):
+            refine.write_history(project_id)  # rebuilt from the database (a restart wipes the server's disk)
     elif iteration is not None and name in REVIEW_FILES:
         path, media = judge.review_dir(project_id, iteration) / name, REVIEW_FILES[name]
     else:
@@ -730,6 +733,9 @@ def download_package(project_id: str, session: Session = Depends(get_session),
                      user: CurrentUser = Depends(get_current_user)) -> FileResponse:
     _owned(session, project_id, user)
     from_thread.run(sandbox_for(project_id).pull)
+    if not report_agent.has_files(project_id):
+        raise HTTPException(404, "This project's files are not available right now. Try again in a minute; if this "
+                                 "persists, its workspace could not be restored.")
     path = report_agent.package(project_id)
     return FileResponse(path, media_type="application/zip", filename=path.name)
 

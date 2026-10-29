@@ -8,7 +8,7 @@ import anthropic
 import httpx2
 import pytest
 
-from app import llm
+from app import integrity, llm
 from app.agents import judge
 from app.agents.judge import Evidence, IssueCheck, JudgeIssue, JudgeReport, RubricItem, VerificationReport
 from study_fixture import SENTINELS, TEX, make_study, png
@@ -273,11 +273,16 @@ def test_reject_without_verified_issues_triggers_one_fresh_rejudge(study, provid
     assert mistakes["rejudged"] and not mistakes["verdict_consistent"]
 
 
-def test_iteration_files_are_written_outside_the_workspace(study, provider):
+def test_iteration_files_are_kept_out_of_the_visible_workspace(study, provider):
+    """Hidden from every workspace scan, listing and evidence filter, but synced with the workspace so
+    the record survives a server restart."""
     provider.parse_result(report())
     mistakes, bundle = run(study)
     out = judge.write_iteration_files(study.pid, 2, mistakes, bundle, study.root)
-    assert out == study.exports / study.pid / "review" / "iter-2"
+    assert out == study.root / judge.REVIEW_RECORD / "iter-2"
+    rel = (out / "mistakes.json").relative_to(study.root)
+    assert not integrity._visible(rel) and not judge.allowed_evidence(rel.as_posix())
+    assert not any(p.startswith(".openscientist") for p in integrity.workspace_manifest(study.root))
     assert json.loads((out / "mistakes.json").read_text())["schema"] == "openscientist.mistakes/v1"
     assert (out / "paper.tex").is_file() and (out / "paper.pdf").is_file() and "[IMAGE figures/main.png" in (
         out / "bundle.md").read_text(encoding="utf-8")

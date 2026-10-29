@@ -117,3 +117,27 @@ def test_a_consolidation_that_was_all_reasoning_is_retried_once_at_medium_effort
     monkeypatch.setattr(report_agent, "parse", parse)
     asyncio.run(report_agent.run(study.pid, Handle()))
     assert efforts == ["high", "medium"]
+
+
+@pytest.mark.parametrize("name, schema", [("vague_research_plan.json", "openscientist.vague_research_plan/v1"),
+                                          ("master_plan.json", "openscientist.master_plan/v1"),
+                                          ("context.json", None)])
+def test_plan_exports_wiped_by_a_restart_are_rebuilt_from_the_database(study, name, schema):
+    import json
+
+    from app.agents import plan as plan_agent
+
+    path = plan_agent.export_path(study.pid, name)  # never written: as after a restart wiped the disk
+    assert path is not None and path.is_file()
+    doc = json.loads(path.read_text())
+    if schema:
+        assert doc["schema"] == schema and "run_id" not in doc
+
+
+def test_packaging_a_workspace_that_is_gone_is_reported_not_crashed(study):
+    import shutil
+
+    from app.execution.sandbox import sandbox_for
+
+    shutil.rmtree(sandbox_for(study.pid).root, ignore_errors=True)
+    assert not report_agent.has_files(study.pid)

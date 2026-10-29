@@ -363,14 +363,21 @@ async def run(project_id: str, h: RunHandle) -> dict:
     }
 
 
+def has_files(project_id: str) -> bool:
+    """Whether the project's workspace has any files to package."""
+    root = sandbox_for(project_id).root
+    return root.is_dir() and bool(_inventory(root))
+
+
 def package(project_id: str) -> Path:
     """Zip the research package: everything in the workspace except environments and caches,
     plus the scientific review record (mistakes.json per review, HISTORY.md, REVIEW.md)."""
-    from .plan import EXPORT_DIR
+    from .judge import review_dir
 
     root = sandbox_for(project_id).root
     out = root.parent / f"{project_id}-research-package.zip"
-    review = EXPORT_DIR / project_id / "review"
+    out.parent.mkdir(parents=True, exist_ok=True)
+    review = review_dir(project_id)
     with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED) as z:
         for f in _inventory(root):
             if f["size"] < 200 * 1024**2:

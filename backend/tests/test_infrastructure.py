@@ -9,6 +9,8 @@ failures and genuinely dead sandboxes behave as before.
 """
 
 import asyncio
+import types
+from datetime import datetime, timezone
 
 import anthropic
 import e2b
@@ -502,3 +504,92 @@ def test_other_errors_still_fail_the_task(chain, error):
     st = chain.states()
     assert st["T2"].status == "failed" and st["T2"].note.startswith("Runtime error")
     assert result["counts"]["failed"] == 1 and chain.calls == ["T1", "T2"]
+
+
+# ── Reattaching after a restart ────────────────────────────────────────────
+
+
+class _Listing:
+    def __init__(self, items):
+        self.items, self.has_next = items, False
+
+    async def next_items(self):
+        return self.items
+
+
+def _restartable(tmp_path, monkeypatch, existing: list):
+    """A freshly constructed E2BSandbox (as after a backend restart) and a fake E2B API."""
+    from app.execution import e2b_sandbox
+
+    monkeypatch.setattr(e2b_sandbox.settings, "e2b_api_key", "test-key")
+    calls = {"connect": [], "create": [], "kill": [], "synced": []}
+
+    class API:
+        @staticmethod
+        def list(query=None, **kw):
+            assert query.metadata == {"project_id": "_infra"}
+            return _Listing(existing)
+
+        @staticmethod
+        async def connect(sandbox_id, **kw):
+            calls["connect"].append(sandbox_id)
+            return types.SimpleNamespace(sandbox_id=sandbox_id)
+
+        @staticmethod
+        async def create(**kw):
+            calls["create"].append(kw)
+            raise RuntimeError("stop here")  # creation itself is covered elsewhere
+
+        @staticmethod
+        async def kill(sandbox_id, **kw):
+            calls["kill"].append(sandbox_id)
+
+    monkeypatch.setattr(e2b, "AsyncSandbox", API)
+    sb = E2BSandbox("_infra")
+    sb.root = tmp_path / "workspace"  # the host copy is gone
+
+    async def sh(cmd, timeout, **kw):
+        return types.SimpleNamespace(exit_code=0, stdout="", stderr="")
+
+    async def pull():
+        calls["synced"].append("pull")
+
+    async def push():
+        calls["synced"].append("push")
+
+    sb._sh, sb._pull, sb._push = sh, pull, push
+    return sb, calls
+
+
+def _info(sandbox_id, minute):
+    return types.SimpleNamespace(sandbox_id=sandbox_id, started_at=datetime(2026, 10, 1, 0, minute, tzinfo=timezone.utc))
+
+
+def test_a_reader_after_a_restart_restores_the_workspace_from_the_projects_sandbox(tmp_path, monkeypatch):
+    sb, calls = _restartable(tmp_path, monkeypatch, [_info("old", 1), _info("newest", 9)])
+    asyncio.run(sb.pull())  # e.g. a download right after a deploy
+    assert calls["connect"] == ["newest"] and calls["synced"] == ["pull", "push"] and calls["create"] == []
+    assert sb._sbx.sandbox_id == "newest"
+
+
+def test_a_reader_never_creates_a_sandbox(tmp_path, monkeypatch):
+    sb, calls = _restartable(tmp_path, monkeypatch, [])
+    asyncio.run(sb.pull())
+    assert sb._sbx is None and calls["create"] == [] and calls["synced"] == []
+
+
+def test_ensure_reattaches_before_creating_and_new_sandboxes_pause_instead_of_dying(tmp_path, monkeypatch):
+    sb, calls = _restartable(tmp_path, monkeypatch, [_info("kept", 3)])
+    asyncio.run(sb.ensure())
+    assert sb._sbx.sandbox_id == "kept" and calls["create"] == []
+
+    fresh, calls = _restartable(tmp_path, monkeypatch, [])
+    with pytest.raises(RuntimeError, match="stop here"):
+        asyncio.run(fresh.ensure())
+    assert calls["create"][0]["lifecycle"] == {"on_timeout": "pause"}
+
+
+def test_deleting_a_project_kills_its_paused_sandboxes(tmp_path, monkeypatch):
+    sb, calls = _restartable(tmp_path, monkeypatch, [_info("a", 1), _info("b", 2)])
+    asyncio.run(sb.forget())
+    assert calls["kill"] == ["a", "b"] and sb._sbx is None
