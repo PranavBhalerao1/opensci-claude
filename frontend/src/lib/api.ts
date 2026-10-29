@@ -146,11 +146,30 @@ export async function accessToken(): Promise<string | null> {
 
 /** fetch() with the current user's bearer token attached, so FastAPI can verify
  * who is calling and never has to trust a user id from the request body. */
+/** Shown when the server cannot be reached at all (a restart or deploy, or a dropped connection). */
+export const UNREACHABLE = "Couldn't reach OpenScientist. The server may be restarting; try again in a moment.";
+
 async function apiFetch(url: string, init: RequestInit = {}): Promise<Response> {
   const token = await accessToken();
   const headers = new Headers(init.headers);
   if (token) headers.set("Authorization", `Bearer ${token}`);
-  return fetch(url, { ...init, headers });
+  // Reads are retried through a brief outage (a server restart takes a few seconds); writes are
+  // not, since a request that got through but whose reply was lost must not be sent twice.
+  const retries = (init.method ?? "GET").toUpperCase() === "GET" ? 3 : 0;
+  for (let attempt = 0; ; attempt++) {
+    try {
+      const res = await fetch(url, { ...init, headers });
+      if (attempt < retries && (res.status === 502 || res.status === 503 || res.status === 504)) {
+        await new Promise((r) => setTimeout(r, 1000 * 2 ** attempt));
+        continue;
+      }
+      return res;
+    } catch (e) {
+      if (!(e instanceof TypeError) || init.signal?.aborted) throw e; // aborted on purpose
+      if (attempt >= retries) throw new Error(UNREACHABLE);
+      await new Promise((r) => setTimeout(r, 1000 * 2 ** attempt));
+    }
+  }
 }
 
 const post = (url: string, body: unknown = {}) =>

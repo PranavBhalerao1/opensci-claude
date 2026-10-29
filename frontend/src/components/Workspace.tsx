@@ -941,7 +941,7 @@ function Thread({
         {busy && streaming === null && <StatusLine text={status ?? "Thinking"} />}
         {error && (
           <div className="mt-4 border border-ink px-4 py-3 font-mono text-[12px]">
-            <span className="uppercase tracking-wider">Error</span> — {error}
+            <span className="uppercase tracking-wider">Error</span> — {error.replace(/^Error:\s*/, "")}
           </div>
         )}
         <div ref={bottom} />
