@@ -9,10 +9,7 @@ export function SiteHeader() {
       </Link>
       <nav className="flex items-center gap-7 whitespace-nowrap font-mono text-[11px] uppercase tracking-[0.14em] max-sm:gap-3.5 max-sm:text-[10px] max-sm:tracking-[0.08em]">
         <Link href="/#method" className="text-muted transition-colors hover:text-ink max-sm:hidden">
-          Method
-        </Link>
-        <Link href="/#principles" className="text-muted transition-colors hover:text-ink max-sm:hidden">
-          Principles
+          How it works
         </Link>
         {/* Plain <a>: /demo is a static page outside the Next.js router. */}
         <a href="/demo" className="text-muted transition-colors hover:text-ink max-sm:hidden">
