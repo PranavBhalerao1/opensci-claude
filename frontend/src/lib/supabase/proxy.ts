@@ -6,7 +6,7 @@ import { isWalkthroughAccount, WALKTHROUGH_PATH } from "@/lib/walkthrough";
 // Pages reachable without a session. Everything else redirects to /login.
 // robots.txt, the sitemap and the share image must stay public for search engines.
 const PUBLIC_PATHS = [
-  "/login", "/signup", "/forgot-password", "/auth", "/welcome", "/waitlist", "/demo", "/pricing",
+  "/login", "/signup", "/forgot-password", "/auth", "/welcome", "/waitlist", "/demo", "/pricing", "/news",
   "/robots.txt", "/sitemap.xml", "/opengraph-image",
   "/api/stripe", // Stripe's webhook; it authenticates by signature, not session
 ];
