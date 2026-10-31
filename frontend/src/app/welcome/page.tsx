@@ -94,21 +94,9 @@ export default async function Landing({ searchParams }: PageProps<"/welcome">) {
             <br />
             deserves a <span className="italic">scientist</span>.
           </h1>
-          <Link
-            href={`/news/${NEWS[0].slug}`}
-            className="group mt-14 block w-full max-w-xl border-y border-rule py-5 text-left"
-          >
-            <div className="font-mono text-[10px] uppercase tracking-[0.16em] text-faint">
-              Latest update · {formatNewsDate(NEWS[0].date)}
-            </div>
-            <div className="mt-2 font-serif text-[22px] leading-snug group-hover:underline group-hover:underline-offset-4">
-              {NEWS[0].title}
-            </div>
-            <p className="mt-1.5 truncate font-serif text-[16px] text-muted">{NEWS[0].summary}</p>
-            <div className="mt-3 font-mono text-[11px] uppercase tracking-[0.14em] text-muted group-hover:text-ink">
-              Read more →
-            </div>
-          </Link>
+          <p className="mt-8 max-w-xl text-[17px] leading-relaxed text-muted">
+            Ask in plain words. Agents read the literature, run the experiments and write the paper.
+          </p>
           <div className="mt-12 flex flex-wrap justify-center gap-3">
             <Link
               href="/waitlist"
@@ -211,6 +199,45 @@ export default async function Landing({ searchParams }: PageProps<"/welcome">) {
                 <h3 className="mt-4 font-serif text-[26px] leading-snug">{line}</h3>
                 <p className="mt-3 text-[14px] leading-relaxed text-muted">{text}</p>
               </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* §4 News */}
+      <section id="news" className="scroll-mt-6 border-t border-ink">
+        <div className="mx-auto max-w-6xl px-6 py-28">
+          <div className="flex items-end justify-between gap-6 max-sm:flex-col max-sm:items-start">
+            <div>
+              <Label>§4 · News</Label>
+              <h2 className="mt-4 font-serif text-[52px] leading-[1.05] tracking-tight max-md:text-[38px]">
+                Latest <span className="italic">updates</span>.
+              </h2>
+            </div>
+            <Link href="/news" className="font-mono text-[11px] uppercase tracking-[0.14em] text-muted hover:text-ink">
+              All news →
+            </Link>
+          </div>
+          <div className="mt-14 border-t border-ink">
+            {NEWS.slice(0, 3).map((post) => (
+              <Link
+                key={post.slug}
+                href={`/news/${post.slug}`}
+                className="group grid gap-2 border-b border-ink py-8 md:grid-cols-[220px_1fr_auto] md:items-baseline md:gap-8"
+              >
+                <div className="font-mono text-[11px] uppercase tracking-[0.14em] text-faint">
+                  {formatNewsDate(post.date)}
+                </div>
+                <div>
+                  <h3 className="font-serif text-[28px] leading-tight group-hover:underline group-hover:underline-offset-4">
+                    {post.title}
+                  </h3>
+                  <p className="mt-2 max-w-2xl text-[15px] leading-relaxed text-muted">{post.summary}</p>
+                </div>
+                <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-muted group-hover:text-ink">
+                  Read →
+                </span>
+              </Link>
             ))}
           </div>
         </div>
