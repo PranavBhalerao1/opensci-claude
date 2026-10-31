@@ -11,10 +11,10 @@ export type NewsPost = {
 export const NEWS: NewsPost[] = [
   {
     slug: "backed-by-y-combinator",
-    title: "OpenScientist is backed by Y Combinator",
+    title: "OpenScientist raises $125,000 from Y Combinator",
     date: "2026-10-30",
     time: "10:47 AM PT",
-    summary: "We've raised $125,000 from Y Combinator, along with over $200,000 in compute and credits.",
+    summary: "Along with more than $200,000 in compute and credits, we're starting to onboard our waitlist and open access to more researchers.",
     body: [
       "We're excited to share that OpenScientist has raised $125,000 from Y Combinator, along with more than $200,000 in compute and credits.",
       "We feel very fortunate, and we're deeply thankful to YC for backing us. Running real science takes real compute, and this support lets us give far more people access to it.",

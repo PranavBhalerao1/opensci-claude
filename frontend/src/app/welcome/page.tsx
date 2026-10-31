@@ -6,7 +6,7 @@ import { redirect } from "next/navigation";
 
 import InvestigationFigure from "@/components/InvestigationFigure";
 import { SiteFooter, SiteHeader } from "@/components/Site";
-import { NEWS } from "@/lib/news";
+import { formatNewsDate, NEWS } from "@/lib/news";
 import { SITE_DESCRIPTION, SITE_NAME, SITE_URL } from "@/lib/site";
 import { YCBadge } from "@/components/YCBadge";
 
@@ -94,14 +94,20 @@ export default async function Landing({ searchParams }: PageProps<"/welcome">) {
             <br />
             deserves a <span className="italic">scientist</span>.
           </h1>
-          <p className="mt-8 max-w-xl text-[17px] leading-relaxed text-muted">
-            Ask in plain words. Agents read the literature, run the experiments and write the paper.
-          </p>
           <Link
             href={`/news/${NEWS[0].slug}`}
-            className="mt-5 font-mono text-[11px] uppercase tracking-[0.14em] text-muted underline-offset-4 hover:text-ink hover:underline"
+            className="group mt-14 block w-full max-w-xl border-y border-rule py-5 text-left"
           >
-            Read our latest update →
+            <div className="font-mono text-[10px] uppercase tracking-[0.16em] text-faint">
+              Latest update · {formatNewsDate(NEWS[0].date)}
+            </div>
+            <div className="mt-2 font-serif text-[22px] leading-snug group-hover:underline group-hover:underline-offset-4">
+              {NEWS[0].title}
+            </div>
+            <p className="mt-1.5 truncate font-serif text-[16px] text-muted">{NEWS[0].summary}</p>
+            <div className="mt-3 font-mono text-[11px] uppercase tracking-[0.14em] text-muted group-hover:text-ink">
+              Read more →
+            </div>
           </Link>
           <div className="mt-12 flex flex-wrap justify-center gap-3">
             <Link
