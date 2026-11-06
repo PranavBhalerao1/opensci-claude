@@ -8,7 +8,6 @@ import InvestigationFigure from "@/components/InvestigationFigure";
 import { SiteFooter, SiteHeader } from "@/components/Site";
 import { formatNewsDate, NEWS } from "@/lib/news";
 import { SITE_DESCRIPTION, SITE_NAME, SITE_URL } from "@/lib/site";
-import { YCBadge } from "@/components/YCBadge";
 
 // Served at "/" for signed-out visitors, so "/" is the address search engines should index.
 export const metadata: Metadata = { alternates: { canonical: "/" } };
@@ -88,7 +87,6 @@ export default async function Landing({ searchParams }: PageProps<"/welcome">) {
       <section className="graph-paper relative flex min-h-[min(92vh,900px)] flex-col">
         <SiteHeader />
         <div className="flex flex-1 flex-col items-center justify-center px-6 pb-20 text-center">
-          <YCBadge />
           <h1 className="mt-10 max-w-5xl font-serif text-[88px] leading-[0.98] tracking-[-0.02em] max-md:text-[56px] max-sm:text-[42px]">
             Every question
             <br />
