@@ -15,9 +15,6 @@ export function SiteHeader() {
         <a href="/demo" className="text-muted transition-colors hover:text-ink max-sm:hidden">
           Demo
         </a>
-        <Link href="/news" className="text-muted transition-colors hover:text-ink max-sm:hidden">
-          News
-        </Link>
         <Link href="/pricing" className="text-muted transition-colors hover:text-ink">
           Pricing
         </Link>

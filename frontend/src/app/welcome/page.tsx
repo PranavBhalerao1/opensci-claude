@@ -6,9 +6,7 @@ import { redirect } from "next/navigation";
 
 import InvestigationFigure from "@/components/InvestigationFigure";
 import { SiteFooter, SiteHeader } from "@/components/Site";
-import { formatNewsDate, NEWS } from "@/lib/news";
 import { SITE_DESCRIPTION, SITE_NAME, SITE_URL } from "@/lib/site";
-import { YCBadge } from "@/components/YCBadge";
 
 // Served at "/" for signed-out visitors, so "/" is the address search engines should index.
 export const metadata: Metadata = { alternates: { canonical: "/" } };
@@ -88,7 +86,6 @@ export default async function Landing({ searchParams }: PageProps<"/welcome">) {
       <section className="graph-paper relative flex min-h-[min(92vh,900px)] flex-col">
         <SiteHeader />
         <div className="flex flex-1 flex-col items-center justify-center px-6 pb-20 text-center">
-          <YCBadge />
           <h1 className="mt-10 max-w-5xl font-serif text-[88px] leading-[0.98] tracking-[-0.02em] max-md:text-[56px] max-sm:text-[42px]">
             Every question
             <br />
@@ -199,45 +196,6 @@ export default async function Landing({ searchParams }: PageProps<"/welcome">) {
                 <h3 className="mt-4 font-serif text-[26px] leading-snug">{line}</h3>
                 <p className="mt-3 text-[14px] leading-relaxed text-muted">{text}</p>
               </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* §4 News */}
-      <section id="news" className="scroll-mt-6 border-t border-ink">
-        <div className="mx-auto max-w-6xl px-6 py-28">
-          <div className="flex items-end justify-between gap-6 max-sm:flex-col max-sm:items-start">
-            <div>
-              <Label>§4 · News</Label>
-              <h2 className="mt-4 font-serif text-[52px] leading-[1.05] tracking-tight max-md:text-[38px]">
-                Latest <span className="italic">updates</span>.
-              </h2>
-            </div>
-            <Link href="/news" className="font-mono text-[11px] uppercase tracking-[0.14em] text-muted hover:text-ink">
-              All news →
-            </Link>
-          </div>
-          <div className="mt-14 border-t border-ink">
-            {NEWS.slice(0, 3).map((post) => (
-              <Link
-                key={post.slug}
-                href={`/news/${post.slug}`}
-                className="group grid gap-2 border-b border-ink py-8 md:grid-cols-[220px_1fr_auto] md:items-baseline md:gap-8"
-              >
-                <div className="font-mono text-[11px] uppercase tracking-[0.14em] text-faint">
-                  {formatNewsDate(post.date)}
-                </div>
-                <div>
-                  <h3 className="font-serif text-[28px] leading-tight group-hover:underline group-hover:underline-offset-4">
-                    {post.title}
-                  </h3>
-                  <p className="mt-2 max-w-2xl text-[15px] leading-relaxed text-muted">{post.summary}</p>
-                </div>
-                <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-muted group-hover:text-ink">
-                  Read →
-                </span>
-              </Link>
             ))}
           </div>
         </div>
